@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+
+model School {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  caption   String
+  address   String
+  phone     String
+  logoUrl   String
+  signatureUrl String
+  classes    Class[]   // This creates a relation to the Class model
+  students  Student[] // This creates a relation to the Student model
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Student {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId          String   @db.ObjectId
+  school            School   @relation(fields: [schoolId], references: [id])
+  name              String
+  idNo              String
+  camSno            String
+  fatherName        String
+  motherName        String
+  fatherPhone       String
+  motherPhone       String
+  address           String
+  class             Class    @relation(fields: [classId], references: [id])
+  classId           String   @db.ObjectId
+  profilePictureUrl String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Class {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  schoolId  String    @db.ObjectId
+  school    School    @relation(fields: [schoolId], references: [id])
+  students  Student[] // This creates a relation to the Student model
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
