@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import StudentForm from "@/components/StudentForm";
 import IdCard, { CardTheme } from "@/components/IdCard";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface Class {
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+interface ClassData {
   id: string;
   name: string;
   school: {
@@ -35,8 +38,9 @@ interface Student {
   profilePictureUrl: string;
 }
 
-// Dummy data for the preview studio
-const DUMMY_STUDENT = {
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const DUMMY_STUDENT: Student = {
   id: "dummy1",
   name: "A. Punarvi",
   idNo: "STU-001",
@@ -47,266 +51,342 @@ const DUMMY_STUDENT = {
   motherPhone: "9876512340",
   address: "Kosgi",
   profilePictureUrl:
-    "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg", // Standard placeholder
+    "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
 };
 
+const DEFAULT_THEME: CardTheme = {
+  primary: "#e85d04",
+  secondary: "#ffecd1",
+  background: "#f6fff8",
+  textMain: "#ffffff",
+  textSub: "#4b5563",
+};
+
+const DEFAULT_LAYOUT = 1;
+
+const COLOR_FIELDS: [keyof CardTheme, string][] = [
+  ["primary",    "Primary"],
+  ["secondary",  "Secondary"],
+  ["background", "Background"],
+  ["textMain",   "Header Text"],
+  ["textSub",    "Body Text"],
+];
+
+// localStorage helpers
+function lsLayoutKey(id: string) { return `idcard_layout_${id}`; }
+function lsThemeKey(id: string)  { return `idcard_theme_${id}`; }
+
+function loadDesign(classId: string): { layout: number; theme: CardTheme } {
+  try {
+    const layout = parseInt(localStorage.getItem(lsLayoutKey(classId)) ?? "", 10) || DEFAULT_LAYOUT;
+    const raw    = localStorage.getItem(lsThemeKey(classId));
+    const theme  = raw ? (JSON.parse(raw) as CardTheme) : DEFAULT_THEME;
+    return { layout, theme };
+  } catch {
+    return { layout: DEFAULT_LAYOUT, theme: DEFAULT_THEME };
+  }
+}
+
+function saveDesign(classId: string, layout: number, theme: CardTheme) {
+  try {
+    localStorage.setItem(lsLayoutKey(classId), String(layout));
+    localStorage.setItem(lsThemeKey(classId), JSON.stringify(theme));
+  } catch { /* storage full / SSR — ignore */ }
+}
+
+// ─── Component ──────────────────────────────────────────────────────────────
+
 export default function ClassPage() {
-  const params = useParams();
-  const classId = params.id as string;
+  const params   = useParams();
+  const router   = useRouter();
+  const classId  = params.id as string;
+  const { user } = useAuth();
+  const isAdmin  = user?.role === "admin";
 
-  const [classData, setClassData] = useState<Class | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [classData,       setClassData]       = useState<ClassData | null>(null);
+  const [loading,         setLoading]         = useState(true);
+  const [forbidden,       setForbidden]       = useState(false);
   const [showStudentForm, setShowStudentForm] = useState(false);
+  const [isDesignMode,    setIsDesignMode]    = useState(false);
 
-  const DEFAULT_LAYOUT = 1;
-  const DEFAULT_THEME: CardTheme = {
-    primary: "#e85d04",
-    secondary: "#ffecd1",
-    background: "#f6fff8",
-    textMain: "#ffffff",
-    textSub: "#4b5563",
-  };
+  // Design — only loaded on client (localStorage is not available on server)
+  const [selectedLayout, setSelectedLayout] = useState(DEFAULT_LAYOUT);
+  const [theme,          setTheme]          = useState<CardTheme>(DEFAULT_THEME);
+  const [designReady,    setDesignReady]    = useState(false);
 
-  // Design Studio State
-  const [isDesignMode, setIsDesignMode] = useState(false);
-  const [selectedLayout, setSelectedLayout] = useState<number>(DEFAULT_LAYOUT);
-  const [theme, setTheme] = useState<CardTheme>(DEFAULT_THEME);
-
+  // Hydrate from localStorage once on the client
   useEffect(() => {
-    if (typeof window !== "undefined" && classId) {
-      const savedLayout = localStorage.getItem(`idcard_layout_${classId}`);
-      const savedTheme = localStorage.getItem(`idcard_theme_${classId}`);
-
-      if (savedLayout) setSelectedLayout(parseInt(savedLayout, 10));
-      if (savedTheme) setTheme(JSON.parse(savedTheme));
-    }
+    if (!classId) return;
+    const { layout, theme: t } = loadDesign(classId);
+    setSelectedLayout(layout);
+    setTheme(t);
+    setDesignReady(true);
   }, [classId]);
 
-  useEffect(() => {
-    if (classId) {
-      fetchClass();
-    }
-  }, [classId]);
+  // ── Fetch class data ──────────────────────────────────────────────────────
 
-  const fetchClass = async () => {
+  const fetchClass = useCallback(async () => {
     try {
-      const response = await fetch(`/api/classes/${classId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setClassData(data);
-      }
-    } catch (error) {
-      console.error("Error fetching class:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const res = await fetch(`/api/classes/${classId}`);
+      if (res.status === 403) { setForbidden(true); return; }
+      if (res.ok) setClassData(await res.json());
+    } catch { /* ignore */ }
+    finally   { setLoading(false); }
+  }, [classId]);
 
-  // NEW: Reset design to default
-  const handleResetToDefault = () => {
-    setSelectedLayout(DEFAULT_LAYOUT);
-    setTheme(DEFAULT_THEME);
+  useEffect(() => { if (classId) fetchClass(); }, [classId, fetchClass]);
 
-    // Clear the customized settings from the browser
-    if (classId) {
-      localStorage.removeItem(`idcard_layout_${classId}`);
-      localStorage.removeItem(`idcard_theme_${classId}`);
-    }
-  };
+  // ── Design handlers (admin only) ──────────────────────────────────────────
 
-  const handleLayoutChange = (layoutNum: number) => {
-    setSelectedLayout(layoutNum);
-    localStorage.setItem(`idcard_layout_${classId}`, layoutNum.toString());
+  const handleLayoutChange = (num: number) => {
+    setSelectedLayout(num);
+    saveDesign(classId, num, theme);
   };
 
   const handleColorChange = (key: keyof CardTheme, value: string) => {
-    setTheme((prev) => {
-      const newTheme = { ...prev, [key]: value };
-      localStorage.setItem(`idcard_theme_${classId}`, JSON.stringify(newTheme));
-      return newTheme;
-    });
+    const next = { ...theme, [key]: value };
+    setTheme(next);
+    saveDesign(classId, selectedLayout, next);
   };
 
-  if (loading)
-    return <div className="ml-64 p-8 text-center text-xl">Loading...</div>;
-  if (!classData)
-    return <div className="ml-64 p-8 text-center text-xl">Class not found</div>;
+  const handleReset = () => {
+    setSelectedLayout(DEFAULT_LAYOUT);
+    setTheme(DEFAULT_THEME);
+    saveDesign(classId, DEFAULT_LAYOUT, DEFAULT_THEME);
+  };
+
+  // ── Shell wrapper ─────────────────────────────────────────────────────────
+
+  const Shell = ({ children }: { children: React.ReactNode }) => (
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar onCreateSchool={() => {}} />
+      <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 flex items-center justify-center p-4">
+        {children}
+      </div>
+    </div>
+  );
+
+  if (loading || !designReady) return (
+    <Shell>
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-gray-500 text-sm">Loading class…</p>
+      </div>
+    </Shell>
+  );
+
+  if (forbidden) return (
+    <Shell>
+      <div className="text-center max-w-sm">
+        <div className="text-6xl mb-4">🔒</div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+        <p className="text-gray-500 mb-5 text-sm">You don&apos;t have permission to view this class.</p>
+        <button onClick={() => router.back()} className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-5 rounded-xl text-sm">Go Back</button>
+      </div>
+    </Shell>
+  );
+
+  if (!classData) return (
+    <Shell><p className="text-gray-500">Class not found.</p></Shell>
+  );
+
+  // ── Main render ───────────────────────────────────────────────────────────
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar onCreateSchool={() => {}} />
 
-      <div className="ml-64 flex-1 p-8">
-        <div className="max-w-400 mx-auto">
-          {/* Class Header */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 mb-8 flex items-center justify-between">
-            <div>
-              <div className="flex items-center space-x-2 mb-2 text-sm">
-                <span className="text-gray-500">{classData.school.name}</span>
-                <span className="text-gray-300">/</span>
-                <span className="text-gray-900 font-medium">
-                  {classData.name}
-                </span>
-              </div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Class {classData.name}
-              </h1>
-              <p className="text-gray-500">
-                {classData.students.length} students enrolled
-              </p>
-            </div>
+      <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-screen-xl mx-auto">
 
-            <div className="flex gap-4">
-              <button
-                onClick={() => setIsDesignMode(!isDesignMode)}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${isDesignMode ? "bg-gray-800 text-white" : "bg-gray-100 text-gray-800 hover:bg-gray-200"}`}
-              >
-                {isDesignMode ? "Exit Design Studio" : "🎨 Customize ID Design"}
-              </button>
-              <button
-                onClick={() => setShowStudentForm(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md"
-              >
-                + Add Student
-              </button>
+          {/* ── Page Header ─────────────────────────────────────────────── */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+
+              {/* Title + breadcrumb */}
+              <div>
+                <p className="text-xs text-gray-400 mb-1">
+                  <Link href={`/school/${classData.school.id}`} className="hover:underline">
+                    {classData.school.name}
+                  </Link>
+                  {" / "}Class {classData.name}
+                </p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                  Class {classData.name}
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  {classData.students.length} student{classData.students.length !== 1 ? "s" : ""} enrolled
+                </p>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-wrap gap-2">
+                {/* Design Studio — admin only */}
+                {isAdmin && (
+                  <button
+                    onClick={() => setIsDesignMode(!isDesignMode)}
+                    className={`py-2.5 px-4 rounded-xl font-medium text-sm flex items-center gap-2 transition-colors ${
+                      isDesignMode
+                        ? "bg-gray-900 text-white"
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    🎨
+                    <span className="hidden sm:inline">
+                      {isDesignMode ? "Exit Studio" : "Customize Design"}
+                    </span>
+                    <span className="sm:hidden">Design</span>
+                  </button>
+                )}
+
+                {/* Print / Export — everyone */}
+                {classData.students.length > 0 && (
+                  <Link
+                    href={`/class/${classId}/print`}
+                    className="py-2.5 px-4 rounded-xl font-medium text-sm flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    <span className="hidden sm:inline">Print / Export PDF</span>
+                    <span className="sm:hidden">Print</span>
+                  </Link>
+                )}
+
+                {/* Add student */}
+                <button
+                  onClick={() => setShowStudentForm(true)}
+                  className="py-2.5 px-4 rounded-xl font-medium text-sm flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span className="hidden sm:inline">Add Student</span>
+                  <span className="sm:hidden">Add</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* DESIGN STUDIO PANEL */}
-          {isDesignMode && (
-            <div className="bg-white rounded-xl shadow-lg border-2 border-indigo-100 p-6 mb-8 animate-fade-in">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-indigo-900">
-                  ID Card Design Studio
-                </h2>
+          {/* ── Design Studio (admin only) ───────────────────────────────── */}
+          {isAdmin && isDesignMode && (
+            <div className="bg-white rounded-xl shadow-sm border-2 border-indigo-100 p-5 sm:p-6 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
+                <div>
+                  <h2 className="text-xl font-bold text-indigo-900">ID Card Design Studio</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Settings are saved locally on this device. The selected design will be used for printing.
+                  </p>
+                </div>
                 <button
-                  onClick={handleResetToDefault}
-                  className="text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-4 rounded-md transition-colors shadow-sm"
+                  onClick={handleReset}
+                  className="self-start flex items-center gap-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-1.5 px-3 rounded-lg transition-colors"
                 >
-                  ↺ Reset to Default
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Reset to Default
                 </button>
               </div>
 
-              {/* Color Pickers */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-8 p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">
-                    Primary Color
-                  </label>
-                  <input
-                    type="color"
-                    value={theme.primary}
-                    onChange={(e) =>
-                      handleColorChange("primary", e.target.value)
-                    }
-                    className="w-full h-10 rounded cursor-pointer"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">
-                    Secondary / Accent
-                  </label>
-                  <input
-                    type="color"
-                    value={theme.secondary}
-                    onChange={(e) =>
-                      handleColorChange("secondary", e.target.value)
-                    }
-                    className="w-full h-10 rounded cursor-pointer"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">
-                    Background
-                  </label>
-                  <input
-                    type="color"
-                    value={theme.background}
-                    onChange={(e) =>
-                      handleColorChange("background", e.target.value)
-                    }
-                    className="w-full h-10 rounded cursor-pointer"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">
-                    Header Text
-                  </label>
-                  <input
-                    type="color"
-                    value={theme.textMain}
-                    onChange={(e) =>
-                      handleColorChange("textMain", e.target.value)
-                    }
-                    className="w-full h-10 rounded cursor-pointer"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">
-                    Body Text
-                  </label>
-                  <input
-                    type="color"
-                    value={theme.textSub}
-                    onChange={(e) =>
-                      handleColorChange("textSub", e.target.value)
-                    }
-                    className="w-full h-10 rounded cursor-pointer"
-                  />
+              {/* ── Color pickers ────────────────────────────────────────── */}
+              <div className="p-4 bg-gray-50 rounded-xl mb-6">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Colour Theme</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {COLOR_FIELDS.map(([key, label]) => (
+                    <div key={key} className="flex flex-col items-center gap-2">
+                      <div className="relative">
+                        <input
+                          type="color"
+                          value={theme[key]}
+                          onChange={(e) => handleColorChange(key, e.target.value)}
+                          className="w-12 h-12 rounded-xl cursor-pointer border-2 border-white shadow-md appearance-none p-0.5"
+                          style={{ backgroundColor: theme[key] }}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-gray-600 text-center leading-tight">
+                        {label}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Layout Previews (Horizontal Scroll) */}
-              <h3 className="text-lg font-bold text-gray-700 mb-4">
-                Select Layout (1-10)
-              </h3>
-              <div className="flex overflow-x-auto gap-8 pb-8 pt-4 px-4 custom-scrollbar">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((layoutNum) => (
-                  <div
-                    key={layoutNum}
-                    onClick={() => handleLayoutChange(layoutNum)}
-                    className={`shrink-0 cursor-pointer rounded-2xl transition-all duration-300 ${selectedLayout === layoutNum ? "ring-8 ring-indigo-500 scale-105" : "hover:scale-105 opacity-70 hover:opacity-100"}`}
-                  >
-                    {/* Scale down the massive card for preview purposes */}
-                    <div
-                      style={{
-                        transform: "scale(0.4)",
-                        transformOrigin: "top left",
-                        width: "255px",
-                        height: "405px",
-                      }}
-                      className="pointer-events-none"
+              {/* ── Layout selector ──────────────────────────────────────── */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Layout</p>
+                  <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+                    Layout {selectedLayout} selected
+                  </span>
+                </div>
+
+                <div className="flex overflow-x-auto gap-5 pb-4 pt-1 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-gray-200">
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => handleLayoutChange(num)}
+                      className={`flex-none snap-start flex flex-col items-center gap-2 p-1 rounded-2xl transition-all duration-200 outline-none ${
+                        selectedLayout === num
+                          ? "ring-4 ring-indigo-500 ring-offset-2 scale-105"
+                          : "hover:scale-102 opacity-60 hover:opacity-95"
+                      }`}
                     >
-                      <IdCard
-                        layout={layoutNum}
-                        theme={theme}
-                        school={classData.school}
-                        student={DUMMY_STUDENT}
-                        classNameStr={classData.name}
-                      />
-                    </div>
-                    <div className="text-center mt-2 font-bold text-gray-700">
-                      Layout {layoutNum}
-                    </div>
-                  </div>
-                ))}
+                      {/* Scaled-down card preview */}
+                      <div
+                        style={{
+                          width:    "243px",
+                          height:   "385px",
+                          overflow: "hidden",
+                          position: "relative",
+                          borderRadius: "12px",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <div
+                          style={{
+                            transform:       "scale(0.38)",
+                            transformOrigin: "top left",
+                            width:           "638px",
+                            height:          "1013px",
+                            pointerEvents:   "none",
+                          }}
+                        >
+                          <IdCard
+                            layout={num}
+                            theme={theme}
+                            school={classData.school}
+                            student={DUMMY_STUDENT}
+                            classNameStr={classData.name}
+                          />
+                        </div>
+                      </div>
+                      <span
+                        className={`text-xs font-bold transition-colors ${
+                          selectedLayout === num ? "text-indigo-600" : "text-gray-500"
+                        }`}
+                      >
+                        Layout {num}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Actual Students Grid */}
+          {/* ── Student ID Cards (view mode) ─────────────────────────────── */}
           {!isDesignMode && classData.students.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 justify-items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-y-4 gap-x-6 justify-items-center">
               {classData.students.map((student) => (
-                <div
-                  key={student.id}
-                  className="w-full flex justify-center overflow-hidden pb-4"
-                >
+                <div key={student.id} className="w-full flex justify-center overflow-hidden pb-2">
                   <div
                     style={{
-                      transform: "scale(0.55)",
+                      transform:       "scale(0.55)",
                       transformOrigin: "top center",
-                      height: "560px",
+                      height:          "557px",
                     }}
                   >
                     <IdCard
@@ -322,24 +402,23 @@ export default function ClassPage() {
             </div>
           )}
 
-          {/* Empty State */}
+          {/* ── Empty state ───────────────────────────────────────────────── */}
           {!isDesignMode && classData.students.length === 0 && (
-            <div className="text-center py-20 bg-white rounded-lg shadow-sm border border-gray-100">
-              <div className="text-6xl mb-4">👥</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No students added yet
-              </h3>
-              <p className="text-gray-500 mb-6">
-                Start by adding your first student to see the ID cards.
+            <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
+              <div className="text-5xl mb-4">👥</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No students yet</h3>
+              <p className="text-gray-500 text-sm mb-5">
+                Add your first student to start generating ID cards.
               </p>
               <button
                 onClick={() => setShowStudentForm(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md shadow-md"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-5 rounded-xl text-sm transition-colors"
               >
                 Add First Student
               </button>
             </div>
           )}
+
         </div>
       </div>
 

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/utils/prismaClient';
 
+function getAuth(request: NextRequest) {
+  return {
+    role: request.headers.get('x-user-role') || '',
+    schoolId: request.headers.get('x-user-school-id') || '',
+  };
+}
+
 // GET a single student by ID
 export async function GET(
   request: NextRequest,
@@ -8,24 +15,24 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const { role, schoolId } = getAuth(request);
 
     const student = await prisma.student.findUnique({
       where: { id },
-      include: {
-        school: true,
-        class: true,
-      },
+      include: { school: true, class: true },
     });
 
     if (!student) {
-      return NextResponse.json(
-        { error: 'Student not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
+    // Users can only view students from their own school
+    if (role !== 'admin' && student.schoolId !== schoolId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     return NextResponse.json(student);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to fetch student' },
       { status: 500 }
@@ -33,13 +40,28 @@ export async function GET(
   }
 }
 
-// PUT update a student by ID
+// PUT update a student — admin only
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { role } = getAuth(request);
+
+    if (role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Forbidden — only admins can edit students' },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
+    const student = await prisma.student.findUnique({ where: { id } });
+
+    if (!student) {
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
     const body = await request.json();
     const {
       schoolId,
@@ -55,17 +77,6 @@ export async function PUT(
       profilePictureUrl,
     } = body;
 
-    const student = await prisma.student.findUnique({
-      where: { id },
-    });
-
-    if (!student) {
-      return NextResponse.json(
-        { error: 'Student not found' },
-        { status: 404 }
-      );
-    }
-
     const updatedStudent = await prisma.student.update({
       where: { id },
       data: {
@@ -79,16 +90,16 @@ export async function PUT(
         motherPhone: motherPhone !== undefined ? motherPhone : student.motherPhone,
         address: address !== undefined ? address : student.address,
         classId: classId || student.classId,
-        profilePictureUrl: profilePictureUrl !== undefined ? profilePictureUrl : student.profilePictureUrl,
+        profilePictureUrl:
+          profilePictureUrl !== undefined
+            ? profilePictureUrl
+            : student.profilePictureUrl,
       },
-      include: {
-        school: true,
-        class: true,
-      },
+      include: { school: true, class: true },
     });
 
     return NextResponse.json(updatedStudent);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to update student' },
       { status: 500 }
@@ -96,34 +107,31 @@ export async function PUT(
   }
 }
 
-// DELETE a student by ID
+// DELETE a student — admin only
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { role } = getAuth(request);
 
-    const student = await prisma.student.findUnique({
-      where: { id },
-    });
-
-    if (!student) {
+    if (role !== 'admin') {
       return NextResponse.json(
-        { error: 'Student not found' },
-        { status: 404 }
+        { error: 'Forbidden — only admins can delete students' },
+        { status: 403 }
       );
     }
 
-    await prisma.student.delete({
-      where: { id },
-    });
+    const { id } = await params;
+    const student = await prisma.student.findUnique({ where: { id } });
 
-    return NextResponse.json(
-      { message: 'Student deleted successfully' },
-      { status: 200 }
-    );
-  } catch (error) {
+    if (!student) {
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
+    await prisma.student.delete({ where: { id } });
+    return NextResponse.json({ message: 'Student deleted successfully' });
+  } catch {
     return NextResponse.json(
       { error: 'Failed to delete student' },
       { status: 500 }

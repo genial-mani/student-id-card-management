@@ -31,9 +31,10 @@ interface IdCardProps {
 export default function IdCard({ layout, theme, school, student, classNameStr }: IdCardProps) {
   // OUTER CONTAINER: Represents the physical uncut paper (638x1013). Backgrounds bleed to the edges of this.
   const cardContainerStyle = {
-    width: '638px',
-    height: '1013px',
+    width: '637.8px',
+    height: '1015.75px',
     backgroundColor: theme.background,
+    border: '0.1px solid black', // Ensures the container is recognized for bleed even if background is white
   };
 
   // INNER SAFE ZONE: 24px padding ensures no content gets cut off by the blade.
@@ -78,7 +79,7 @@ export default function IdCard({ layout, theme, school, student, classNameStr }:
   // --- LAYOUT 1: Standard Top Curve ---
   if (layout === 1) {
     return (
-      <div className="relative box-border overflow-hidden shadow-2xl mx-auto" style={cardContainerStyle}>
+      <div className="relative box-border overflow-hidden mx-auto" style={cardContainerStyle}>
         {/* Bleed Background */}
         <div className="absolute top-0 left-0 w-full h-85 rounded-b-[50%] z-0" style={{ backgroundColor: theme.primary }}></div>
         

@@ -26,9 +26,9 @@ export default function StudentForm({
     motherPhone: "",
     address: "",
   });
-  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
-    null,
-  );
+  
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null); // NEW: State for image preview
   const [loading, setLoading] = useState(false);
 
   const handleInputChange = (
@@ -42,6 +42,11 @@ export default function StudentForm({
     const file = e.target.files?.[0];
     if (file) {
       setProfilePictureFile(file);
+      // NEW: Generate a local URL to preview the image instantly
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      setProfilePictureFile(null);
+      setPreviewUrl(null);
     }
   };
 
@@ -92,6 +97,36 @@ export default function StudentForm({
         <h2 className="text-xl font-bold mb-4">Create Student</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* MOVED TO TOP: Profile Picture Section with Preview */}
+          <div className="flex flex-col items-center bg-gray-50 p-4 border border-gray-200 rounded-md">
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt="Profile Preview"
+                // No border radius applied here, standard sharp corners
+                className="w-32 h-40 object-cover mb-4 shadow-sm border border-gray-300"
+              />
+            ) : (
+              <div className="w-32 h-40 bg-gray-200 mb-4 flex items-center justify-center text-gray-500 text-sm border border-gray-300">
+                No Image
+              </div>
+            )}
+            
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Profile Picture *
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                required
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600 text-sm"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Student Name *
@@ -194,18 +229,6 @@ export default function StudentForm({
               value={formData.address}
               onChange={handleInputChange}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Profile Picture
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
             />
           </div>
