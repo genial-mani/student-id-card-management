@@ -13,31 +13,49 @@ import { useState, useEffect, useRef, useCallback, CSSProperties } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import IdCard, { CardTheme } from "@/components/IdCard";
+import { Button } from "@/components/ui/button";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface School {
-  id: string; name: string; caption: string; address: string;
-  phone: string; logoUrl: string; signatureUrl: string;
+  id: string;
+  name: string;
+  caption: string;
+  address: string;
+  phone: string;
+  logoUrl: string;
+  signatureUrl: string;
 }
 interface Student {
-  id: string; name: string; idNo: string; camSno: string;
-  fatherName: string; motherName: string; fatherPhone: string;
-  motherPhone: string; address: string; profilePictureUrl: string;
+  id: string;
+  name: string;
+  idNo: string;
+  camSno: string;
+  fatherName: string;
+  motherName: string;
+  fatherPhone: string;
+  motherPhone: string;
+  address: string;
+  profilePictureUrl: string;
 }
-interface ClassData { id: string; name: string; school: School; students: Student[]; }
+interface ClassData {
+  id: string;
+  name: string;
+  school: School;
+  students: Student[];
+}
 
 // ─── Exact Math & Dimensions (NO SCALING) ──────────────────────────────────────
 
-const A4_W = 3508; 
-const A4_H = 2480; 
-const CARD_W = 637.8; 
+const A4_W = 3508;
+const A4_H = 2480;
+const CARD_W = 637.8;
 const CARD_H = 1015.75;
 
 // Changed to a 5x2 grid to fit 10 cards per sheet
-const COLS = 5; 
+const COLS = 5;
 const ROWS = 2;
-const CPP  = COLS * ROWS; // 10 cards per sheet
+const CPP = COLS * ROWS; // 10 cards per sheet
 
 // 2mm gap at 300 DPI is mathematically 23.6 pixels (rounded to 24)
 const GAP_PX = 24;
@@ -58,14 +76,18 @@ function slotPos(idx: number) {
 // ─── localStorage ───────────────────────────────────────────────────────────────
 
 const DEFAULT_THEME: CardTheme = {
-  primary: "#e85d04", secondary: "#ffecd1", background: "#f6fff8",
-  textMain: "#ffffff", textSub: "#4b5563",
+  primary: "#e85d04",
+  secondary: "#ffecd1",
+  background: "#f6fff8",
+  textMain: "#ffffff",
+  textSub: "#4b5563",
 };
 
 function loadDesign(id: string): { layout: number; theme: CardTheme } {
   try {
-    const layout = parseInt(localStorage.getItem(`idcard_layout_${id}`) ?? "", 10) || 1;
-    const raw    = localStorage.getItem(`idcard_theme_${id}`);
+    const layout =
+      parseInt(localStorage.getItem(`idcard_layout_${id}`) ?? "", 10) || 1;
+    const raw = localStorage.getItem(`idcard_theme_${id}`);
     return { layout, theme: raw ? JSON.parse(raw) : DEFAULT_THEME };
   } catch {
     return { layout: 1, theme: DEFAULT_THEME };
@@ -75,18 +97,18 @@ function loadDesign(id: string): { layout: number; theme: CardTheme } {
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function PrintPage() {
-  const params  = useParams();
-  const router  = useRouter();
+  const params = useParams();
+  const router = useRouter();
   const classId = params.id as string;
 
-  const [classData,   setClassData]   = useState<ClassData | null>(null);
-  const [layout,      setLayout]      = useState(1);
-  const [theme,       setTheme]       = useState<CardTheme>(DEFAULT_THEME);
-  const [loading,     setLoading]     = useState(true);
-  const [forbidden,   setForbidden]   = useState(false);
-  const [settled,     setSettled]     = useState(false);
+  const [classData, setClassData] = useState<ClassData | null>(null);
+  const [layout, setLayout] = useState(1);
+  const [theme, setTheme] = useState<CardTheme>(DEFAULT_THEME);
+  const [loading, setLoading] = useState(true);
+  const [forbidden, setForbidden] = useState(false);
+  const [settled, setSettled] = useState(false);
   const [downloading, setDownloading] = useState<"all" | number | null>(null);
-  const [dlProgress,  setDlProgress]  = useState("");
+  const [dlProgress, setDlProgress] = useState("");
 
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -95,10 +117,16 @@ export default function PrintPage() {
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch(`/api/classes/${classId}`);
-      if (res.status === 403) { setForbidden(true); return; }
+      if (res.status === 403) {
+        setForbidden(true);
+        return;
+      }
       if (res.ok) setClassData(await res.json());
-    } catch { /**/ }
-    finally   { setLoading(false); }
+    } catch {
+      /**/
+    } finally {
+      setLoading(false);
+    }
   }, [classId]);
 
   useEffect(() => {
@@ -118,10 +146,10 @@ export default function PrintPage() {
 
   // ── Sheet slices ────────────────────────────────────────────────────────────
 
-  const students    = classData?.students ?? [];
+  const students = classData?.students ?? [];
   const totalSheets = Math.max(1, Math.ceil(students.length / CPP));
   const sheets: Student[][] = Array.from({ length: totalSheets }, (_, i) =>
-    students.slice(i * CPP, (i + 1) * CPP)
+    students.slice(i * CPP, (i + 1) * CPP),
   );
 
   // ── PDF core ────────────────────────────────────────────────────────────────
@@ -139,16 +167,18 @@ export default function PrintPage() {
     try {
       // Capture exactly at 1:1 pixel ratio (638x1013)
       const dataUrl = await toPng(el, {
-        pixelRatio: 1, 
+        pixelRatio: 1,
         backgroundColor: "#ffffff",
         width: CARD_W,
         height: CARD_H,
       });
-      
+
       // Convert Data URL to an Image object so we can draw it on the A4 canvas
       const img = new Image();
       img.src = dataUrl;
-      await new Promise((resolve) => { img.onload = resolve; });
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
       return img;
     } catch (err) {
       console.error("Capture failed for", studentId, err);
@@ -163,8 +193,8 @@ export default function PrintPage() {
     cardImages: (HTMLImageElement | null)[],
     sheetStudents: Student[],
   ): HTMLCanvasElement => {
-    const a4  = document.createElement("canvas");
-    a4.width  = A4_W;
+    const a4 = document.createElement("canvas");
+    a4.width = A4_W;
     a4.height = A4_H;
     const ctx = a4.getContext("2d")!;
 
@@ -186,7 +216,9 @@ export default function PrintPage() {
    */
   const downloadSheets = async (indices: number[]) => {
     if (!settled) {
-      alert("Please wait a moment for images to finish loading, then try again.");
+      alert(
+        "Please wait a moment for images to finish loading, then try again.",
+      );
       return;
     }
 
@@ -199,24 +231,32 @@ export default function PrintPage() {
         import("html-to-image"),
         import("jspdf"),
       ]);
-      
+
       const { toPng } = h2iMod;
       const jsPDF = jsPDFMod.default || (jsPDFMod as any).jsPDF;
 
-      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+      });
 
       for (let pi = 0; pi < indices.length; pi++) {
-        const sheetIdx      = indices[pi];
+        const sheetIdx = indices[pi];
         const sheetStudents = sheets[sheetIdx];
 
-        setDlProgress(`Sheet ${pi + 1} / ${indices.length}: capturing ${sheetStudents.length} card${sheetStudents.length !== 1 ? "s" : ""}…`);
+        setDlProgress(
+          `Sheet ${pi + 1} / ${indices.length}: capturing ${sheetStudents.length} card${sheetStudents.length !== 1 ? "s" : ""}…`,
+        );
 
         // Capture cards
         const cardImages = await Promise.all(
-          sheetStudents.map((s) => captureCardImage(toPng, s.id))
+          sheetStudents.map((s) => captureCardImage(toPng, s.id)),
         );
 
-        setDlProgress(`Sheet ${pi + 1} / ${indices.length}: compositing A4 sheet…`);
+        setDlProgress(
+          `Sheet ${pi + 1} / ${indices.length}: compositing A4 sheet…`,
+        );
 
         const a4Canvas = buildA4Canvas(cardImages, sheetStudents);
         const imgData = a4Canvas.toDataURL("image/jpeg", 0.97);
@@ -225,20 +265,22 @@ export default function PrintPage() {
         pdf.addImage(imgData, "JPEG", 0, 0, 297, 210);
       }
 
-      const safe     = (s: string) => (s ?? "").replace(/[^a-z0-9]/gi, "_");
-      const fileName = [
-        safe(`${classData?.school.name}`),
-        "Class",
-        safe(`${classData?.name}`),
-        isAll ? `all_${totalSheets}_sheets` : `sheet_${indices[0] + 1}`,
-      ].join("_") + ".pdf";
+      const safe = (s: string) => (s ?? "").replace(/[^a-z0-9]/gi, "_");
+      const fileName =
+        [
+          safe(`${classData?.school.name}`),
+          "Class",
+          safe(`${classData?.name}`),
+          isAll ? `all_${totalSheets}_sheets` : `sheet_${indices[0] + 1}`,
+        ].join("_") + ".pdf";
 
       setDlProgress("Saving PDF…");
       pdf.save(fileName);
-
     } catch (err) {
       console.error("PDF error:", err);
-      alert(`PDF generation failed:\n${err instanceof Error ? err.message : String(err)}`);
+      alert(
+        `PDF generation failed:\n${err instanceof Error ? err.message : String(err)}`,
+      );
     } finally {
       setDownloading(null);
       setDlProgress("");
@@ -247,46 +289,66 @@ export default function PrintPage() {
 
   // ── Guards ──────────────────────────────────────────────────────────────────
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-gray-500 text-sm">Loading class…</p>
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-500 text-sm">Loading class…</p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
-  if (forbidden) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="text-center">
-        <div className="text-6xl mb-4">🔒</div>
-        <h1 className="text-xl font-bold text-gray-900 mb-4">Access Denied</h1>
-        <button onClick={() => router.back()} className="bg-blue-600 text-white py-2 px-5 rounded-xl text-sm">Go Back</button>
+  if (forbidden)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <h1 className="text-xl font-bold text-gray-900 mb-4">
+            Access Denied
+          </h1>
+          <Button
+            onClick={() => router.back()}
+            className="bg-blue-600 text-white py-2 px-5 rounded-xl text-sm"
+          >
+            Go Back
+          </Button>
+        </div>
       </div>
-    </div>
-  );
+    );
 
-  if (!classData) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <p className="text-gray-500">Class not found.</p>
-    </div>
-  );
-
-  if (students.length === 0) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="text-center">
-        <div className="text-5xl mb-4">👥</div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">No students to print</h2>
-        <p className="text-gray-500 text-sm mb-5">Add students to this class first.</p>
-        <Link href={`/class/${classId}`} className="bg-blue-600 text-white py-2 px-5 rounded-xl text-sm">Go Back</Link>
+  if (!classData)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-500">Class not found.</p>
       </div>
-    </div>
-  );
+    );
+
+  if (students.length === 0)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="text-center">
+          <div className="text-5xl mb-4">👥</div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            No students to print
+          </h2>
+          <p className="text-gray-500 text-sm mb-5">
+            Add students to this class first.
+          </p>
+          <Link
+            href={`/class/${classId}`}
+            className="bg-blue-600 text-white py-2 px-5 rounded-xl text-sm"
+          >
+            Go Back
+          </Link>
+        </div>
+      </div>
+    );
 
   const isBusy = downloading !== null || !settled;
 
   // ── Hidden card farm ────────────────────────────────────────────────────────
-  // To prevent "Blank PDFs", the farm is placed at top:0 left:0 but with a microscopic 
+  // To prevent "Blank PDFs", the farm is placed at top:0 left:0 but with a microscopic
   // opacity so the browser still renders all the images and DOM nodes inside it.
   const hiddenWrapStyle: CSSProperties = {
     position: "absolute",
@@ -305,7 +367,7 @@ export default function PrintPage() {
             key={`farm-${student.id}`}
             ref={(el) => {
               if (el) cardRefs.current.set(student.id, el);
-              else    cardRefs.current.delete(student.id);
+              else cardRefs.current.delete(student.id);
             }}
           >
             {/* Note: Ensure your updated dynamic IdCard takes `template` prop instead if using the drag/drop feature */}
@@ -325,9 +387,22 @@ export default function PrintPage() {
         <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
           <div className="px-4 sm:px-6 py-3">
             <div className="flex items-center gap-3 mb-2">
-              <Link href={`/class/${classId}`} className="text-gray-400 hover:text-gray-700 transition-colors shrink-0">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <Link
+                href={`/class/${classId}`}
+                className="text-gray-400 hover:text-gray-700 transition-colors shrink-0"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
               </Link>
               <div className="min-w-0">
@@ -335,7 +410,8 @@ export default function PrintPage() {
                   {classData.school.name} — Class {classData.name}
                 </h1>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {students.length} cards · {totalSheets} A4 sheet{totalSheets !== 1 ? "s" : ""} · 300 DPI
+                  {students.length} cards · {totalSheets} A4 sheet
+                  {totalSheets !== 1 ? "s" : ""} · 300 DPI
                   {!settled && " · Loading images…"}
                 </p>
               </div>
@@ -344,16 +420,33 @@ export default function PrintPage() {
             <div className="flex flex-wrap items-center gap-2">
               {dlProgress && (
                 <span className="text-xs text-emerald-700 font-medium flex items-center gap-1.5 mr-1">
-                  <svg className="animate-spin w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  <svg
+                    className="animate-spin w-3.5 h-3.5 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
                   </svg>
                   <span className="truncate max-w-xs">{dlProgress}</span>
                 </span>
               )}
 
               {sheets.map((_, i) => (
-                <button key={i}
+                <Button
+                  key={i}
+                  type="button"
                   onClick={() => downloadSheets([i])}
                   disabled={isBusy}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border shadow-sm transition-colors disabled:opacity-40 ${
@@ -363,16 +456,23 @@ export default function PrintPage() {
                   }`}
                 >
                   {downloading === i ? "…" : `Sheet ${i + 1}`}
-                </button>
+                </Button>
               ))}
 
-              <button
+              <Button
+                type="button"
                 onClick={() => downloadSheets(sheets.map((_, i) => i))}
                 disabled={isBusy}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors disabled:opacity-40"
               >
-                {!settled ? "Loading images…" : downloading === "all" ? "Generating PDF…" : totalSheets === 1 ? "Download PDF" : `Download All (${totalSheets} sheets)`}
-              </button>
+                {!settled
+                  ? "Loading images…"
+                  : downloading === "all"
+                    ? "Generating PDF…"
+                    : totalSheets === 1
+                      ? "Download PDF"
+                      : `Download All (${totalSheets} sheets)`}
+              </Button>
             </div>
           </div>
         </div>
@@ -389,7 +489,8 @@ export default function PrintPage() {
                     Sheet {sheetIdx + 1} / {totalSheets}
                   </span>
                   <span className="text-xs text-gray-400">
-                    {sheetStudents.length} card{sheetStudents.length !== 1 ? "s" : ""}
+                    {sheetStudents.length} card
+                    {sheetStudents.length !== 1 ? "s" : ""}
                     {emptyCount > 0 ? ` · ${emptyCount} empty` : ""}
                   </span>
                 </div>
@@ -400,8 +501,8 @@ export default function PrintPage() {
                   eliminating all CSS scaling bugs!
                 */}
                 <div className="bg-white shadow-2xl rounded-sm overflow-hidden border border-gray-300 w-full">
-                  <svg 
-                    viewBox={`0 0 ${A4_W} ${A4_H}`} 
+                  <svg
+                    viewBox={`0 0 ${A4_W} ${A4_H}`}
                     className="w-full h-auto block"
                   >
                     <foreignObject width={A4_W} height={A4_H}>

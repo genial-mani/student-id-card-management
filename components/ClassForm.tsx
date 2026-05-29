@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface ClassFormProps {
   schoolId: string;
@@ -48,40 +51,42 @@ export default function ClassForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">Create Class</h2>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3">
+      <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md shadow-2xl">
+        <h2 className="text-lg sm:text-xl font-bold mb-4">Create Class</h2>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor="class-name" className="text-xs sm:text-sm">
               Class Name (Do not type 'Class') *
-            </label>
-            <input
+            </Label>
+            <Input
+              id="class-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               placeholder="e.g., 10A, VII, UKG, etc."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+              className="text-xs sm:text-sm"
             />
           </div>
 
-          <div className="flex space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded"
-            >
-              Cancel
-            </button>
-            <button
+          <div className="flex flex-col gap-2 sm:gap-3 pt-2 sm:pt-4">
+            <Button
               type="submit"
+              className="flex-1 text-xs sm:text-sm"
               disabled={loading}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded disabled:opacity-50"
             >
               {loading ? "Creating..." : "Create Class"}
-            </button>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 text-xs sm:text-sm"
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
           </div>
         </form>
       </div>

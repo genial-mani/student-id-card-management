@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import uploadImageToCloudinary from "@/utils/cloudService";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface StudentFormProps {
   schoolId: string;
@@ -26,8 +30,10 @@ export default function StudentForm({
     motherPhone: "",
     address: "",
   });
-  
-  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
+
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
+    null,
+  );
   const [previewUrl, setPreviewUrl] = useState<string | null>(null); // NEW: State for image preview
   const [loading, setLoading] = useState(false);
 
@@ -92,162 +98,169 @@ export default function StudentForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Create Student</h2>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3">
+      <div className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
+        <h2 className="text-lg sm:text-xl font-bold mb-4">Create Student</h2>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          
-          {/* MOVED TO TOP: Profile Picture Section with Preview */}
-          <div className="flex flex-col items-center bg-gray-50 p-4 border border-gray-200 rounded-md">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+          <div className="flex flex-col items-center bg-gray-50 p-3 sm:p-4 border border-gray-200 rounded-2xl">
             {previewUrl ? (
               <img
                 src={previewUrl}
                 alt="Profile Preview"
-                // No border radius applied here, standard sharp corners
-                className="w-32 h-40 object-cover mb-4 shadow-sm border border-gray-300"
+                className="w-28 sm:w-32 h-36 sm:h-40 object-cover mb-3 sm:mb-4 shadow-sm border border-gray-300 rounded-lg sm:rounded-xl"
               />
             ) : (
-              <div className="w-32 h-40 bg-gray-200 mb-4 flex items-center justify-center text-gray-500 text-sm border border-gray-300">
+              <div className="w-28 sm:w-32 h-36 sm:h-40 bg-gray-200 mb-3 sm:mb-4 flex items-center justify-center text-gray-500 text-xs sm:text-sm border border-gray-300 rounded-lg sm:rounded-xl">
                 No Image
               </div>
             )}
-            
+
             <div className="w-full">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Label htmlFor="profilePicture" className="text-xs sm:text-sm">
                 Profile Picture *
-              </label>
-              <input
+              </Label>
+              <Input
+                id="profilePicture"
                 type="file"
                 accept="image/*"
                 onChange={handleFileChange}
                 required
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600 text-sm"
+                className="bg-white text-xs sm:text-sm"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor="name" className="text-xs sm:text-sm">
               Student Name *
-            </label>
-            <input
+            </Label>
+            <Input
+              id="name"
               type="text"
               name="name"
               value={formData.name}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+              className="text-xs sm:text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor="idNo" className="text-xs sm:text-sm">
               ID Number *
-            </label>
-            <input
+            </Label>
+            <Input
+              id="idNo"
               type="text"
               name="idNo"
               value={formData.idNo}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+              className="text-xs sm:text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor="camSno" className="text-xs sm:text-sm">
               Camera Serial Number
-            </label>
-            <input
+            </Label>
+            <Input
+              id="camSno"
               type="text"
               name="camSno"
               value={formData.camSno}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+              className="text-xs sm:text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor="fatherName" className="text-xs sm:text-sm">
               Father's Name
-            </label>
-            <input
+            </Label>
+            <Input
+              id="fatherName"
               type="text"
               name="fatherName"
               value={formData.fatherName}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+              className="text-xs sm:text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor="motherName" className="text-xs sm:text-sm">
               Mother's Name
-            </label>
-            <input
+            </Label>
+            <Input
+              id="motherName"
               type="text"
               name="motherName"
               value={formData.motherName}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+              className="text-xs sm:text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor="fatherPhone" className="text-xs sm:text-sm">
               Father's Phone
-            </label>
-            <input
+            </Label>
+            <Input
+              id="fatherPhone"
               type="tel"
               name="fatherPhone"
               value={formData.fatherPhone}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+              className="text-xs sm:text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor="motherPhone" className="text-xs sm:text-sm">
               Mother's Phone
-            </label>
-            <input
+            </Label>
+            <Input
+              id="motherPhone"
               type="tel"
               name="motherPhone"
               value={formData.motherPhone}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+              className="text-xs sm:text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor="address" className="text-xs sm:text-sm">
               Address
-            </label>
-            <textarea
+            </Label>
+            <Textarea
+              id="address"
               name="address"
               value={formData.address}
               onChange={handleInputChange}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+              rows={4}
+              className="text-xs sm:text-sm"
             />
           </div>
 
-          <div className="flex space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded"
-            >
-              Cancel
-            </button>
-            <button
+          <div className="flex flex-col gap-2 sm:gap-3 pt-3 sm:pt-4">
+            <Button
               type="submit"
+              className="flex-1 text-xs sm:text-sm"
               disabled={loading}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded disabled:opacity-50"
             >
               {loading ? "Creating..." : "Create Student"}
-            </button>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 text-xs sm:text-sm"
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
           </div>
         </form>
       </div>

@@ -65,22 +65,28 @@ const DEFAULT_THEME: CardTheme = {
 const DEFAULT_LAYOUT = 1;
 
 const COLOR_FIELDS: [keyof CardTheme, string][] = [
-  ["primary",    "Primary"],
-  ["secondary",  "Secondary"],
+  ["primary", "Primary"],
+  ["secondary", "Secondary"],
   ["background", "Background"],
-  ["textMain",   "Header Text"],
-  ["textSub",    "Body Text"],
+  ["textMain", "Header Text"],
+  ["textSub", "Body Text"],
 ];
 
 // localStorage helpers
-function lsLayoutKey(id: string) { return `idcard_layout_${id}`; }
-function lsThemeKey(id: string)  { return `idcard_theme_${id}`; }
+function lsLayoutKey(id: string) {
+  return `idcard_layout_${id}`;
+}
+function lsThemeKey(id: string) {
+  return `idcard_theme_${id}`;
+}
 
 function loadDesign(classId: string): { layout: number; theme: CardTheme } {
   try {
-    const layout = parseInt(localStorage.getItem(lsLayoutKey(classId)) ?? "", 10) || DEFAULT_LAYOUT;
-    const raw    = localStorage.getItem(lsThemeKey(classId));
-    const theme  = raw ? (JSON.parse(raw) as CardTheme) : DEFAULT_THEME;
+    const layout =
+      parseInt(localStorage.getItem(lsLayoutKey(classId)) ?? "", 10) ||
+      DEFAULT_LAYOUT;
+    const raw = localStorage.getItem(lsThemeKey(classId));
+    const theme = raw ? (JSON.parse(raw) as CardTheme) : DEFAULT_THEME;
     return { layout, theme };
   } catch {
     return { layout: DEFAULT_LAYOUT, theme: DEFAULT_THEME };
@@ -91,28 +97,30 @@ function saveDesign(classId: string, layout: number, theme: CardTheme) {
   try {
     localStorage.setItem(lsLayoutKey(classId), String(layout));
     localStorage.setItem(lsThemeKey(classId), JSON.stringify(theme));
-  } catch { /* storage full / SSR — ignore */ }
+  } catch {
+    /* storage full / SSR — ignore */
+  }
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function ClassPage() {
-  const params   = useParams();
-  const router   = useRouter();
-  const classId  = params.id as string;
+  const params = useParams();
+  const router = useRouter();
+  const classId = params.id as string;
   const { user } = useAuth();
-  const isAdmin  = user?.role === "admin";
+  const isAdmin = user?.role === "admin";
 
-  const [classData,       setClassData]       = useState<ClassData | null>(null);
-  const [loading,         setLoading]         = useState(true);
-  const [forbidden,       setForbidden]       = useState(false);
+  const [classData, setClassData] = useState<ClassData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [forbidden, setForbidden] = useState(false);
   const [showStudentForm, setShowStudentForm] = useState(false);
-  const [isDesignMode,    setIsDesignMode]    = useState(false);
+  const [isDesignMode, setIsDesignMode] = useState(false);
 
   // Design — only loaded on client (localStorage is not available on server)
   const [selectedLayout, setSelectedLayout] = useState(DEFAULT_LAYOUT);
-  const [theme,          setTheme]          = useState<CardTheme>(DEFAULT_THEME);
-  const [designReady,    setDesignReady]    = useState(false);
+  const [theme, setTheme] = useState<CardTheme>(DEFAULT_THEME);
+  const [designReady, setDesignReady] = useState(false);
 
   // Hydrate from localStorage once on the client
   useEffect(() => {
@@ -128,13 +136,21 @@ export default function ClassPage() {
   const fetchClass = useCallback(async () => {
     try {
       const res = await fetch(`/api/classes/${classId}`);
-      if (res.status === 403) { setForbidden(true); return; }
+      if (res.status === 403) {
+        setForbidden(true);
+        return;
+      }
       if (res.ok) setClassData(await res.json());
-    } catch { /* ignore */ }
-    finally   { setLoading(false); }
+    } catch {
+      /* ignore */
+    } finally {
+      setLoading(false);
+    }
   }, [classId]);
 
-  useEffect(() => { if (classId) fetchClass(); }, [classId, fetchClass]);
+  useEffect(() => {
+    if (classId) fetchClass();
+  }, [classId, fetchClass]);
 
   // ── Design handlers (admin only) ──────────────────────────────────────────
 
@@ -166,29 +182,43 @@ export default function ClassPage() {
     </div>
   );
 
-  if (loading || !designReady) return (
-    <Shell>
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-gray-500 text-sm">Loading class…</p>
-      </div>
-    </Shell>
-  );
+  if (loading || !designReady)
+    return (
+      <Shell>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-500 text-sm">Loading class…</p>
+        </div>
+      </Shell>
+    );
 
-  if (forbidden) return (
-    <Shell>
-      <div className="text-center max-w-sm">
-        <div className="text-6xl mb-4">🔒</div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-        <p className="text-gray-500 mb-5 text-sm">You don&apos;t have permission to view this class.</p>
-        <button onClick={() => router.back()} className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-5 rounded-xl text-sm">Go Back</button>
-      </div>
-    </Shell>
-  );
+  if (forbidden)
+    return (
+      <Shell>
+        <div className="text-center max-w-sm">
+          <div className="text-6xl mb-4">🔒</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Access Denied
+          </h1>
+          <p className="text-gray-500 mb-5 text-sm">
+            You don&apos;t have permission to view this class.
+          </p>
+          <button
+            onClick={() => router.back()}
+            className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-5 rounded-xl text-sm"
+          >
+            Go Back
+          </button>
+        </div>
+      </Shell>
+    );
 
-  if (!classData) return (
-    <Shell><p className="text-gray-500">Class not found.</p></Shell>
-  );
+  if (!classData)
+    return (
+      <Shell>
+        <p className="text-gray-500">Class not found.</p>
+      </Shell>
+    );
 
   // ── Main render ───────────────────────────────────────────────────────────
 
@@ -197,35 +227,37 @@ export default function ClassPage() {
       <Sidebar onCreateSchool={() => {}} />
 
       <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8">
-        <div className="max-w-screen-xl mx-auto">
-
+        <div className="max-w-7xl mx-auto">
           {/* ── Page Header ─────────────────────────────────────────────── */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6 mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-5 lg:p-6 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
               {/* Title + breadcrumb */}
-              <div>
-                <p className="text-xs text-gray-400 mb-1">
-                  <Link href={`/school/${classData.school.id}`} className="hover:underline">
+              <div className="min-w-0">
+                <p className="text-xs text-gray-400 mb-1 truncate">
+                  <Link
+                    href={`/school/${classData.school.id}`}
+                    className="hover:underline"
+                  >
                     {classData.school.name}
                   </Link>
                   {" / "}Class {classData.name}
                 </p>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
                   Class {classData.name}
                 </h1>
-                <p className="text-sm text-gray-500 mt-1">
-                  {classData.students.length} student{classData.students.length !== 1 ? "s" : ""} enrolled
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                  {classData.students.length} student
+                  {classData.students.length !== 1 ? "s" : ""} enrolled
                 </p>
               </div>
 
               {/* Action buttons */}
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {/* Design Studio — admin only */}
                 {isAdmin && (
                   <button
                     onClick={() => setIsDesignMode(!isDesignMode)}
-                    className={`py-2.5 px-4 rounded-xl font-medium text-sm flex items-center gap-2 transition-colors ${
+                    className={`py-2 sm:py-2.5 px-2.5 sm:px-4 rounded-lg lg:rounded-xl font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors ${
                       isDesignMode
                         ? "bg-gray-900 text-white"
                         : "bg-gray-100 hover:bg-gray-200 text-gray-700"
@@ -243,11 +275,20 @@ export default function ClassPage() {
                 {classData.students.length > 0 && (
                   <Link
                     href={`/class/${classId}/print`}
-                    className="py-2.5 px-4 rounded-xl font-medium text-sm flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+                    className="py-2 sm:py-2.5 px-2.5 sm:px-4 rounded-lg lg:rounded-xl font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                      />
                     </svg>
                     <span className="hidden sm:inline">Print / Export PDF</span>
                     <span className="sm:hidden">Print</span>
@@ -257,10 +298,20 @@ export default function ClassPage() {
                 {/* Add student */}
                 <button
                   onClick={() => setShowStudentForm(true)}
-                  className="py-2.5 px-4 rounded-xl font-medium text-sm flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                  className="py-2 sm:py-2.5 px-2.5 sm:px-4 rounded-lg lg:rounded-xl font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-colors"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
                   </svg>
                   <span className="hidden sm:inline">Add Student</span>
                   <span className="sm:hidden">Add</span>
@@ -271,42 +322,58 @@ export default function ClassPage() {
 
           {/* ── Design Studio (admin only) ───────────────────────────────── */}
           {isAdmin && isDesignMode && (
-            <div className="bg-white rounded-xl shadow-sm border-2 border-indigo-100 p-5 sm:p-6 mb-6">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
-                <div>
-                  <h2 className="text-xl font-bold text-indigo-900">ID Card Design Studio</h2>
+            <div className="bg-white rounded-xl shadow-sm border-2 border-indigo-100 p-4 sm:p-5 lg:p-6 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2.5 sm:gap-3 mb-4 sm:mb-5">
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-xl font-bold text-indigo-900">
+                    ID Card Design Studio
+                  </h2>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    Settings are saved locally on this device. The selected design will be used for printing.
+                    Settings are saved locally on this device. The selected
+                    design will be used for printing.
                   </p>
                 </div>
                 <button
                   onClick={handleReset}
-                  className="self-start flex items-center gap-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-1.5 px-3 rounded-lg transition-colors"
+                  className="self-start flex items-center gap-1.5 text-xs sm:text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-1.5 px-2.5 sm:px-3 rounded-lg transition-colors whitespace-nowrap"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
                   </svg>
                   Reset to Default
                 </button>
               </div>
 
               {/* ── Color pickers ────────────────────────────────────────── */}
-              <div className="p-4 bg-gray-50 rounded-xl mb-6">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Colour Theme</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="p-3 sm:p-4 bg-gray-50 rounded-xl mb-6">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
+                  Colour Theme
+                </p>
+                <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
                   {COLOR_FIELDS.map(([key, label]) => (
                     <div key={key} className="flex flex-col items-center gap-2">
                       <div className="relative">
                         <input
                           type="color"
                           value={theme[key]}
-                          onChange={(e) => handleColorChange(key, e.target.value)}
-                          className="w-12 h-12 rounded-xl cursor-pointer border-2 border-white shadow-md appearance-none p-0.5"
+                          onChange={(e) =>
+                            handleColorChange(key, e.target.value)
+                          }
+                          className="w-10 sm:w-12 h-10 sm:h-12 rounded-xl cursor-pointer border-2 border-white shadow-md appearance-none p-0.5"
                           style={{ backgroundColor: theme[key] }}
                         />
                       </div>
-                      <span className="text-xs font-medium text-gray-600 text-center leading-tight">
+                      <span className="text-xs font-medium text-gray-600 text-center leading-tight line-clamp-2">
                         {label}
                       </span>
                     </div>
@@ -316,61 +383,69 @@ export default function ClassPage() {
 
               {/* ── Layout selector ──────────────────────────────────────── */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Layout</p>
-                  <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-3">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                    Layout
+                  </p>
+                  <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full whitespace-nowrap">
                     Layout {selectedLayout} selected
                   </span>
                 </div>
 
-                <div className="flex overflow-x-auto gap-5 pb-4 pt-1 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-gray-200">
-                  {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
-                    <button
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
+                    <div
                       key={num}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleLayoutChange(num)}
-                      className={`flex-none snap-start flex flex-col items-center gap-2 p-1 rounded-2xl transition-all duration-200 outline-none ${
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          handleLayoutChange(num);
+                        }
+                      }}
+                      className={`group flex flex-col items-center gap-1.5 sm:gap-3 p-1 sm:p-2 rounded-2xl sm:rounded-3xl transition-all duration-200 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                         selectedLayout === num
-                          ? "ring-4 ring-indigo-500 ring-offset-2 scale-105"
-                          : "hover:scale-102 opacity-60 hover:opacity-95"
+                          ? "scale-[1.01]"
+                          : "hover:opacity-95"
                       }`}
                     >
                       {/* Scaled-down card preview */}
                       <div
-                        style={{
-                          width:    "243px",
-                          height:   "385px",
-                          overflow: "hidden",
-                          position: "relative",
-                          borderRadius: "12px",
-                          flexShrink: 0,
-                        }}
+                        className={`relative overflow-hidden rounded-lg sm:rounded-[1rem] w-32 sm:w-52 md:w-56 h-48 sm:h-80 ${
+                          selectedLayout === num ? "ring-2 ring-indigo-300" : ""
+                        }`}
                       >
-                        <div
-                          style={{
-                            transform:       "scale(0.38)",
-                            transformOrigin: "top left",
-                            width:           "638px",
-                            height:          "1013px",
-                            pointerEvents:   "none",
-                          }}
-                        >
-                          <IdCard
-                            layout={num}
-                            theme={theme}
-                            school={classData.school}
-                            student={DUMMY_STUDENT}
-                            classNameStr={classData.name}
-                          />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div
+                            style={{
+                              transform: "scale(0.2)",
+                              transformOrigin: "center center",
+                              width: "638px",
+                              height: "1015px",
+                              pointerEvents: "none",
+                            }}
+                          >
+                            <IdCard
+                              layout={num}
+                              theme={theme}
+                              school={classData.school}
+                              student={DUMMY_STUDENT}
+                              classNameStr={classData.name}
+                            />
+                          </div>
                         </div>
                       </div>
                       <span
-                        className={`text-xs font-bold transition-colors ${
-                          selectedLayout === num ? "text-indigo-600" : "text-gray-500"
+                        className={`text-xs font-bold transition-colors line-clamp-1 ${
+                          selectedLayout === num
+                            ? "text-indigo-600"
+                            : "text-gray-500"
                         }`}
                       >
                         Layout {num}
                       </span>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -379,14 +454,17 @@ export default function ClassPage() {
 
           {/* ── Student ID Cards (view mode) ─────────────────────────────── */}
           {!isDesignMode && classData.students.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-y-4 gap-x-6 justify-items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 sm:gap-y-4 justify-items-center">
               {classData.students.map((student) => (
-                <div key={student.id} className="w-full flex justify-center overflow-hidden pb-2">
+                <div
+                  key={student.id}
+                  className="w-full max-w-sm sm:max-w-none flex justify-center overflow-hidden pb-1 sm:pb-2"
+                >
                   <div
                     style={{
-                      transform:       "scale(0.55)",
+                      transform: "scale(0.50)",
                       transformOrigin: "top center",
-                      height:          "557px",
+                      height: "507px",
                     }}
                   >
                     <IdCard
@@ -406,7 +484,9 @@ export default function ClassPage() {
           {!isDesignMode && classData.students.length === 0 && (
             <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
               <div className="text-5xl mb-4">👥</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No students yet</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No students yet
+              </h3>
               <p className="text-gray-500 text-sm mb-5">
                 Add your first student to start generating ID cards.
               </p>
@@ -418,7 +498,6 @@ export default function ClassPage() {
               </button>
             </div>
           )}
-
         </div>
       </div>
 
