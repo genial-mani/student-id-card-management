@@ -20,8 +20,11 @@ const oxygen = Oxygen({
 });
 
 export const metadata: Metadata = {
-  title: "Student ID Card Management",
+  title: "Arun ID Cards & Digital",
   description: "Manage schools, classes, and student ID cards efficiently",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({
