@@ -44,15 +44,21 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
       {/* ── Top ───────────────────────────────────────────── */}
       <div className="p-4 border-b border-gray-700/60">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-extrabold tracking-tight leading-tight flex items-center gap-1.5">
-            <Image
-              src={balaji}
-              alt="Arun ID Cards & Digital"
-              className="w-7 shrink-0"
-            />
-            <span className="text-white">ARUN</span>
-            <span className="text-indigo-400">ID CARDS & DIGITAL</span>
-          </h2>
+          <Link 
+            href="/" 
+            onClick={onClose}
+            className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+          >
+            <h2 className="text-sm font-extrabold tracking-tight leading-tight flex items-center gap-1.5">
+              <Image
+                src={balaji}
+                alt="Arun ID Cards & Digital"
+                className="w-7 shrink-0"
+              />
+              <span className="text-white">ARUN</span>
+              <span className="text-indigo-400">ID CARDS & DIGITAL</span>
+            </h2>
+          </Link>
           {/* Mobile close */}
           <Button
             type="button"

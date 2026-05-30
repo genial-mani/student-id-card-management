@@ -5,6 +5,7 @@ import Sidebar from "@/components/Sidebar";
 import SchoolForm from "@/components/SchoolForm";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import Header from "@/components/Header";
 
 export default function Home() {
   const [showSchoolForm, setShowSchoolForm] = useState(false);
@@ -17,8 +18,14 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar onCreateSchool={() => setShowSchoolForm(true)} isOpen={isSidebarOpen} 
-   onClose={() => setIsSidebarOpen(false)}/>
+      {/* ADD THE HEADER HERE */}
+      <Header onMenuClick={() => setIsSidebarOpen(true)} />
+      
+      <Sidebar 
+        onCreateSchool={() => setShowSchoolForm(true)} 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)}
+      />
 
       {/* Main content — offset for desktop sidebar, top padding for mobile hamburger */}
       <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8">
