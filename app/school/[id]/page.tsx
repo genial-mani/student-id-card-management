@@ -471,7 +471,7 @@ export default function SchoolPage() {
                       />
                     </svg>
                     <span className="hidden sm:inline">View Credentials</span>
-                    <span className="sm:hidden">Creds</span>
+                    <span className="sm:hidden">Credentials</span>
                   </Button>
                 )}
 
