@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
   const [showSchoolForm, setShowSchoolForm] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user } = useAuth();
 
   const handleSchoolCreated = () => {
@@ -16,7 +17,8 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar onCreateSchool={() => setShowSchoolForm(true)} />
+      <Sidebar onCreateSchool={() => setShowSchoolForm(true)} isOpen={isSidebarOpen} 
+   onClose={() => setIsSidebarOpen(false)}/>
 
       {/* Main content — offset for desktop sidebar, top padding for mobile hamburger */}
       <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8">
