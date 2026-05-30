@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import StudentForm from "@/components/StudentForm";
 import IdCard, { CardTheme } from "@/components/IdCard";
 import { useAuth } from "@/contexts/AuthContext";
+import Header from "@/components/Header";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -117,6 +118,8 @@ export default function ClassPage() {
   const [showStudentForm, setShowStudentForm] = useState(false);
   const [isDesignMode, setIsDesignMode] = useState(false);
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   // Design — only loaded on client (localStorage is not available on server)
   const [selectedLayout, setSelectedLayout] = useState(DEFAULT_LAYOUT);
   const [theme, setTheme] = useState<CardTheme>(DEFAULT_THEME);
@@ -175,7 +178,12 @@ export default function ClassPage() {
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar onCreateSchool={() => {}} />
+      <Header onMenuClick={() => setIsSidebarOpen(true)} />
+      <Sidebar 
+        onCreateSchool={() => {}} 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)} 
+      />
       <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 flex items-center justify-center p-4">
         {children}
       </div>
@@ -224,7 +232,12 @@ export default function ClassPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar onCreateSchool={() => {}} />
+      <Header onMenuClick={() => setIsSidebarOpen(true)} />
+      <Sidebar 
+        onCreateSchool={() => {}} 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)} 
+      />
 
       <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">

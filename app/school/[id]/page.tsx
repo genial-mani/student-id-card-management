@@ -10,6 +10,7 @@ import CredentialsModal from "@/components/CredentialsModal";
 import SchoolForm from "@/components/SchoolForm";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import Header from "@/components/Header";
 
 // Imported Assets
 import card1 from "@/assets/5_5918cf6f-84b7-4ed7-b3d9-0b78a62d3087.webp";
@@ -282,6 +283,7 @@ export default function SchoolPage() {
   const [showClass, setShowClass] = useState(false);
   const [showCreds, setShowCreds] = useState(false);
   const [showSchoolForm, setShowSchoolForm] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const fetchSchool = useCallback(async () => {
     try {
@@ -306,7 +308,11 @@ export default function SchoolPage() {
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar onCreateSchool={() => setShowSchoolForm(true)} />
+      <Sidebar
+        onCreateSchool={() => setShowSchoolForm(true)}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
       <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 flex items-center justify-center p-4">
         {children}
       </div>
@@ -365,8 +371,12 @@ export default function SchoolPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar onCreateSchool={() => setShowSchoolForm(true)} />
-
+      <Sidebar
+        onCreateSchool={() => setShowSchoolForm(true)}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
+      <Header onMenuClick={() => setIsSidebarOpen(true)} />
       <div className="lg:ml-64 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8 flex items-center justify-center w-full lg:max-w-[calc(100%-256px)] mx-auto">
         <div className="w-full max-w-full flex flex-col mx-auto">
           {/* ── School header card ───────────────────────────────────────── */}

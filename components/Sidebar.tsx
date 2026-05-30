@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import balaji from "@/assets/tirupati-balaji-hd-wallpaper-for-android-2745524-removebg-preview.png";
 
 interface School {
   id: string;
@@ -14,11 +15,12 @@ interface School {
 
 interface SidebarProps {
   onCreateSchool: () => void;
+  isOpen: boolean;       // NEW
+  onClose: () => void;   // NEW
 }
 
-export default function Sidebar({ onCreateSchool }: SidebarProps) {
+export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProps) {
   const [schools, setSchools] = useState<School[]>([]);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const { user, logout } = useAuth();
 
   useEffect(() => {
@@ -36,27 +38,27 @@ export default function Sidebar({ onCreateSchool }: SidebarProps) {
     }
   };
 
-  const close = () => setMobileOpen(false);
 
   const Content = () => (
     <div className="flex flex-col h-full">
       {/* ── Top ───────────────────────────────────────────── */}
       <div className="p-4 border-b border-gray-700/60">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-white font-bold text-base leading-none">
-              Student ID
-            </p>
-            <p className="text-blue-400 text-xs font-medium mt-0.5">
-              Management System
-            </p>
-          </div>
+          <h2 className="text-sm font-extrabold tracking-tight leading-tight flex items-center gap-1.5">
+            <Image
+              src={balaji}
+              alt="Arun ID Cards & Digital"
+              className="w-7 shrink-0"
+            />
+            <span className="text-white">ARUN</span>
+            <span className="text-indigo-400">ID CARDS & DIGITAL</span>
+          </h2>
           {/* Mobile close */}
           <Button
             type="button"
             variant="ghost"
             className="lg:hidden text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-700 transition-colors"
-            onClick={close}
+            onClick={onClose} // CHANGED: 'close' to 'onClose'
             aria-label="Close menu"
           >
             <svg
@@ -106,7 +108,7 @@ export default function Sidebar({ onCreateSchool }: SidebarProps) {
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-3 rounded-xl text-sm flex items-center gap-2.5 transition-colors mb-3"
             onClick={() => {
               onCreateSchool();
-              close();
+              onClose();
             }}
           >
             <svg
@@ -196,34 +198,13 @@ export default function Sidebar({ onCreateSchool }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile hamburger */}
-      <Button
-        type="button"
-        variant="ghost"
-        className="lg:hidden fixed top-3 left-3 z-40 bg-gray-800 text-white p-2.5 rounded-lg shadow-lg border border-gray-700 active:bg-gray-700 transition-colors"
-        onClick={() => setMobileOpen(true)}
-        aria-label="Open menu"
-      >
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 6h16M4 12h16M4 18h16"
-          />
-        </svg>
-      </Button>
+      
 
       {/* Mobile backdrop */}
-      {mobileOpen && (
+      {isOpen && ( // CHANGED: 'mobileOpen' to 'isOpen'
         <div
           className="lg:hidden fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
-          onClick={close}
+          onClick={onClose} // CHANGED: 'close' to 'onClose'
           role="presentation"
         />
       )}
@@ -231,7 +212,7 @@ export default function Sidebar({ onCreateSchool }: SidebarProps) {
       {/* Mobile drawer - responsive width */}
       <div
         className={`lg:hidden fixed top-0 left-0 h-full w-full sm:w-80 max-w-sm bg-gray-800 z-50 transition-transform duration-300 ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+          isOpen ? "translate-x-0" : "-translate-x-full" // CHANGED: 'mobileOpen' to 'isOpen'
         }`}
       >
         <Content />
