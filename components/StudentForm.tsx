@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import uploadImageToCloudinary from "@/utils/cloudService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
+// NEW: Premium cropping library
+import Cropper from "react-easy-crop";
 
 interface StudentFormProps {
   schoolId: string;
@@ -14,6 +17,15 @@ interface StudentFormProps {
   onClose: () => void;
   onSuccess: () => void;
 }
+
+// Helper to load the image for canvas extraction
+const createImage = (url: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", (error) => reject(error));
+    image.src = url;
+  });
 
 export default function StudentForm({
   schoolId,
@@ -33,11 +45,17 @@ export default function StudentForm({
     address: "",
   });
 
-  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
-    null,
-  );
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null); // NEW: State for image preview
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // ─── CROPPING STATES ────────────────────────────────────────────────────
+  const [isCropping, setIsCropping] = useState(false);
+  const [imgSrc, setImgSrc] = useState("");
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  // ────────────────────────────────────────────────────────────────────────
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -47,14 +65,56 @@ export default function StudentForm({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setProfilePictureFile(file);
-      // NEW: Generate a local URL to preview the image instantly
-      setPreviewUrl(URL.createObjectURL(file));
-    } else {
-      setProfilePictureFile(null);
-      setPreviewUrl(null);
+    if (e.target.files && e.target.files.length > 0) {
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        setImgSrc(reader.result?.toString() || "");
+        setIsCropping(true);
+      });
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+
+  const onCropComplete = useCallback((croppedArea: any, croppedPixels: any) => {
+    setCroppedAreaPixels(croppedPixels);
+  }, []);
+
+  const generateCroppedImage = async () => {
+    if (!imgSrc || !croppedAreaPixels) return;
+
+    try {
+      const image = await createImage(imgSrc);
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) return;
+
+      canvas.width = croppedAreaPixels.width;
+      canvas.height = croppedAreaPixels.height;
+
+      // Draw the cropped area onto the canvas
+      ctx.drawImage(
+        image,
+        croppedAreaPixels.x,
+        croppedAreaPixels.y,
+        croppedAreaPixels.width,
+        croppedAreaPixels.height,
+        0,
+        0,
+        croppedAreaPixels.width,
+        croppedAreaPixels.height
+      );
+
+      // Convert to file
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const file = new File([blob], "profile-pic.jpg", { type: "image/jpeg" });
+        setProfilePictureFile(file);
+        setPreviewUrl(URL.createObjectURL(blob));
+        setIsCropping(false);
+      }, "image/jpeg", 0.95);
+    } catch (e) {
+      console.error("Failed to crop image", e);
     }
   };
 
@@ -62,16 +122,18 @@ export default function StudentForm({
     e.preventDefault();
     setLoading(true);
 
+    if (!profilePictureFile) {
+      alert("Please take a photo or select one from the gallery.");
+      setLoading(false);
+      return;
+    }
+
     try {
       let profilePictureUrl = "";
       
-      // Generate a 12-character unique ID, or use the one manually typed in the form
-      const generatedCamId = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
-      
-      // Get the first word of the school name for the Cloudinary folder
+      const generatedCamId = formData.camSno || crypto.randomUUID().replace(/-/g, '').substring(0, 12);
       const folderName = schoolName.trim().split(/\s+/)[0];
 
-      // Upload profile picture if provided
       if (profilePictureFile) {
         profilePictureUrl = await uploadImageToCloudinary(
           profilePictureFile, 
@@ -80,7 +142,6 @@ export default function StudentForm({
         );
       }
 
-      // Create student
       const response = await fetch("/api/students", {
         method: "POST",
         headers: {
@@ -88,13 +149,13 @@ export default function StudentForm({
         },
         body: JSON.stringify({
           ...formData,
-          camSno: generatedCamId, // Ensures the generated ID is saved to the database
+          camSno: generatedCamId, 
           schoolId,
           classId,
           profilePictureUrl,
         }),
       });
-// ... rest of the submit function remains the same
+
       if (response.ok) {
         onSuccess();
         onClose();
@@ -113,169 +174,139 @@ export default function StudentForm({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3">
       <div className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
-        <h2 className="text-lg sm:text-xl font-bold mb-4">Create Student</h2>
-
-        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-          <div className="flex flex-col items-center bg-gray-50 p-3 sm:p-4 border border-gray-200 rounded-2xl">
-            {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt="Profile Preview"
-                className="w-28 sm:w-32 h-36 sm:h-40 object-cover mb-3 sm:mb-4 shadow-sm border border-gray-300 rounded-lg sm:rounded-xl"
-              />
-            ) : (
-              <div className="w-28 sm:w-32 h-36 sm:h-40 bg-gray-200 mb-3 sm:mb-4 flex items-center justify-center text-gray-500 text-xs sm:text-sm border border-gray-300 rounded-lg sm:rounded-xl">
-                No Image
-              </div>
-            )}
-
-            <div className="w-full">
-              <Label htmlFor="profilePicture" className="text-xs sm:text-sm">
-                Profile Picture *
-              </Label>
-              <Input
-                id="profilePicture"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                required
-                className="bg-white text-xs sm:text-sm"
+        
+        {/* ─── PREMIUM CROPPING UI ─────────────────────────────────────── */}
+        {isCropping ? (
+          <div className="flex flex-col items-center">
+            <h2 className="text-lg sm:text-xl font-bold mb-4">Adjust Photo</h2>
+            
+            {/* The Cropper Window */}
+            <div className="relative w-full h-[60vh] max-h-100 bg-black rounded-xl overflow-hidden mb-4">
+              <Cropper
+                image={imgSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={4/5} // Perfect ID card ratio
+                onCropChange={setCrop}
+                onCropComplete={onCropComplete}
+                onZoomChange={setZoom}
+                showGrid={true}
               />
             </div>
+
+            {/* Zoom Slider */}
+            <div className="w-full mb-6 px-2">
+              <Label className="text-xs text-gray-500 mb-2 block">Zoom</Label>
+              <input
+                type="range"
+                value={zoom}
+                min={1}
+                max={3}
+                step={0.1}
+                aria-labelledby="Zoom"
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="w-full accent-indigo-600"
+              />
+            </div>
+
+            <div className="flex w-full gap-3">
+              <Button onClick={generateCroppedImage} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+                Apply Crop
+              </Button>
+              <Button onClick={() => setIsCropping(false)} variant="outline" className="flex-1">
+                Cancel
+              </Button>
+            </div>
           </div>
+        ) : (
+          
+        /* ─── STANDARD FORM UI ─────────────────────────────────────────── */
+          <>
+            <h2 className="text-lg sm:text-xl font-bold mb-4">Create Student</h2>
+            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+              
+              <div className="flex flex-col items-center bg-gray-50 p-3 sm:p-4 border border-gray-200 rounded-2xl">
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt="Profile Preview"
+                    className="w-28 sm:w-32 h-36 sm:h-40 object-cover mb-3 sm:mb-4 shadow-sm border border-gray-300 rounded-lg sm:rounded-xl"
+                  />
+                ) : (
+                  <div className="w-28 sm:w-32 h-36 sm:h-40 bg-gray-200 mb-3 sm:mb-4 flex items-center justify-center text-gray-500 text-xs sm:text-sm border border-gray-300 rounded-lg sm:rounded-xl">
+                    No Image
+                  </div>
+                )}
 
-          <div>
-            <Label htmlFor="name" className="text-xs sm:text-sm">
-              Student Name *
-            </Label>
-            <Input
-              id="name"
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-              className="text-xs sm:text-sm"
-            />
-          </div>
+                <div className="w-full flex gap-2">
+                  <div className="flex-1">
+                    <Label
+                      htmlFor="cameraInput"
+                      className="cursor-pointer flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border border-indigo-200 transition-colors shadow-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                      Take Photo
+                    </Label>
+                    <input
+                      id="cameraInput"
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </div>
 
-          {/* <div>
-            <Label htmlFor="idNo" className="text-xs sm:text-sm">
-              ID Number *
-            </Label>
-            <Input
-              id="idNo"
-              type="text"
-              name="idNo"
-              value={formData.idNo}
-              onChange={handleInputChange}
-              required
-              className="text-xs sm:text-sm"
-            />
-          </div> */}
+                  <div className="flex-1">
+                    <Label
+                      htmlFor="galleryInput"
+                      className="cursor-pointer flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border border-gray-200 transition-colors shadow-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      Gallery
+                    </Label>
+                    <input
+                      id="galleryInput"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+              </div>
 
-          {/* <div>
-            <Label htmlFor="camSno" className="text-xs sm:text-sm">
-              Camera Serial Number
-            </Label>
-            <Input
-              id="camSno"
-              type="text"
-              name="camSno"
-              value={formData.camSno}
-              onChange={handleInputChange}
-              className="text-xs sm:text-sm"
-            />
-          </div> */}
+              <div>
+                <Label htmlFor="name" className="text-xs sm:text-sm">Student Name *</Label>
+                <Input id="name" type="text" name="name" value={formData.name} onChange={handleInputChange} required className="text-xs sm:text-sm" />
+              </div>
 
-          <div>
-            <Label htmlFor="fatherName" className="text-xs sm:text-sm">
-              Father's Name
-            </Label>
-            <Input
-              id="fatherName"
-              type="text"
-              name="fatherName"
-              value={formData.fatherName}
-              onChange={handleInputChange}
-              className="text-xs sm:text-sm"
-            />
-          </div>
+              <div>
+                <Label htmlFor="fatherName" className="text-xs sm:text-sm">Father's Name</Label>
+                <Input id="fatherName" type="text" name="fatherName" value={formData.fatherName} onChange={handleInputChange} className="text-xs sm:text-sm" />
+              </div>
 
-          {/* <div>
-            <Label htmlFor="motherName" className="text-xs sm:text-sm">
-              Mother's Name
-            </Label>
-            <Input
-              id="motherName"
-              type="text"
-              name="motherName"
-              value={formData.motherName}
-              onChange={handleInputChange}
-              className="text-xs sm:text-sm"
-            />
-          </div> */}
+              <div>
+                <Label htmlFor="fatherPhone" className="text-xs sm:text-sm">Father's Phone</Label>
+                <Input id="fatherPhone" type="tel" name="fatherPhone" value={formData.fatherPhone} onChange={handleInputChange} className="text-xs sm:text-sm" />
+              </div>
 
-          <div>
-            <Label htmlFor="fatherPhone" className="text-xs sm:text-sm">
-              Father's Phone
-            </Label>
-            <Input
-              id="fatherPhone"
-              type="tel"
-              name="fatherPhone"
-              value={formData.fatherPhone}
-              onChange={handleInputChange}
-              className="text-xs sm:text-sm"
-            />
-          </div>
+              <div>
+                <Label htmlFor="address" className="text-xs sm:text-sm">Address</Label>
+                <Textarea id="address" name="address" value={formData.address} onChange={handleInputChange} rows={3} className="text-xs sm:text-sm" />
+              </div>
 
-          {/* <div>
-            <Label htmlFor="motherPhone" className="text-xs sm:text-sm">
-              Mother's Phone
-            </Label>
-            <Input
-              id="motherPhone"
-              type="tel"
-              name="motherPhone"
-              value={formData.motherPhone}
-              onChange={handleInputChange}
-              className="text-xs sm:text-sm"
-            />
-          </div> */}
-
-          <div>
-            <Label htmlFor="address" className="text-xs sm:text-sm">
-              Address
-            </Label>
-            <Textarea
-              id="address"
-              name="address"
-              value={formData.address}
-              onChange={handleInputChange}
-              rows={4}
-              className="text-xs sm:text-sm"
-            />
-          </div>
-
-          <div className="flex flex-col gap-2 sm:gap-3 pt-3 sm:pt-4">
-            <Button
-              type="submit"
-              className="flex-1 text-xs sm:text-sm"
-              disabled={loading}
-            >
-              {loading ? "Creating..." : "Create Student"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1 text-xs sm:text-sm"
-              onClick={onClose}
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
+              <div className="flex flex-col gap-2 sm:gap-3 pt-3 sm:pt-4">
+                <Button type="submit" className="flex-1 text-xs sm:text-sm" disabled={loading}>
+                  {loading ? "Creating..." : "Create Student"}
+                </Button>
+                <Button type="button" variant="outline" className="flex-1 text-xs sm:text-sm" onClick={onClose}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );
