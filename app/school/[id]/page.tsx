@@ -525,6 +525,34 @@ export default function SchoolPage() {
           {/* ── Classes grid ──────────────────────────────────────────────── */}
           {school.classes.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              
+              {/* NEW: All Students Aggregate Card */}
+              <Link
+                href={`/school/${schoolId}/students`}
+                className="bg-linear-to-br from-indigo-50 to-white rounded-xl border border-indigo-200 p-5 hover:shadow-md hover:border-indigo-300 transition-all group shadow-sm"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="w-10 h-10 bg-indigo-600 group-hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center transition-colors shadow-sm">
+                    <span className="text-lg">👥</span>
+                  </div>
+                  <svg
+                    className="w-4 h-4 text-indigo-300 group-hover:text-indigo-500 mt-1 transition-colors"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  All Students
+                </h3>
+                <p className="text-sm text-gray-500 mt-1 font-medium">
+                  {totalStudents} student{totalStudents !== 1 ? "s" : ""} total
+                </p>
+              </Link>
+
+              {/* Individual Class Cards */}
               {school.classes.map((cls) => (
                 <Link
                   key={cls.id}

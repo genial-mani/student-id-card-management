@@ -475,7 +475,7 @@ export default function ClassPage() {
                 >
                   <div
                     style={{
-                      transform: "scale(0.50)",
+                      transform: "scale(0.40)",
                       transformOrigin: "top center",
                       height: "507px",
                     }}
@@ -518,6 +518,7 @@ export default function ClassPage() {
         <StudentForm
           schoolId={classData.school.id}
           classId={classId}
+          schoolName={classData.school.name}
           onClose={() => setShowStudentForm(false)}
           onSuccess={() => fetchClass()}
         />

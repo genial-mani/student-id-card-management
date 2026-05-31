@@ -50,8 +50,8 @@ interface ClassData {
 
 const A4_W = 3508;
 const A4_H = 2480;
-const CARD_W = 637.8;
-const CARD_H = 1015.75;
+const CARD_W = 673;
+const CARD_H = 1087;
 
 // Changed to a 5x2 grid to fit 10 cards per sheet
 const COLS = 5;

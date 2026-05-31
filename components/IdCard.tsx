@@ -37,8 +37,8 @@ export default function IdCard({
 }: IdCardProps) {
   // OUTER CONTAINER: Represents the physical uncut paper (638x1013). Backgrounds bleed to the edges of this.
   const cardContainerStyle = {
-    width: "637.8px",
-    height: "1015.75px",
+    width: "673px",
+    height: "1087px",
     backgroundColor: theme.background,
     border: "0.1px solid black", // Ensures the container is recognized for bleed even if background is white
   };
@@ -89,7 +89,7 @@ export default function IdCard({
     bgColor: string = "transparent",
     boxPadding: string = "px-4 py-2",
   ) => (
-    <div className="mt-auto flex justify-end w-full pt-4">
+    <div className="mt-auto flex justify-end w-full pt-4 pr-2.5">
       <div className="flex flex-col items-center">
         {school.signatureUrl ? (
           <img
@@ -828,7 +828,7 @@ export default function IdCard({
   // layout 10
   if (layout === 10) {
     return (
-      <div className="relative box-border overflow-hidden shadow-2xl mx-auto w-[637.8px] h-[1015.75px] bg-[url('@/assets/idcard-layout-10.jpeg')] bg-cover bg-center bg-no-repeat">
+      <div className="relative box-border overflow-hidden shadow-2xl mx-auto w-168.25 h-271.75 bg-[url('@/assets/idcard-layout-10.jpeg')] bg-cover bg-center bg-no-repeat">
         {/* Dark overlay so text stays readable over the image */}
         <div className="absolute inset-0 z-0" />
 
@@ -950,7 +950,7 @@ export default function IdCard({
   if (layout === 11) {
     return (
     <div
-      className="relative box-border overflow-hidden shadow-2xl mx-auto w-[637.8px] h-[1015.75px] bg-[url('@/assets/id-card-layout-11.jpeg')] bg-cover bg-center bg-no-repeat"
+      className="relative box-border overflow-hidden shadow-2xl mx-auto w-168.25 h-271.75 bg-[url('@/assets/id-card-layout-11.jpeg')] bg-cover bg-center bg-no-repeat"
       style={cardContainerStyle}
     >
       <div className={safeZoneClass}>

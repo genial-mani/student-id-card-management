@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 interface StudentFormProps {
   schoolId: string;
   classId: string;
+  schoolName: string;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -17,6 +18,7 @@ interface StudentFormProps {
 export default function StudentForm({
   schoolId,
   classId,
+  schoolName,
   onClose,
   onSuccess,
 }: StudentFormProps) {
@@ -62,10 +64,20 @@ export default function StudentForm({
 
     try {
       let profilePictureUrl = "";
+      
+      // Generate a 12-character unique ID, or use the one manually typed in the form
+      const generatedCamId = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
+      
+      // Get the first word of the school name for the Cloudinary folder
+      const folderName = schoolName.trim().split(/\s+/)[0];
 
       // Upload profile picture if provided
       if (profilePictureFile) {
-        profilePictureUrl = await uploadImageToCloudinary(profilePictureFile);
+        profilePictureUrl = await uploadImageToCloudinary(
+          profilePictureFile, 
+          folderName, 
+          generatedCamId
+        );
       }
 
       // Create student
@@ -76,12 +88,13 @@ export default function StudentForm({
         },
         body: JSON.stringify({
           ...formData,
+          camSno: generatedCamId, // Ensures the generated ID is saved to the database
           schoolId,
           classId,
           profilePictureUrl,
         }),
       });
-
+// ... rest of the submit function remains the same
       if (response.ok) {
         onSuccess();
         onClose();
@@ -146,7 +159,7 @@ export default function StudentForm({
             />
           </div>
 
-          <div>
+          {/* <div>
             <Label htmlFor="idNo" className="text-xs sm:text-sm">
               ID Number *
             </Label>
@@ -159,9 +172,9 @@ export default function StudentForm({
               required
               className="text-xs sm:text-sm"
             />
-          </div>
+          </div> */}
 
-          <div>
+          {/* <div>
             <Label htmlFor="camSno" className="text-xs sm:text-sm">
               Camera Serial Number
             </Label>
@@ -173,7 +186,7 @@ export default function StudentForm({
               onChange={handleInputChange}
               className="text-xs sm:text-sm"
             />
-          </div>
+          </div> */}
 
           <div>
             <Label htmlFor="fatherName" className="text-xs sm:text-sm">
@@ -189,7 +202,7 @@ export default function StudentForm({
             />
           </div>
 
-          <div>
+          {/* <div>
             <Label htmlFor="motherName" className="text-xs sm:text-sm">
               Mother's Name
             </Label>
@@ -201,7 +214,7 @@ export default function StudentForm({
               onChange={handleInputChange}
               className="text-xs sm:text-sm"
             />
-          </div>
+          </div> */}
 
           <div>
             <Label htmlFor="fatherPhone" className="text-xs sm:text-sm">
@@ -217,7 +230,7 @@ export default function StudentForm({
             />
           </div>
 
-          <div>
+          {/* <div>
             <Label htmlFor="motherPhone" className="text-xs sm:text-sm">
               Mother's Phone
             </Label>
@@ -229,7 +242,7 @@ export default function StudentForm({
               onChange={handleInputChange}
               className="text-xs sm:text-sm"
             />
-          </div>
+          </div> */}
 
           <div>
             <Label htmlFor="address" className="text-xs sm:text-sm">
