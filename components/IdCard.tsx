@@ -161,14 +161,14 @@ export default function IdCard({
 
           <div className="flex flex-col items-center mt-6">
             <div
-              className="w-72 h-72 p-2 shadow-2xl border-8 rounded-full overflow-hidden"
-              style={{ borderColor: theme.secondary, backgroundColor: "#fff" }}
+              className="w-72 h-72"
+              
             >
               <img
                 src={student.profilePictureUrl}
                 alt={student.name}
                 crossOrigin="anonymous"
-                className="w-full h-full object-cover rounded-full"
+                className="w-full h-full "
               />
             </div>
             <h2
@@ -240,8 +240,7 @@ export default function IdCard({
               src={student.profilePictureUrl}
               alt={student.name}
               crossOrigin="anonymous"
-              className="w-80 h-80 object-cover border-8 shadow-2xl rounded-xl"
-              style={{ borderColor: theme.secondary }}
+              className="w-72 h-72"
             />
           </div>
 
@@ -301,14 +300,14 @@ export default function IdCard({
 
           <div className="flex justify-center mt-8">
             <div
-              className="w-72 h-72 rounded-full overflow-hidden border-4 shadow-lg p-2 bg-white"
+              className="w-72 h-72"
               style={{ borderColor: theme.secondary }}
             >
               <img
                 src={student.profilePictureUrl}
                 alt={student.name}
                 crossOrigin="anonymous"
-                className="w-full h-full object-cover rounded-full"
+                className="w-full h-full"
               />
             </div>
           </div>
@@ -378,7 +377,7 @@ export default function IdCard({
               src={student.profilePictureUrl}
               alt={student.name}
               crossOrigin="anonymous"
-              className="w-72 h-80 object-cover rounded-2xl shadow-xl border-4"
+              className="w-72 h-72"
               style={{ borderColor: theme.secondary }}
             />
           </div>
@@ -450,14 +449,13 @@ export default function IdCard({
 
           <div className="flex justify-center my-8">
             <div
-              className="w-80 h-80 rounded-full overflow-hidden shadow-2xl border-8"
-              style={{ borderColor: theme.background }}
+              className="w-72 h-72 border-8 box-content"
             >
               <img
                 src={student.profilePictureUrl}
                 alt={student.name}
                 crossOrigin="anonymous"
-                className="w-full h-full object-cover"
+                className="w-full h-full"
               />
             </div>
           </div>
@@ -546,7 +544,7 @@ export default function IdCard({
               src={student.profilePictureUrl}
               alt={student.name}
               crossOrigin="anonymous"
-              className="w-72 h-72 object-cover rounded-full shadow-lg border-8"
+              className="w-72 h-72 box-content border-8"
               style={{ borderColor: theme.secondary }}
             />
           </div>
@@ -614,7 +612,7 @@ export default function IdCard({
               src={student.profilePictureUrl}
               alt={student.name}
               crossOrigin="anonymous"
-              className="w-80 h-96 object-cover rounded-md shadow-2xl border-4 bg-white p-2"
+              className="w-72 h-72"
               style={{ borderColor: theme.primary }}
             />
           </div>
@@ -709,17 +707,14 @@ export default function IdCard({
 
           <div className="flex flex-col items-center mt-12 mb-10">
             <div
-              className="w-72 h-72 rounded-full p-2 border-4 shadow-xl"
-              style={{
-                borderColor: theme.primary,
-                backgroundColor: theme.background,
-              }}
+              className="w-72 h-72"
+              
             >
               <img
                 src={student.profilePictureUrl}
                 alt={student.name}
                 crossOrigin="anonymous"
-                className="w-full h-full object-cover rounded-full"
+                className="w-full h-full"
               />
             </div>
           </div>
@@ -797,7 +792,7 @@ export default function IdCard({
               src={student.profilePictureUrl}
               alt={student.name}
               crossOrigin="anonymous"
-              className="w-80 h-80 object-cover shadow-2xl"
+              className="w-72 h-72"
             />
           </div>
 
@@ -874,16 +869,15 @@ export default function IdCard({
           </div>
 
           {/* Student photo */}
-          <div className="flex justify-center mt-8">
+          <div className="flex justify-center mt-20">
             <div
-              className="w-72 h-72 rounded-md overflow-hidden shadow-2xl border-4"
-              style={{ borderColor: theme.primary }}
+              className="w-72 h-72"
             >
               <img
                 src={student.profilePictureUrl}
                 alt={student.name}
                 crossOrigin="anonymous"
-                className="w-full h-full object-cover"
+                className="w-full h-full"
               />
             </div>
           </div>
@@ -984,17 +978,16 @@ export default function IdCard({
         </div>
 
         {/* Spacer to push the student photo down into the white area of the background */}
-        <div className="mt-5 flex flex-col items-center">
+        <div className="mt-25 flex flex-col items-center">
           {/* Student photo */}
           <div
-            className="w-80 h-80 rounded-2xl overflow-hidden shadow-xl border-4"
-            style={{ borderColor: theme.primary }}
+            className="w-72 h-72"
           >
             <img
               src={student.profilePictureUrl}
               alt={student.name}
               crossOrigin="anonymous"
-              className="w-full h-full object-cover"
+              className="w-full h-full"
             />
           </div>
 
@@ -1082,8 +1075,7 @@ export default function IdCard({
             src={student.profilePictureUrl}
             alt={student.name}
             crossOrigin="anonymous"
-            className="w-64 h-72 object-cover rounded-xl shadow-md border-2"
-            style={{ borderColor: theme.secondary }}
+            className="w-72 h-72"
           />
         </div>
 

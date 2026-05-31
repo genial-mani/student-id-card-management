@@ -186,7 +186,7 @@ export default function StudentForm({
                 image={imgSrc}
                 crop={crop}
                 zoom={zoom}
-                aspect={4/5} // Perfect ID card ratio
+                aspect={12/15} // Perfect ID card ratio
                 onCropChange={setCrop}
                 onCropComplete={onCropComplete}
                 onZoomChange={setZoom}
