@@ -14,6 +14,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import IdCard, { CardTheme } from "@/components/IdCard";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -109,6 +110,7 @@ export default function PrintPage() {
   const [settled, setSettled] = useState(false);
   const [downloading, setDownloading] = useState<"all" | number | null>(null);
   const [dlProgress, setDlProgress] = useState("");
+  const { user } = useAuth();
 
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -143,6 +145,14 @@ export default function PrintPage() {
     const t = setTimeout(() => setSettled(true), 1500);
     return () => clearTimeout(t);
   }, [loading]);
+
+  useEffect(()=>{
+    if(user){
+      if(user.role !== "admin"){
+        setForbidden(true);
+      }
+    }
+  },[user])
 
   // ── Sheet slices ────────────────────────────────────────────────────────────
 

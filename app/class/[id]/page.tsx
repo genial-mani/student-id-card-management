@@ -267,7 +267,7 @@ export default function ClassPage() {
               {/* Action buttons */}
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {/* Design Studio — admin only */}
-                {isAdmin && (
+                {user?.role === "admin" && (
                   <button
                     onClick={() => setIsDesignMode(!isDesignMode)}
                     className={`py-2 sm:py-2.5 px-2.5 sm:px-4 rounded-lg lg:rounded-xl font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors ${
@@ -285,7 +285,7 @@ export default function ClassPage() {
                 )}
 
                 {/* Print / Export — everyone */}
-                {classData.students.length > 0 && (
+                {user?.role === "admin" && classData.students.length > 0 && (
                   <Link
                     href={`/class/${classId}/print`}
                     className="py-2 sm:py-2.5 px-2.5 sm:px-4 rounded-lg lg:rounded-xl font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
