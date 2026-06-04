@@ -6,11 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
+  const { refreshUser } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -36,6 +38,9 @@ function LoginForm() {
         setError(data.error || "Login failed");
         return;
       }
+
+      // Refresh AuthContext immediately
+      await refreshUser();
 
       // Redirect based on role
       if (data.user.role === "admin") {

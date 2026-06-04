@@ -526,30 +526,35 @@ export default function SchoolPage() {
           {school.classes.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               
-              {/* NEW: All Students Aggregate Card */}
+              {/* All Students Aggregate Card */}
               <Link
                 href={`/school/${schoolId}/students`}
-                className="bg-linear-to-br from-indigo-50 to-white rounded-xl border border-indigo-200 p-5 hover:shadow-md hover:border-indigo-300 transition-all group shadow-sm"
+                className="bg-linear-to-br from-indigo-50/60 to-white rounded-xl border border-indigo-150 p-4 hover:shadow-md hover:border-indigo-300 transition-all group shadow-xs flex items-center justify-between gap-4 cursor-pointer"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-10 h-10 bg-indigo-600 group-hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center transition-colors shadow-sm">
-                    <span className="text-lg">👥</span>
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-11 h-11 bg-indigo-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-sm shrink-0">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
                   </div>
-                  <svg
-                    className="w-4 h-4 text-indigo-300 group-hover:text-indigo-500 mt-1 transition-colors"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-bold text-gray-950 truncate group-hover:text-indigo-900 transition-colors">
+                      All Students
+                    </h3>
+                    <p className="text-xs text-gray-500 font-semibold mt-0.5">
+                      {totalStudents} student{totalStudents !== 1 ? "s" : ""} total
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">
-                  All Students
-                </h3>
-                <p className="text-sm text-gray-500 mt-1 font-medium">
-                  {totalStudents} student{totalStudents !== 1 ? "s" : ""} total
-                </p>
+                <svg
+                  className="w-4 h-4 text-indigo-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2.5"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
               </Link>
 
               {/* Individual Class Cards */}
@@ -557,33 +562,32 @@ export default function SchoolPage() {
                 <Link
                   key={cls.id}
                   href={`/class/${cls.id}`}
-                  className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md hover:border-gray-200 transition-all group"
+                  className="bg-white rounded-xl border border-gray-150 p-4 hover:shadow-md hover:border-indigo-200 transition-all group flex items-center justify-between gap-4 cursor-pointer"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 bg-indigo-100 group-hover:bg-indigo-200 rounded-lg flex items-center justify-center transition-colors">
-                      <span className="text-lg">📚</span>
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-11 h-11 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center transition-colors shrink-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
                     </div>
-                    <svg
-                      className="w-4 h-4 text-gray-300 group-hover:text-gray-500 mt-1 transition-colors"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-bold text-gray-900 truncate group-hover:text-indigo-900 transition-colors">
+                        Class {cls.name}
+                      </h3>
+                      <p className="text-xs text-gray-500 font-semibold mt-0.5">
+                        {cls.students?.length ?? 0} student{(cls.students?.length ?? 0) !== 1 ? "s" : ""}
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900">
-                    Class {cls.name}
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {cls.students?.length ?? 0} student
-                    {(cls.students?.length ?? 0) !== 1 ? "s" : ""}
-                  </p>
+                  <svg
+                    className="w-4 h-4 text-gray-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2.5"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
                 </Link>
               ))}
             </div>

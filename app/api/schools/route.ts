@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, caption, address, phone, logoUrl, signatureUrl } = body;
+    const { name, caption, address, phone, logoUrl, signatureUrl, idCardLayout, idCardTheme } = body;
 
     if (!name || !caption || !address || !phone) {
       return NextResponse.json(
@@ -59,6 +59,8 @@ export async function POST(request: NextRequest) {
         phone,
         logoUrl: logoUrl || '',
         signatureUrl: signatureUrl || '',
+        idCardLayout: idCardLayout !== undefined ? parseInt(String(idCardLayout), 10) : 1,
+        idCardTheme: idCardTheme || null,
       },
     });
 

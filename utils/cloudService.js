@@ -10,10 +10,11 @@ const uploadImageToCloudinary = async (imageFile, folderName, publicId) => {
     formData.append('folder', folderName); // Sets the URL path
     formData.append('asset_folder', folderName); // NEW: Forces the visual folder in the dashboard
   }
-  
+
   if (publicId) {
     formData.append('public_id', publicId);
-    formData.append('filename_override', publicId);  }
+    formData.append('filename_override', publicId);
+  }
 
   try {
     const response = await axios.post(url, formData);

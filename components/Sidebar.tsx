@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import balaji from "@/assets/tirupati-balaji-hd-wallpaper-for-android-2745524-removebg-preview.png";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, Add01Icon, Logout01Icon } from "@hugeicons/core-free-icons";
 
 interface School {
   id: string;
@@ -25,7 +27,7 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
 
   useEffect(() => {
     fetchSchools();
-  }, []);
+  }, [user]);
 
   const fetchSchools = async () => {
     try {
@@ -67,19 +69,7 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
             onClick={onClose} // CHANGED: 'close' to 'onClose'
             aria-label="Close menu"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <HugeiconsIcon icon={Cancel01Icon} size={18} color="currentColor" strokeWidth={2} className="shrink-0" />
           </Button>
         </div>
 
@@ -88,18 +78,18 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
           <div className="mt-3 flex items-center gap-2.5 bg-gray-700/40 rounded-xl px-3 py-2.5">
             <div
               className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                user.role === "admin"
+                user?.role === "admin"
                   ? "bg-amber-500 text-white"
                   : "bg-blue-500 text-white"
               }`}
             >
-              {user.username.charAt(0).toUpperCase()}
+              {user?.username?.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
               <p className="text-white text-xs font-semibold truncate">
-                {user.username}
+                {user?.username}
               </p>
-              <p className="text-gray-400 text-xs capitalize">{user.role}</p>
+              <p className="text-gray-400 text-xs capitalize">{user?.role}</p>
             </div>
           </div>
         )}
@@ -117,19 +107,7 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
               onClose();
             }}
           >
-            <svg
-              className="w-4 h-4 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
+            <HugeiconsIcon icon={Add01Icon} size={16} color="currentColor" strokeWidth={2.5} className="shrink-0" />
             Create School
           </Button>
         )}
@@ -183,19 +161,7 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-gray-700/60 transition-colors text-sm font-medium"
           onClick={logout}
         >
-          <svg
-            className="w-4 h-4 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-            />
-          </svg>
+          <HugeiconsIcon icon={Logout01Icon} size={16} color="currentColor" strokeWidth={2} className="shrink-0" />
           Sign Out
         </Button>
       </div>

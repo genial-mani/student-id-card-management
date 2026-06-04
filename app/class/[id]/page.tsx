@@ -124,6 +124,7 @@ export default function ClassPage() {
   const [selectedLayout, setSelectedLayout] = useState(DEFAULT_LAYOUT);
   const [theme, setTheme] = useState<CardTheme>(DEFAULT_THEME);
   const [designReady, setDesignReady] = useState(false);
+  const [savingLayout, setSavingLayout] = useState(false);
 
   // Hydrate from localStorage once on the client
   useEffect(() => {
@@ -172,6 +173,33 @@ export default function ClassPage() {
     setSelectedLayout(DEFAULT_LAYOUT);
     setTheme(DEFAULT_THEME);
     saveDesign(classId, DEFAULT_LAYOUT, DEFAULT_THEME);
+  };
+
+  const handleFixFinalLayout = async () => {
+    if (!classData?.school?.id) return;
+    setSavingLayout(true);
+    try {
+      const response = await fetch(`/api/schools/${classData.school.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idCardLayout: selectedLayout,
+          idCardTheme: JSON.stringify(theme),
+        }),
+      });
+
+      if (response.ok) {
+        alert("Layout fixed successfully for this school!");
+      } else {
+        const err = await response.json();
+        alert(err.error || "Failed to fix layout");
+      }
+    } catch (error) {
+      console.error("Error fixing layout:", error);
+      alert("Failed to fix layout");
+    } finally {
+      setSavingLayout(false);
+    }
   };
 
   // ── Shell wrapper ─────────────────────────────────────────────────────────
@@ -346,25 +374,34 @@ export default function ClassPage() {
                     design will be used for printing.
                   </p>
                 </div>
-                <button
-                  onClick={handleReset}
-                  className="self-start flex items-center gap-1.5 text-xs sm:text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-1.5 px-2.5 sm:px-3 rounded-lg transition-colors whitespace-nowrap"
-                >
-                  <svg
-                    className="w-3.5 h-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                 <div className="flex flex-wrap items-center gap-2 self-start">
+                  <button
+                    onClick={handleFixFinalLayout}
+                    disabled={savingLayout}
+                    className="flex items-center gap-1.5 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap disabled:opacity-50 cursor-pointer shadow-xs"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                  Reset to Default
-                </button>
+                    {savingLayout ? "Saving..." : "Fix Final Layout"}
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    className="flex items-center gap-1.5 text-xs sm:text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-1.5 px-2.5 sm:px-3 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                  >
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                    Reset to Default
+                  </button>
+                </div>
               </div>
 
               {/* ── Color pickers ────────────────────────────────────────── */}

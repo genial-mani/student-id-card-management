@@ -50,7 +50,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, caption, address, phone, logoUrl, signatureUrl } = body;
+    const { name, caption, address, phone, logoUrl, signatureUrl, idCardLayout, idCardTheme } = body;
 
     const school = await prisma.school.findUnique({ where: { id } });
     if (!school) {
@@ -66,6 +66,8 @@ export async function PUT(
         phone: phone || school.phone,
         logoUrl: logoUrl !== undefined ? logoUrl : school.logoUrl,
         signatureUrl: signatureUrl !== undefined ? signatureUrl : school.signatureUrl,
+        idCardLayout: idCardLayout !== undefined ? parseInt(String(idCardLayout), 10) : school.idCardLayout,
+        idCardTheme: idCardTheme !== undefined ? idCardTheme : school.idCardTheme,
       },
       include: { classes: true, students: true },
     });

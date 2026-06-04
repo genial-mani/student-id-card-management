@@ -18,6 +18,8 @@ model School {
   classes      Class[]
   students     Student[]
   users        User[]
+  idCardLayout Int?      @default(1)
+  idCardTheme  String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }

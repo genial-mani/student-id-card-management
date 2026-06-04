@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/utils/prismaClient';
+import { deleteImageFromCloudinary } from '@/utils/cloudinaryBackend';
 
 function getAuth(request: NextRequest) {
   return {
@@ -77,6 +78,13 @@ export async function PUT(
       profilePictureUrl,
     } = body;
 
+    const oldPhotoUrl = student.profilePictureUrl;
+    if (profilePictureUrl !== undefined && oldPhotoUrl && profilePictureUrl !== oldPhotoUrl) {
+      deleteImageFromCloudinary(oldPhotoUrl).catch((err) => {
+        console.error("Failed to delete old photo during update:", err);
+      });
+    }
+
     const updatedStudent = await prisma.student.update({
       where: { id },
       data: {
@@ -127,6 +135,12 @@ export async function DELETE(
 
     if (!student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
+    if (student.profilePictureUrl) {
+      deleteImageFromCloudinary(student.profilePictureUrl).catch((err) => {
+        console.error("Failed to delete student photo during deletion:", err);
+      });
     }
 
     await prisma.student.delete({ where: { id } });

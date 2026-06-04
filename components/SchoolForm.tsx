@@ -24,6 +24,7 @@ export default function SchoolForm({ onClose, onSuccess }: SchoolFormProps) {
     caption: "",
     address: "",
     phone: "",
+    idCardLayout: 1,
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
@@ -312,6 +313,26 @@ export default function SchoolForm({ onClose, onSuccess }: SchoolFormProps) {
                 rows={4}
                 className="text-xs sm:text-sm"
               />
+            </div>
+
+            <div>
+              <Label htmlFor="idCardLayout" className="text-xs sm:text-sm font-semibold text-gray-700">
+                Default ID Card Layout *
+              </Label>
+              <select
+                id="idCardLayout"
+                name="idCardLayout"
+                value={formData.idCardLayout}
+                onChange={(e) => setFormData((prev) => ({ ...prev, idCardLayout: parseInt(e.target.value, 10) }))}
+                required
+                className="w-full h-9 px-3 bg-gray-55 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all cursor-pointer mt-1"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
+                  <option key={num} value={num}>
+                    Layout {num}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {[
