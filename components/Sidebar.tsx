@@ -128,7 +128,7 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
           <Link
             key={school.id}
             href={`/school/${school.id}`}
-            onClick={close}
+            onClick={onClose}
             className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-700/60 active:bg-gray-600/80 transition-colors group"
           >
             {school.logoUrl ? (
