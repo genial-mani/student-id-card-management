@@ -36,9 +36,7 @@ interface Student {
   idNo: string;
   camSno: string;
   fatherName: string;
-  motherName: string;
   fatherPhone: string;
-  motherPhone: string;
   address: string;
   profilePictureUrl: string;
   customValues?: any;
@@ -111,7 +109,8 @@ function loadDesign(id: string): { layout: number; theme: CardTheme } {
 export default function PrintPage() {
   const params = useParams();
   const router = useRouter();
-  const classId = params.id as string;
+  const schoolId = params.id as string;
+  const classId = params.classId as string;
 
   const [classData, setClassData] = useState<ClassData | null>(null);
   const [layout, setLayout] = useState(1);
@@ -378,7 +377,7 @@ export default function PrintPage() {
             Add students to this class first.
           </p>
           <Link
-            href={`/class/${classId}`}
+            href={`/school/${schoolId}/class/${classId}`}
             className="bg-blue-600 text-white py-2 px-5 rounded-xl text-sm"
           >
             Go Back
@@ -431,7 +430,7 @@ export default function PrintPage() {
           <div className="px-4 sm:px-6 py-3">
             <div className="flex items-center gap-3 mb-2">
               <Link
-                href={`/class/${classId}`}
+                href={`/school/${schoolId}/class/${classId}`}
                 className="text-gray-400 hover:text-gray-700 transition-colors shrink-0"
               >
                 <svg

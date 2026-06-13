@@ -35,9 +35,7 @@ model Student {
   idNo              String
   camSno            String
   fatherName        String
-  motherName        String
   fatherPhone       String
-  motherPhone       String
   address           String
   class             Class    @relation(fields: [classId], references: [id])
   classId           String   @db.ObjectId

@@ -39,9 +39,7 @@ export default function StudentForm({
     idNo: "",
     camSno: "",
     fatherName: "",
-    motherName: "",
     fatherPhone: "",
-    motherPhone: "",
     address: "",
   });
 
@@ -67,11 +65,13 @@ export default function StudentForm({
         if (res.ok) {
           const data = await res.json();
           if (data.customFieldsConfig) {
-            setCustomFieldsConfig(
-              typeof data.customFieldsConfig === "string"
-                ? JSON.parse(data.customFieldsConfig)
-                : data.customFieldsConfig
-            );
+            const parsed = typeof data.customFieldsConfig === "string"
+              ? JSON.parse(data.customFieldsConfig)
+              : data.customFieldsConfig;
+            if (parsed && parsed.student) {
+              parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone");
+            }
+            setCustomFieldsConfig(parsed);
           }
         }
       } catch (err) {
@@ -307,9 +307,7 @@ export default function StudentForm({
                   { key: "idNo", label: "ID Number", type: "text", required: false, default: true, enabled: true },
                   { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
                   { key: "fatherName", label: "Father's Name", type: "text", required: false, default: true, enabled: true },
-                  { key: "motherName", label: "Mother's Name", type: "text", required: false, default: true, enabled: true },
                   { key: "fatherPhone", label: "Father's Phone", type: "text", required: false, default: true, enabled: true },
-                  { key: "motherPhone", label: "Mother's Phone", type: "text", required: false, default: true, enabled: true },
                   { key: "address", label: "Address", type: "text", required: false, default: true, enabled: true }
                 ];
                 return fields

@@ -1,5 +1,5 @@
 "use client";
-
+import { useMemo } from "react";
 import { Student } from "@/types/student";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { UserIcon, PencilEdit01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
@@ -25,16 +25,24 @@ export default function StudentListTable({
   onSortChange,
   customFieldsConfig,
 }: StudentListTableProps) {
-  const fields = customFieldsConfig?.student || [
-    { key: "name", label: "Student Name", type: "text", required: true, default: true, enabled: true },
-    { key: "idNo", label: "ID Number", type: "text", required: false, default: true, enabled: true },
-    { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
-    { key: "fatherName", label: "Father Name", type: "text", required: false, default: true, enabled: true },
-    { key: "motherName", label: "Mother Name", type: "text", required: false, default: true, enabled: true },
-    { key: "fatherPhone", label: "Father Phone", type: "text", required: false, default: true, enabled: true },
-    { key: "motherPhone", label: "Mother Phone", type: "text", required: false, default: true, enabled: true },
-    { key: "address", label: "Address", type: "text", required: false, default: true, enabled: true }
-  ];
+  const fields = useMemo(() => {
+    const defaults = [
+      { key: "name", label: "Student Name", type: "text", required: true, default: true, enabled: true },
+      { key: "idNo", label: "ID Number", type: "text", required: false, default: true, enabled: true },
+      { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
+      { key: "fatherName", label: "Father Name", type: "text", required: false, default: true, enabled: true },
+      { key: "fatherPhone", label: "Father Phone", type: "text", required: false, default: true, enabled: true },
+      { key: "address", label: "Address", type: "text", required: false, default: true, enabled: true }
+    ];
+    if (!customFieldsConfig) return defaults;
+    try {
+      const parsed = typeof customFieldsConfig === "string" ? JSON.parse(customFieldsConfig) : customFieldsConfig;
+      const studentFields = parsed?.student || defaults;
+      return studentFields.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone");
+    } catch {
+      return defaults;
+    }
+  }, [customFieldsConfig]);
 
   const isEnabled = (key: string) => {
     const field = fields.find((f: any) => f.key === key);
@@ -86,15 +94,9 @@ export default function StudentListTable({
                 Class
               </th>
               {isEnabled("fatherName") && renderSortableHeader("fatherName", "Father Name")}
-              {isEnabled("motherName") && renderSortableHeader("motherName", "Mother Name")}
               {isEnabled("fatherPhone") && (
                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider select-none">
                   Father Phone
-                </th>
-              )}
-              {isEnabled("motherPhone") && (
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider select-none">
-                  Mother Phone
                 </th>
               )}
               {isEnabled("address") && (
@@ -178,13 +180,6 @@ export default function StudentListTable({
                     </td>
                   )}
 
-                  {/* Mother Name */}
-                  {isEnabled("motherName") && (
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-700 font-medium">
-                      {student.motherName || "—"}
-                    </td>
-                  )}
-
                   {/* Father Phone */}
                   {isEnabled("fatherPhone") && (
                     <td className="px-4 py-3 whitespace-nowrap font-semibold">
@@ -194,22 +189,6 @@ export default function StudentListTable({
                           className="text-gray-800 hover:underline transition-colors"
                         >
                           {student.fatherPhone}
-                        </a>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                  )}
-
-                  {/* Mother Phone */}
-                  {isEnabled("motherPhone") && (
-                    <td className="px-4 py-3 whitespace-nowrap font-semibold">
-                      {student.motherPhone ? (
-                        <a
-                          href={`tel:${student.motherPhone}`}
-                          className="text-gray-800 hover:underline transition-colors"
-                        >
-                          {student.motherPhone}
                         </a>
                       ) : (
                         <span className="text-gray-400">—</span>

@@ -172,10 +172,6 @@ export default function AllStudentsPage() {
         return (a.fatherName || "").localeCompare(b.fatherName || "");
       } else if (sortBy === "fatherName-desc") {
         return (b.fatherName || "").localeCompare(a.fatherName || "");
-      } else if (sortBy === "motherName-asc") {
-        return (a.motherName || "").localeCompare(b.motherName || "");
-      } else if (sortBy === "motherName-desc") {
-        return (b.motherName || "").localeCompare(a.motherName || "");
       }
       return 0;
     });
@@ -225,34 +221,67 @@ export default function AllStudentsPage() {
       return;
     }
 
-    const headers = [
-      "Name",
-      "Cam SNo",
-      "Class",
-      "Father Name",
-      "Father Phone",
-      "Address"
-    ];
+    const config = school?.customFieldsConfig;
+    let studentFields = [];
+    if (config) {
+      try {
+        studentFields = typeof config === "string" ? JSON.parse(config).student : config.student;
+      } catch {
+        studentFields = [];
+      }
+    }
+    if (!studentFields || studentFields.length === 0) {
+      studentFields = [
+        { key: "name", label: "Student Name", type: "text", required: true, default: true, enabled: true },
+        { key: "idNo", label: "ID Number", type: "text", required: false, default: true, enabled: true },
+        { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
+        { key: "fatherName", label: "Father Name", type: "text", required: false, default: true, enabled: true },
+        { key: "fatherPhone", label: "Father Phone", type: "text", required: false, default: true, enabled: true },
+        { key: "address", label: "Address", type: "text", required: false, default: true, enabled: true }
+      ];
+    }
+
+    const activeStudentFields = studentFields.filter((f: any) => 
+      f.key !== "profilePictureUrl" && 
+      f.key !== "motherName" && 
+      f.key !== "motherPhone" && 
+      f.enabled
+    );
+
+    // Build headers dynamically
+    const headers = activeStudentFields.map((f: any) => f.label);
+    
+    // Find ideal position for Class column (e.g. after Student Name, which is index 1 or so)
+    const nameIdx = activeStudentFields.findIndex((f: any) => f.key === "name");
+    const classInsertIdx = nameIdx !== -1 ? nameIdx + 1 : 1;
+    headers.splice(classInsertIdx, 0, "Class");
 
     const rows = allStudents.map((student) => {
-      const name = student.name || "";
-      const camSno = student.camSno || "";
+      let customVals = student.customValues;
+      if (typeof customVals === "string") {
+        try {
+          customVals = JSON.parse(customVals);
+        } catch {
+          customVals = {};
+        }
+      } else {
+        customVals = customVals || {};
+      }
+
+      const rowData = activeStudentFields.map((f: any) => {
+        let val = "";
+        if (f.default) {
+          val = (student as any)[f.key] || "";
+        } else {
+          val = customVals[f.key] || "";
+        }
+        return `"${String(val).replace(/"/g, '""')}"`;
+      });
+
       const className = student.className || "";
-      const fatherName = student.fatherName || "";
-      const fatherPhone = student.fatherPhone || "";
-      const address = student.address || "";
+      rowData.splice(classInsertIdx, 0, `"${className.replace(/"/g, '""')}"`);
 
-      // Escape double quotes and wrap in quotes
-      const cleanVal = (val: string) => `"${val.replace(/"/g, '""')}"`;
-
-      return [
-        cleanVal(name),
-        cleanVal(camSno),
-        cleanVal(className),
-        cleanVal(fatherName),
-        cleanVal(fatherPhone),
-        cleanVal(address)
-      ];
+      return rowData;
     });
 
     const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");

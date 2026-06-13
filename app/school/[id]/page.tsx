@@ -305,7 +305,7 @@ const GOOGLE_FONTS = [
   "Marcellus",
   "Crete Round",
   "Philosopher",
-  
+
   // Trendy Sans-Serifs
   "Poppins",
   "Montserrat",
@@ -313,7 +313,7 @@ const GOOGLE_FONTS = [
   "Outfit",
   "Cabin",
   "Josefin Sans",
-  
+
   // Decorative Display
   "Berkshire Swash",
   "Righteous",
@@ -409,9 +409,8 @@ const DraggableField = ({
           e.stopPropagation();
           setSelectedFieldKey(fieldKey);
         }}
-        className={`absolute select-none flex items-center justify-center border cursor-move ${
-          selectedFieldKey === fieldKey ? "border-indigo-650 bg-indigo-50/20 ring-1 ring-indigo-650 shadow-sm" : "border-slate-300 bg-white/70"
-        }`}
+        className={`absolute select-none flex items-center justify-center border cursor-move ${selectedFieldKey === fieldKey ? "border-indigo-650 bg-indigo-50/20 ring-1 ring-indigo-650 shadow-sm" : "border-slate-300 bg-white/70"
+          }`}
         style={{
           width: f.width ? `${f.width}px` : (isImage ? "120px" : "auto"),
           height: f.height ? `${f.height}px` : (isImage ? "120px" : "auto"),
@@ -457,7 +456,7 @@ export default function SchoolPage() {
     width: number;
     height: number;
   } | null>(null);
-  
+
   const [customFieldsConfig, setCustomFieldsConfig] = useState<any>({
     school: [],
     class: [],
@@ -471,9 +470,21 @@ export default function SchoolPage() {
   const [selectedFieldKey, setSelectedFieldKey] = useState<string | null>(null);
 
   // Form Config Inputs State
-  const [newFieldName, setNewFieldName] = useState("");
-  const [newFieldCategory, setNewFieldCategory] = useState<"school" | "class" | "student">("student");
-  const [newFieldRequired, setNewFieldRequired] = useState(false);
+  const [editingField, setEditingField] = useState<{
+    category: "school" | "class" | "student";
+    key: string;
+    label: string;
+    required: boolean;
+  } | null>(null);
+
+  const [newFieldNameSchool, setNewFieldNameSchool] = useState("");
+  const [newFieldRequiredSchool, setNewFieldRequiredSchool] = useState(false);
+
+  const [newFieldNameClass, setNewFieldNameClass] = useState("");
+  const [newFieldRequiredClass, setNewFieldRequiredClass] = useState(false);
+
+  const [newFieldNameStudent, setNewFieldNameStudent] = useState("");
+  const [newFieldRequiredStudent, setNewFieldRequiredStudent] = useState(false);
 
   useEffect(() => {
     if (school) {
@@ -490,11 +501,13 @@ export default function SchoolPage() {
 
       if (school.customFieldsConfig) {
         try {
-          setCustomFieldsConfig(
-            typeof school.customFieldsConfig === "string"
-              ? JSON.parse(school.customFieldsConfig)
-              : school.customFieldsConfig
-          );
+          const parsed = typeof school.customFieldsConfig === "string"
+            ? JSON.parse(school.customFieldsConfig)
+            : school.customFieldsConfig;
+          if (parsed && parsed.student) {
+            parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone");
+          }
+          setCustomFieldsConfig(parsed);
         } catch (e) {
           console.error("Failed to parse school.customFieldsConfig", e);
         }
@@ -517,9 +530,7 @@ export default function SchoolPage() {
             { key: "idNo", label: "ID Number", type: "text", required: false, default: true, enabled: true },
             { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
             { key: "fatherName", label: "Father Name", type: "text", required: false, default: true, enabled: true },
-            { key: "motherName", label: "Mother Name", type: "text", required: false, default: true, enabled: true },
             { key: "fatherPhone", label: "Father Phone", type: "text", required: false, default: true, enabled: true },
-            { key: "motherPhone", label: "Mother Phone", type: "text", required: false, default: true, enabled: true },
             { key: "address", label: "Address", type: "text", required: false, default: true, enabled: true }
           ]
         });
@@ -582,11 +593,11 @@ export default function SchoolPage() {
     });
   };
 
-  const handleAddCustomField = () => {
-    if (!newFieldName.trim()) return;
-    const key = newFieldName.trim().toLowerCase().replace(/[^a-z0-9]/g, "_");
-    
-    const exists = customFieldsConfig[newFieldCategory].some((f: any) => f.key === key);
+  const handleAddCustomField = (category: "school" | "class" | "student", label: string, required: boolean) => {
+    if (!label.trim()) return;
+    const key = label.trim().toLowerCase().replace(/[^a-z0-9]/g, "_");
+
+    const exists = customFieldsConfig[category].some((f: any) => f.key === key);
     if (exists) {
       alert("A field with a similar name already exists.");
       return;
@@ -594,19 +605,46 @@ export default function SchoolPage() {
 
     const newField = {
       key,
-      label: newFieldName.trim(),
+      label: label.trim(),
       type: "text",
-      required: newFieldRequired,
+      required,
       default: false,
       enabled: true
     };
 
     setCustomFieldsConfig((prev: any) => ({
       ...prev,
-      [newFieldCategory]: [...prev[newFieldCategory], newField]
+      [category]: [...prev[category], newField]
     }));
-    setNewFieldName("");
-    setNewFieldRequired(false);
+
+    if (category === "school") {
+      setNewFieldNameSchool("");
+      setNewFieldRequiredSchool(false);
+    } else if (category === "class") {
+      setNewFieldNameClass("");
+      setNewFieldRequiredClass(false);
+    } else if (category === "student") {
+      setNewFieldNameStudent("");
+      setNewFieldRequiredStudent(false);
+    }
+  };
+
+  const handleSaveEditedField = () => {
+    if (!editingField || !editingField.label.trim()) return;
+    setCustomFieldsConfig((prev: any) => {
+      const updatedFields = prev[editingField.category].map((f: any) => {
+        if (f.key === editingField.key) {
+          return {
+            ...f,
+            label: editingField.label.trim(),
+            required: editingField.required
+          };
+        }
+        return f;
+      });
+      return { ...prev, [editingField.category]: updatedFields };
+    });
+    setEditingField(null);
   };
 
   const handleDeleteCustomField = (category: "school" | "class" | "student", key: string) => {
@@ -789,7 +827,7 @@ export default function SchoolPage() {
     setIdCardLayoutConfig((prev: any) => {
       const fields = { ...prev.fields };
       const current = fields[fieldKey] || {};
-      
+
       let defaultCoords = { x: 50, y: 50, visible: true };
       if (fieldKey === "school_logo") defaultCoords = { x: 40, y: 40, visible: true };
       else if (fieldKey === "school_name") defaultCoords = { x: 140, y: 40, visible: true };
@@ -798,7 +836,7 @@ export default function SchoolPage() {
       else if (fieldKey === "student_name") defaultCoords = { x: 226, y: 430, visible: true };
       else if (fieldKey === "class_name") defaultCoords = { x: 226, y: 500, visible: true };
       else if (fieldKey === "principal_signature") defaultCoords = { x: 450, y: 880, visible: true };
-      
+
       fields[fieldKey] = {
         ...defaultCoords,
         ...current,
@@ -1030,11 +1068,10 @@ export default function SchoolPage() {
                 {user && (
                   <Button
                     onClick={() => setIsDesignMode(!isDesignMode)}
-                    className={`font-medium flex items-center gap-1.5 sm:gap-2 transition-colors ${
-                      isDesignMode
-                        ? "bg-gray-900 hover:bg-gray-800 text-white"
-                        : "bg-indigo-50 hover:bg-indigo-100 text-indigo-750 border border-indigo-200"
-                    }`}
+                    className={`font-medium flex items-center gap-1.5 sm:gap-2 transition-colors ${isDesignMode
+                      ? "bg-gray-900 hover:bg-gray-800 text-white"
+                      : "bg-indigo-50 hover:bg-indigo-100 text-indigo-750 border border-indigo-200"
+                      }`}
                   >
                     <HugeiconsIcon icon={PaintBoardIcon} size={18} strokeWidth={2} />
                     <span className="hidden sm:inline">
@@ -1061,33 +1098,30 @@ export default function SchoolPage() {
           <div className="flex border-b border-gray-200 mb-6 gap-2 sm:gap-4 overflow-x-auto select-none">
             <button
               onClick={() => { setActiveTab("classes"); setIsDesignMode(false); }}
-              className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === "classes"
-                  ? "border-indigo-650 text-indigo-650 font-extrabold"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
+              className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === "classes"
+                ? "border-indigo-650 text-indigo-650 font-extrabold"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
             >
               📚 Directory & Classes
             </button>
             {isAdmin && (
               <button
                 onClick={() => { setActiveTab("forms"); setIsDesignMode(false); }}
-                className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                  activeTab === "forms"
-                    ? "border-indigo-650 text-indigo-650 font-extrabold"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
+                className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === "forms"
+                  ? "border-indigo-650 text-indigo-650 font-extrabold"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
               >
                 ⚙️ Form Setup
               </button>
             )}
             <button
               onClick={() => { setActiveTab("designer"); setIsDesignMode(true); }}
-              className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === "designer"
-                  ? "border-indigo-650 text-indigo-650 font-extrabold"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
+              className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === "designer"
+                ? "border-indigo-650 text-indigo-650 font-extrabold"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
             >
               🎨 ID Card Studio
             </button>
@@ -1144,7 +1178,7 @@ export default function SchoolPage() {
                   {school.classes.map((cls) => (
                     <Link
                       key={cls.id}
-                      href={`/class/${cls.id}`}
+                      href={`/school/${school.id}/class/${cls.id}`}
                       className="bg-white rounded-xl border border-gray-150 p-4 hover:shadow-md hover:border-indigo-200 transition-all group flex items-center justify-between gap-4 cursor-pointer"
                     >
                       <div className="flex items-center gap-3.5 min-w-0">
@@ -1209,6 +1243,103 @@ export default function SchoolPage() {
                     </label>
                   ))}
                 </div>
+
+                {/* Render Custom Fields list */}
+                {customFieldsConfig.school?.filter((f: any) => !f.default).length > 0 && (
+                  <div className="pt-2 border-t border-gray-150">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">School Custom Fields</p>
+                    <div className="flex flex-wrap gap-2">
+                      {customFieldsConfig.school.filter((f: any) => !f.default).map((f: any) => {
+                        const isEditing = editingField && editingField.category === "school" && editingField.key === f.key;
+                        if (isEditing) {
+                          return (
+                            <span key={f.key} className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg text-xs">
+                              <input
+                                type="text"
+                                value={editingField.label}
+                                onChange={(e) => setEditingField({ ...editingField, label: e.target.value })}
+                                className="w-24 px-1.5 py-0.5 bg-white border border-gray-300 rounded text-xs font-semibold text-gray-800"
+                              />
+                              <label className="flex items-center gap-1 text-[10px] font-bold text-gray-500 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={editingField.required}
+                                  onChange={(e) => setEditingField({ ...editingField, required: e.target.checked })}
+                                  className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                                />
+                                Req
+                              </label>
+                              <button
+                                type="button"
+                                onClick={handleSaveEditedField}
+                                className="text-emerald-650 hover:text-emerald-700 font-bold text-xs cursor-pointer bg-transparent border-0 p-0"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingField(null)}
+                                className="text-rose-500 hover:text-rose-600 font-bold text-xs cursor-pointer bg-transparent border-0 p-0"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          );
+                        }
+                        return (
+                          <span key={f.key} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:border-gray-300 transition-colors">
+                            <span>{f.label} {f.required && <span className="text-rose-500">*</span>}</span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingField({ category: "school", key: f.key, label: f.label, required: f.required })}
+                              className="text-gray-400 hover:text-indigo-600 font-semibold cursor-pointer ml-1 bg-transparent border-0 p-0"
+                            >
+                              ✎
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCustomField("school", f.key)}
+                              className="text-gray-400 hover:text-red-500 font-bold cursor-pointer bg-transparent border-0 p-0"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add Custom field input */}
+                <div className="pt-4 border-t border-gray-200 flex flex-col sm:flex-row items-end gap-3">
+                  <div className="flex-1 w-full space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500">Add School Custom Field</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Medium, Board Name"
+                      value={newFieldNameSchool}
+                      onChange={(e) => setNewFieldNameSchool(e.target.value)}
+                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+                    />
+                  </div>
+                  <div className="shrink-0 flex items-center gap-2 h-10 pb-2">
+                    <input
+                      type="checkbox"
+                      id="schoolFieldRequired"
+                      checked={newFieldRequiredSchool}
+                      onChange={(e) => setNewFieldRequiredSchool(e.target.checked)}
+                      className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                    />
+                    <label htmlFor="schoolFieldRequired" className="text-xs font-bold text-gray-500 cursor-pointer select-none">Required</label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAddCustomField("school", newFieldNameSchool, newFieldRequiredSchool)}
+                    className="h-10 px-5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md active:scale-98"
+                  >
+                    Add Field
+                  </button>
+                </div>
               </div>
 
               {/* Class Form Configuration */}
@@ -1227,6 +1358,103 @@ export default function SchoolPage() {
                       <span>{f.label} {f.required && <span className="text-rose-500">*</span>}</span>
                     </label>
                   ))}
+                </div>
+
+                {/* Render Custom Fields list */}
+                {customFieldsConfig.class?.filter((f: any) => !f.default).length > 0 && (
+                  <div className="pt-2 border-t border-gray-150">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Class Custom Fields</p>
+                    <div className="flex flex-wrap gap-2">
+                      {customFieldsConfig.class.filter((f: any) => !f.default).map((f: any) => {
+                        const isEditing = editingField && editingField.category === "class" && editingField.key === f.key;
+                        if (isEditing) {
+                          return (
+                            <span key={f.key} className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg text-xs">
+                              <input
+                                type="text"
+                                value={editingField.label}
+                                onChange={(e) => setEditingField({ ...editingField, label: e.target.value })}
+                                className="w-24 px-1.5 py-0.5 bg-white border border-gray-300 rounded text-xs font-semibold text-gray-880"
+                              />
+                              <label className="flex items-center gap-1 text-[10px] font-bold text-gray-500 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={editingField.required}
+                                  onChange={(e) => setEditingField({ ...editingField, required: e.target.checked })}
+                                  className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                                />
+                                Req
+                              </label>
+                              <button
+                                type="button"
+                                onClick={handleSaveEditedField}
+                                className="text-emerald-650 hover:text-emerald-700 font-bold text-xs cursor-pointer bg-transparent border-0 p-0"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingField(null)}
+                                className="text-rose-500 hover:text-rose-650 font-bold text-xs cursor-pointer bg-transparent border-0 p-0"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          );
+                        }
+                        return (
+                          <span key={f.key} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:border-gray-300 transition-colors">
+                            <span>{f.label} {f.required && <span className="text-rose-500">*</span>}</span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingField({ category: "class", key: f.key, label: f.label, required: f.required })}
+                              className="text-gray-400 hover:text-indigo-600 font-semibold cursor-pointer ml-1 bg-transparent border-0 p-0"
+                            >
+                              ✎
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCustomField("class", f.key)}
+                              className="text-gray-400 hover:text-red-500 font-bold cursor-pointer bg-transparent border-0 p-0"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add Custom field input */}
+                <div className="pt-4 border-t border-gray-200 flex flex-col sm:flex-row items-end gap-3">
+                  <div className="flex-1 w-full space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500">Add Class Custom Field</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Class Teacher, Incharge"
+                      value={newFieldNameClass}
+                      onChange={(e) => setNewFieldNameClass(e.target.value)}
+                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+                    />
+                  </div>
+                  <div className="shrink-0 flex items-center gap-2 h-10 pb-2">
+                    <input
+                      type="checkbox"
+                      id="classFieldRequired"
+                      checked={newFieldRequiredClass}
+                      onChange={(e) => setNewFieldRequiredClass(e.target.checked)}
+                      className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                    />
+                    <label htmlFor="classFieldRequired" className="text-xs font-bold text-gray-500 cursor-pointer select-none">Required</label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAddCustomField("class", newFieldNameClass, newFieldRequiredClass)}
+                    className="h-10 px-5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md active:scale-98"
+                  >
+                    Add Field
+                  </button>
                 </div>
               </div>
 
@@ -1250,21 +1478,66 @@ export default function SchoolPage() {
 
                 {/* Render Custom Fields list */}
                 {customFieldsConfig.student?.filter((f: any) => !f.default).length > 0 && (
-                  <div className="pt-2">
+                  <div className="pt-2 border-t border-gray-150">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Student Custom Fields</p>
                     <div className="flex flex-wrap gap-2">
-                      {customFieldsConfig.student.filter((f: any) => !f.default).map((f: any) => (
-                        <span key={f.key} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700">
-                          <span>{f.label} {f.required && <span className="text-rose-500">*</span>}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCustomField("student", f.key)}
-                            className="text-gray-400 hover:text-red-500 font-extrabold ml-1 cursor-pointer transition-colors bg-transparent border-0 p-0"
-                          >
-                            &times;
-                          </button>
-                        </span>
-                      ))}
+                      {customFieldsConfig.student.filter((f: any) => !f.default).map((f: any) => {
+                        const isEditing = editingField && editingField.category === "student" && editingField.key === f.key;
+                        if (isEditing) {
+                          return (
+                            <span key={f.key} className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg text-xs">
+                              <input
+                                type="text"
+                                value={editingField.label}
+                                onChange={(e) => setEditingField({ ...editingField, label: e.target.value })}
+                                className="w-24 px-1.5 py-0.5 bg-white border border-gray-300 rounded text-xs font-semibold text-gray-880"
+                              />
+                              <label className="flex items-center gap-1 text-[10px] font-bold text-gray-500 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={editingField.required}
+                                  onChange={(e) => setEditingField({ ...editingField, required: e.target.checked })}
+                                  className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                                />
+                                Req
+                              </label>
+                              <button
+                                type="button"
+                                onClick={handleSaveEditedField}
+                                className="text-emerald-650 hover:text-emerald-700 font-bold text-xs cursor-pointer bg-transparent border-0 p-0"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingField(null)}
+                                className="text-rose-500 hover:text-rose-650 font-bold text-xs cursor-pointer bg-transparent border-0 p-0"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          );
+                        }
+                        return (
+                          <span key={f.key} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:border-gray-300 transition-colors">
+                            <span>{f.label} {f.required && <span className="text-rose-500">*</span>}</span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingField({ category: "student", key: f.key, label: f.label, required: f.required })}
+                              className="text-gray-400 hover:text-indigo-600 font-semibold cursor-pointer ml-1 bg-transparent border-0 p-0"
+                            >
+                              ✎
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCustomField("student", f.key)}
+                              className="text-gray-400 hover:text-red-500 font-bold cursor-pointer bg-transparent border-0 p-0"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1276,27 +1549,24 @@ export default function SchoolPage() {
                     <input
                       type="text"
                       placeholder="e.g. Blood Group, Bus Route, Roll Number"
-                      value={newFieldName}
-                      onChange={(e) => {
-                        setNewFieldName(e.target.value);
-                        setNewFieldCategory("student");
-                      }}
+                      value={newFieldNameStudent}
+                      onChange={(e) => setNewFieldNameStudent(e.target.value)}
                       className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
                     />
                   </div>
                   <div className="shrink-0 flex items-center gap-2 h-10 pb-2">
                     <input
                       type="checkbox"
-                      id="fieldRequired"
-                      checked={newFieldRequired}
-                      onChange={(e) => setNewFieldRequired(e.target.checked)}
+                      id="studentFieldRequired"
+                      checked={newFieldRequiredStudent}
+                      onChange={(e) => setNewFieldRequiredStudent(e.target.checked)}
                       className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-4 h-4"
                     />
-                    <label htmlFor="fieldRequired" className="text-xs font-bold text-gray-500 cursor-pointer select-none">Required</label>
+                    <label htmlFor="studentFieldRequired" className="text-xs font-bold text-gray-500 cursor-pointer select-none">Required</label>
                   </div>
                   <button
                     type="button"
-                    onClick={handleAddCustomField}
+                    onClick={() => handleAddCustomField("student", newFieldNameStudent, newFieldRequiredStudent)}
                     className="h-10 px-5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md active:scale-98"
                   >
                     Add Field
@@ -1514,22 +1784,22 @@ export default function SchoolPage() {
                         <span className="text-3xl mb-2">🖼️</span>
                         <p className="text-xs font-bold text-gray-600">No Background Image</p>
                         <p className="text-[10px] text-gray-400 mb-4 font-medium">Upload a custom ID Card layout image to start positioning.</p>
-                        
+
                         <label className="px-4 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md select-none">
                           {bgUploading ? "Uploading..." : "Upload Background"}
                           <input type="file" accept="image/*" onChange={handleBgUpload} disabled={bgUploading} className="hidden" />
                         </label>
                       </div>
                     ) : (
-                      <div 
+                      <div
                         className="relative overflow-hidden rounded-xl border border-gray-300 shadow-2xl bg-white select-none shrink-0"
                         style={{ width: "336.5px", height: "543.5px" }}
                         onClick={() => setSelectedFieldKey(null)}
                       >
                         {/* Background loaded */}
-                        <div 
+                        <div
                           className="absolute inset-0 bg-cover bg-center pointer-events-none"
-                          style={{ 
+                          style={{
                             backgroundImage: `url(${idCardLayoutConfig.backgroundUrl})`,
                             backgroundColor: theme.background,
                           }}
@@ -1704,7 +1974,7 @@ export default function SchoolPage() {
                           const actualKey = item.key.replace(/^(school_custom_|student_custom_|class_custom_)/, "");
                           const defaultMapping = customFieldsConfig.student.concat(customFieldsConfig.school).concat(customFieldsConfig.class);
                           const isEnabled = defaultMapping.find((f: any) => f.key === actualKey)?.enabled !== false;
-                          
+
                           if (!isEnabled) return null;
                           const isVisible = !!idCardLayoutConfig.fields?.[item.key]?.visible;
 
@@ -1737,7 +2007,7 @@ export default function SchoolPage() {
                               <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-widest">
                                 Style: {displayName}
                               </h4>
-                              <button 
+                              <button
                                 onClick={() => setSelectedFieldKey(null)}
                                 className="text-gray-405 hover:text-gray-600 font-bold text-xs bg-transparent border-0 cursor-pointer"
                               >
@@ -1877,17 +2147,15 @@ export default function SchoolPage() {
                           handleLayoutChange(num);
                         }
                       }}
-                      className={`group flex flex-col items-center gap-1.5 sm:gap-3 p-1 sm:p-2 rounded-2xl sm:rounded-3xl transition-all duration-200 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-400 ${
-                        selectedLayout === num
-                          ? "scale-[1.01]"
-                          : "hover:opacity-95"
-                      }`}
+                      className={`group flex flex-col items-center gap-1.5 sm:gap-3 p-1 sm:p-2 rounded-2xl sm:rounded-3xl transition-all duration-200 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-400 ${selectedLayout === num
+                        ? "scale-[1.01]"
+                        : "hover:opacity-95"
+                        }`}
                     >
                       {/* Scaled-down card preview */}
                       <div
-                        className={`relative overflow-hidden rounded-lg sm:rounded-[1rem] w-32 sm:w-52 md:w-56 h-48 sm:h-80 bg-white ${
-                          selectedLayout === num ? "ring-2 ring-indigo-300" : ""
-                        }`}
+                        className={`relative overflow-hidden rounded-lg sm:rounded-[1rem] w-32 sm:w-52 md:w-56 h-48 sm:h-80 bg-white ${selectedLayout === num ? "ring-2 ring-indigo-300" : ""
+                          }`}
                       >
                         <div className="absolute inset-0 flex items-center justify-center">
                           {num === 0 && !idCardLayoutConfig.backgroundUrl ? (
@@ -1924,11 +2192,10 @@ export default function SchoolPage() {
                         </div>
                       </div>
                       <span
-                        className={`text-xs font-bold transition-colors line-clamp-1 ${
-                          selectedLayout === num
-                            ? "text-indigo-600"
-                            : "text-gray-500"
-                        }`}
+                        className={`text-xs font-bold transition-colors line-clamp-1 ${selectedLayout === num
+                          ? "text-indigo-600"
+                          : "text-gray-500"
+                          }`}
                       >
                         {num === 0 ? "Custom Designer" : `Layout ${num}`}
                       </span>

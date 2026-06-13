@@ -258,13 +258,21 @@ export default function IdCard({
             textContent = student.fatherName || "";
             labelPrefix = "F's Name: ";
           } else if (fieldKey === "student_motherName") {
-            textContent = student.motherName || "";
+            let customVals = student.customValues;
+            if (typeof customVals === "string") {
+              try { customVals = JSON.parse(customVals); } catch { customVals = null; }
+            }
+            textContent = (student as any).motherName || customVals?.motherName || customVals?.mother_name || "";
             labelPrefix = "M's Name: ";
           } else if (fieldKey === "student_fatherPhone") {
             textContent = student.fatherPhone || "";
             labelPrefix = "Cell: ";
           } else if (fieldKey === "student_motherPhone") {
-            textContent = student.motherPhone || "";
+            let customVals = student.customValues;
+            if (typeof customVals === "string") {
+              try { customVals = JSON.parse(customVals); } catch { customVals = null; }
+            }
+            textContent = (student as any).motherPhone || customVals?.motherPhone || customVals?.mother_phone || "";
             labelPrefix = "Cell: ";
           } else if (fieldKey === "student_address") {
             textContent = student.address || "";
