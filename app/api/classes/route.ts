@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   try {
     const { role, schoolId: userSchoolId } = getAuth(request);
     const body = await request.json();
-    const { name, schoolId } = body;
+    const { name, schoolId, customValues } = body;
 
     if (!name || !schoolId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const newClass = await prisma.class.create({
-      data: { name, schoolId },
+      data: { name, schoolId, customValues: customValues || null },
       include: { school: true, students: true },
     });
 

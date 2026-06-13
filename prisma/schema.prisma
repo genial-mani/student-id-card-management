@@ -18,10 +18,13 @@ model School {
   classes      Class[]
   students     Student[]
   users        User[]
-  idCardLayout Int?      @default(1)
-  idCardTheme  String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  idCardLayout       Int?      @default(1)
+  idCardTheme        String?
+  customFieldsConfig Json?
+  idCardLayoutConfig Json?
+  customValues       Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 model Student {
@@ -39,6 +42,7 @@ model Student {
   class             Class    @relation(fields: [classId], references: [id])
   classId           String   @db.ObjectId
   profilePictureUrl String
+  customValues      Json?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -49,6 +53,7 @@ model Class {
   schoolId  String    @db.ObjectId
   school    School    @relation(fields: [schoolId], references: [id])
   students  Student[]
+  customValues Json?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }

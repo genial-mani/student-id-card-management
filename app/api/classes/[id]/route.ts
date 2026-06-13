@@ -50,7 +50,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, schoolId } = body;
+    const { name, schoolId, customValues } = body;
 
     const classData = await prisma.class.findUnique({ where: { id } });
     if (!classData) {
@@ -69,6 +69,7 @@ export async function PUT(
       data: {
         name: name || classData.name,
         schoolId: schoolId || classData.schoolId,
+        customValues: customValues !== undefined ? customValues : classData.customValues,
       },
       include: { school: true, students: true },
     });

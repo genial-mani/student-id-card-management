@@ -11,4 +11,6 @@ export interface Student {
   profilePictureUrl?: string;
   className?: string; // Attached dynamically on client
   classId?: string; // Attached dynamically on client
+  customValues?: any;
 }
+

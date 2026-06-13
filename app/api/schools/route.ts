@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, caption, address, phone, logoUrl, signatureUrl, idCardLayout, idCardTheme } = body;
+    const { name, caption, address, phone, logoUrl, signatureUrl, idCardLayout, idCardTheme, customFieldsConfig, idCardLayoutConfig, customValues } = body;
 
     if (!name || !caption || !address || !phone) {
       return NextResponse.json(
@@ -61,6 +61,9 @@ export async function POST(request: NextRequest) {
         signatureUrl: signatureUrl || '',
         idCardLayout: idCardLayout !== undefined ? parseInt(String(idCardLayout), 10) : 1,
         idCardTheme: idCardTheme || null,
+        customFieldsConfig: customFieldsConfig || null,
+        idCardLayoutConfig: idCardLayoutConfig || null,
+        customValues: customValues || null,
       },
     });
 

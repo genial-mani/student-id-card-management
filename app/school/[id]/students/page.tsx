@@ -35,6 +35,9 @@ interface School {
   idCardLayout?: number | null;
   idCardTheme?: string | null;
   classes: Class[];
+  customFieldsConfig?: any;
+  customValues?: any;
+  idCardLayoutConfig?: any;
 }
 
 const DEFAULT_THEME: CardTheme = {
@@ -504,6 +507,7 @@ export default function AllStudentsPage() {
                   onPreview={(student) => setSelectedPreviewStudent(student)}
                   sortBy={sortBy}
                   onSortChange={setSortBy}
+                  customFieldsConfig={school?.customFieldsConfig}
                 />
               </div>
             ) : (
@@ -649,9 +653,11 @@ export default function AllStudentsPage() {
                 classId: editingStudent.classId || "",
                 profilePictureUrl: editingStudent.profilePictureUrl || "",
                 camSno: editingStudent.camSno || "",
+                customValues: editingStudent.customValues,
               }}
               classes={school?.classes || []}
               schoolName={school.name}
+              schoolId={schoolId}
               onClose={() => setEditingStudent(null)}
               onSuccess={fetchSchool}
             />
@@ -660,7 +666,7 @@ export default function AllStudentsPage() {
           {/* ID Card Preview Modal */}
           {selectedPreviewStudent && (
             (() => {
-              const idCardLayout = school.idCardLayout || 1;
+              const idCardLayout = (school.idCardLayout !== null && school.idCardLayout !== undefined) ? school.idCardLayout : 1;
               let idCardTheme = DEFAULT_THEME;
               if (school.idCardTheme) {
                 try {
@@ -720,8 +726,8 @@ export default function AllStudentsPage() {
                         <IdCard
                           layout={idCardLayout}
                           theme={idCardTheme}
-                          school={schoolForCard}
-                          student={studentForCard}
+                          school={school}
+                          student={selectedPreviewStudent}
                           classNameStr={selectedPreviewStudent.className || ""}
                         />
                       </div>

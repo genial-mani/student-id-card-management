@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import uploadImageToCloudinary from "@/utils/cloudService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,9 @@ export default function StudentForm({
     address: "",
   });
 
+  const [customFieldsConfig, setCustomFieldsConfig] = useState<any>(null);
+  const [customValues, setCustomValues] = useState<Record<string, string>>({});
+
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -56,6 +59,27 @@ export default function StudentForm({
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
   // ────────────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    async function fetchSchoolConfig() {
+      try {
+        const res = await fetch(`/api/schools/${schoolId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.customFieldsConfig) {
+            setCustomFieldsConfig(
+              typeof data.customFieldsConfig === "string"
+                ? JSON.parse(data.customFieldsConfig)
+                : data.customFieldsConfig
+            );
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch school custom fields config", err);
+      }
+    }
+    fetchSchoolConfig();
+  }, [schoolId]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -153,6 +177,7 @@ export default function StudentForm({
           schoolId,
           classId,
           profilePictureUrl,
+          customValues,
         }),
       });
 
@@ -276,25 +301,70 @@ export default function StudentForm({
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="name" className="text-xs sm:text-sm">Student Name *</Label>
-                <Input id="name" type="text" name="name" value={formData.name} onChange={handleInputChange} required className="text-xs sm:text-sm" />
-              </div>
-
-              <div>
-                <Label htmlFor="fatherName" className="text-xs sm:text-sm">Father's Name</Label>
-                <Input id="fatherName" type="text" name="fatherName" value={formData.fatherName} onChange={handleInputChange} className="text-xs sm:text-sm" />
-              </div>
-
-              <div>
-                <Label htmlFor="fatherPhone" className="text-xs sm:text-sm">Father's Phone</Label>
-                <Input id="fatherPhone" type="tel" name="fatherPhone" value={formData.fatherPhone} onChange={handleInputChange} className="text-xs sm:text-sm" />
-              </div>
-
-              <div>
-                <Label htmlFor="address" className="text-xs sm:text-sm">Address</Label>
-                <Textarea id="address" name="address" value={formData.address} onChange={handleInputChange} rows={3} className="text-xs sm:text-sm" />
-              </div>
+              {(() => {
+                const fields = customFieldsConfig?.student || [
+                  { key: "name", label: "Student Name", type: "text", required: true, default: true, enabled: true },
+                  { key: "idNo", label: "ID Number", type: "text", required: false, default: true, enabled: true },
+                  { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
+                  { key: "fatherName", label: "Father's Name", type: "text", required: false, default: true, enabled: true },
+                  { key: "motherName", label: "Mother's Name", type: "text", required: false, default: true, enabled: true },
+                  { key: "fatherPhone", label: "Father's Phone", type: "text", required: false, default: true, enabled: true },
+                  { key: "motherPhone", label: "Mother's Phone", type: "text", required: false, default: true, enabled: true },
+                  { key: "address", label: "Address", type: "text", required: false, default: true, enabled: true }
+                ];
+                return fields
+                  .filter((f: any) => f.key !== "profilePictureUrl" && f.enabled)
+                  .map((f: any) => {
+                    if (f.default) {
+                      return (
+                        <div key={f.key}>
+                          <Label htmlFor={f.key} className="text-xs sm:text-sm">
+                            {f.label} {f.required && <span className="text-rose-500">*</span>}
+                          </Label>
+                          {f.key === "address" ? (
+                            <Textarea
+                              id={f.key}
+                              name={f.key}
+                              value={formData[f.key as keyof typeof formData] || ""}
+                              onChange={handleInputChange}
+                              required={f.required}
+                              rows={3}
+                              className="text-xs sm:text-sm mt-1"
+                            />
+                          ) : (
+                            <Input
+                              id={f.key}
+                              type={f.key.toLowerCase().includes("phone") ? "tel" : "text"}
+                              name={f.key}
+                              value={formData[f.key as keyof typeof formData] || ""}
+                              onChange={handleInputChange}
+                              required={f.required}
+                              className="text-xs sm:text-sm mt-1"
+                            />
+                          )}
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div key={f.key}>
+                          <Label htmlFor={`custom-${f.key}`} className="text-xs sm:text-sm">
+                            {f.label} {f.required && <span className="text-rose-500">*</span>}
+                          </Label>
+                          <Input
+                            id={`custom-${f.key}`}
+                            type="text"
+                            value={customValues[f.key] || ""}
+                            onChange={(e) =>
+                              setCustomValues((prev) => ({ ...prev, [f.key]: e.target.value }))
+                            }
+                            required={f.required}
+                            className="text-xs sm:text-sm mt-1"
+                          />
+                        </div>
+                      );
+                    }
+                  });
+              })()}
 
               <div className="flex flex-col gap-2 sm:gap-3 pt-3 sm:pt-4">
                 <Button type="submit" className="flex-1 text-xs sm:text-sm" disabled={loading}>

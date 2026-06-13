@@ -24,15 +24,24 @@ interface IdCardProps {
     logoUrl: string;
     signatureUrl?: string;
     phone?: string;
+    customValues?: any;
+    customFieldsConfig?: any;
+    idCardLayoutConfig?: any;
   };
   student: {
     name: string;
-    fatherName: string;
-    fatherPhone: string;
-    address: string;
-    profilePictureUrl: string;
+    fatherName?: string;
+    fatherPhone?: string;
+    address?: string;
+    profilePictureUrl?: string;
+    idNo?: string;
+    camSno?: string;
+    motherName?: string;
+    motherPhone?: string;
+    customValues?: any;
   };
   classNameStr: string;
+  classCustomValues?: any;
 }
 
 export default function IdCard({
@@ -41,6 +50,7 @@ export default function IdCard({
   school,
   student,
   classNameStr,
+  classCustomValues,
 }: IdCardProps) {
   // OUTER CONTAINER: Represents the physical uncut paper (638x1013). Backgrounds bleed to the edges of this.
   const cardContainerStyle = {
@@ -131,6 +141,174 @@ export default function IdCard({
       </div>
     </div>
   );
+
+  // --- LAYOUT 0: Custom Dynamic Layout ---
+  if (layout === 0) {
+    let layoutConfig = school.idCardLayoutConfig;
+    if (typeof layoutConfig === "string") {
+      try {
+        layoutConfig = JSON.parse(layoutConfig);
+      } catch {
+        layoutConfig = null;
+      }
+    }
+
+    if (!layoutConfig || !layoutConfig.fields) {
+      return (
+        <div style={cardContainerStyle} className="relative flex items-center justify-center border border-dashed border-gray-300">
+          <p className="text-xl font-bold text-gray-400">Custom Layout (Config Empty)</p>
+        </div>
+      );
+    }
+
+    const fields = layoutConfig.fields;
+    const backgroundUrl = layoutConfig.backgroundUrl;
+
+    const customCardStyle = {
+      width: "673px",
+      height: "1087px",
+      backgroundColor: theme.background,
+      backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : "none",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      position: "relative" as const,
+      overflow: "hidden" as const,
+      border: "0.1px solid black",
+    };
+
+    return (
+      <div className="relative box-border overflow-hidden mx-auto" style={customCardStyle}>
+        {Object.entries(fields).map(([fieldKey, f]: [string, any]) => {
+          if (!f || !f.visible) return null;
+
+          const fieldStyle = {
+            position: "absolute" as const,
+            left: `${f.x}px`,
+            top: `${f.y}px`,
+            width: f.width ? `${f.width}px` : undefined,
+            height: f.height ? `${f.height}px` : undefined,
+            fontFamily: f.fontFamily ? `'${f.fontFamily}', sans-serif` : undefined,
+            fontSize: f.fontSize ? `${f.fontSize}px` : undefined,
+            fontWeight: f.fontWeight || undefined,
+            color: f.color || undefined,
+          };
+
+          if (fieldKey === "school_logo") {
+            return school.logoUrl ? (
+              <img
+                key={fieldKey}
+                src={school.logoUrl}
+                alt="Logo"
+                crossOrigin="anonymous"
+                style={fieldStyle}
+                className="object-contain"
+              />
+            ) : null;
+          }
+
+          if (fieldKey === "student_photo") {
+            return student.profilePictureUrl ? (
+              <img
+                key={fieldKey}
+                src={student.profilePictureUrl}
+                alt="Student"
+                crossOrigin="anonymous"
+                style={fieldStyle}
+                className="object-cover"
+              />
+            ) : null;
+          }
+
+          if (fieldKey === "principal_signature") {
+            return school.signatureUrl ? (
+              <img
+                key={fieldKey}
+                src={school.signatureUrl}
+                alt="Sign"
+                crossOrigin="anonymous"
+                style={fieldStyle}
+                className="object-contain"
+              />
+            ) : null;
+          }
+
+          let textContent = "";
+          let labelPrefix = "";
+
+          if (fieldKey === "school_name") {
+            textContent = school.name;
+          } else if (fieldKey === "school_caption") {
+            textContent = school.caption || "";
+          } else if (fieldKey === "school_address") {
+            textContent = school.address || "";
+          } else if (fieldKey === "school_phone") {
+            textContent = school.phone || "";
+          } else if (fieldKey === "student_name") {
+            textContent = student.name;
+          } else if (fieldKey === "class_name") {
+            textContent = classNameStr;
+            labelPrefix = "Class: ";
+          } else if (fieldKey === "student_idNo") {
+            textContent = student.idNo || "";
+            labelPrefix = "ID No: ";
+          } else if (fieldKey === "student_camSno") {
+            textContent = student.camSno || "";
+            labelPrefix = "CAM S.No: ";
+          } else if (fieldKey === "student_fatherName") {
+            textContent = student.fatherName || "";
+            labelPrefix = "F's Name: ";
+          } else if (fieldKey === "student_motherName") {
+            textContent = student.motherName || "";
+            labelPrefix = "M's Name: ";
+          } else if (fieldKey === "student_fatherPhone") {
+            textContent = student.fatherPhone || "";
+            labelPrefix = "Cell: ";
+          } else if (fieldKey === "student_motherPhone") {
+            textContent = student.motherPhone || "";
+            labelPrefix = "Cell: ";
+          } else if (fieldKey === "student_address") {
+            textContent = student.address || "";
+            labelPrefix = "Address: ";
+          } else if (fieldKey.startsWith("student_custom_")) {
+            const k = fieldKey.replace("student_custom_", "");
+            let customVals = student.customValues;
+            if (typeof customVals === "string") {
+              try { customVals = JSON.parse(customVals); } catch { customVals = null; }
+            }
+            textContent = customVals?.[k] || "";
+            labelPrefix = `${k.charAt(0).toUpperCase() + k.slice(1)}: `;
+          } else if (fieldKey.startsWith("school_custom_")) {
+            const k = fieldKey.replace("school_custom_", "");
+            let customVals = school.customValues;
+            if (typeof customVals === "string") {
+              try { customVals = JSON.parse(customVals); } catch { customVals = null; }
+            }
+            textContent = customVals?.[k] || "";
+            labelPrefix = `${k.charAt(0).toUpperCase() + k.slice(1)}: `;
+          } else if (fieldKey.startsWith("class_custom_")) {
+            const k = fieldKey.replace("class_custom_", "");
+            let customVals = classCustomValues;
+            if (typeof customVals === "string") {
+              try { customVals = JSON.parse(customVals); } catch { customVals = null; }
+            }
+            textContent = customVals?.[k] || "";
+            labelPrefix = `${k.charAt(0).toUpperCase() + k.slice(1)}: `;
+          }
+
+          if (!textContent) return null;
+
+          return (
+            <div key={fieldKey} style={fieldStyle} className="leading-tight">
+              {f.labelVisible !== false && labelPrefix ? (
+                <span className="font-bold opacity-85 mr-1">{labelPrefix}</span>
+              ) : null}
+              <span>{textContent}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   // --- LAYOUT 1: Standard Top Curve ---
   if (layout === 1) {

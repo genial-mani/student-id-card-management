@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ interface StudentData {
   classId: string;
   profilePictureUrl?: string;
   camSno?: string;
+  customValues?: any;
 }
 
 interface ClassOption {
@@ -30,6 +31,7 @@ interface EditStudentModalProps {
   student: StudentData;
   classes: ClassOption[];
   schoolName: string;
+  schoolId: string;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -47,6 +49,7 @@ export default function EditStudentModal({
   student,
   classes,
   schoolName,
+  schoolId,
   onClose,
   onSuccess,
 }: EditStudentModalProps) {
@@ -57,6 +60,41 @@ export default function EditStudentModal({
     address: student.address || "",
     classId: student.classId || "",
   });
+
+  const [customFieldsConfig, setCustomFieldsConfig] = useState<any>(null);
+  const [customValues, setCustomValues] = useState<Record<string, string>>(() => {
+    if (student.customValues) {
+      try {
+        return typeof student.customValues === "string"
+          ? JSON.parse(student.customValues)
+          : student.customValues;
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  });
+
+  useEffect(() => {
+    async function fetchSchoolConfig() {
+      try {
+        const res = await fetch(`/api/schools/${schoolId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.customFieldsConfig) {
+            setCustomFieldsConfig(
+              typeof data.customFieldsConfig === "string"
+                ? JSON.parse(data.customFieldsConfig)
+                : data.customFieldsConfig
+            );
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch school custom fields config", err);
+      }
+    }
+    fetchSchoolConfig();
+  }, [schoolId]);
 
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(student.profilePictureUrl || null);
@@ -175,6 +213,7 @@ export default function EditStudentModal({
           address: formData.address.trim(),
           classId: formData.classId,
           profilePictureUrl: finalPictureUrl,
+          customValues,
         }),
       });
 
@@ -355,50 +394,74 @@ export default function EditStudentModal({
             </select>
           </div>
 
-          <div>
-            <Label htmlFor="edit-fatherName" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 block">
-              Father's Name
-            </Label>
-            <Input
-              id="edit-fatherName"
-              type="text"
-              name="fatherName"
-              value={formData.fatherName}
-              onChange={handleInputChange}
-              placeholder="e.g. Robert Doe"
-              className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
+          {(() => {
+            const fields = customFieldsConfig?.student || [
+              { key: "name", label: "Student Name", type: "text", required: true, default: true, enabled: true },
+              { key: "idNo", label: "ID Number", type: "text", required: false, default: true, enabled: true },
+              { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
+              { key: "fatherName", label: "Father Name", type: "text", required: false, default: true, enabled: true },
+              { key: "motherName", label: "Mother Name", type: "text", required: false, default: true, enabled: true },
+              { key: "fatherPhone", label: "Father Phone", type: "text", required: false, default: true, enabled: true },
+              { key: "motherPhone", label: "Mother Phone", type: "text", required: false, default: true, enabled: true },
+              { key: "address", label: "Address", type: "text", required: false, default: true, enabled: true }
+            ];
 
-          <div>
-            <Label htmlFor="edit-fatherPhone" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 block">
-              Father's Cell Number
-            </Label>
-            <Input
-              id="edit-fatherPhone"
-              type="tel"
-              name="fatherPhone"
-              value={formData.fatherPhone}
-              onChange={handleInputChange}
-              placeholder="e.g. 9876543210"
-              className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="edit-address" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 block">
-              Address
-            </Label>
-            <Textarea
-              id="edit-address"
-              name="address"
-              value={formData.address}
-              onChange={handleInputChange}
-              rows={3}
-              placeholder="Enter full address..."
-              className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 resize-none"
-            />
-          </div>
+            return fields
+              .filter((f: any) => f.key !== "name" && f.key !== "profilePictureUrl" && f.enabled)
+              .map((f: any) => {
+                if (f.default) {
+                  return (
+                    <div key={f.key}>
+                      <Label htmlFor={`edit-${f.key}`} className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 block">
+                        {f.label} {f.required && <span className="text-rose-500">*</span>}
+                      </Label>
+                      {f.key === "address" ? (
+                        <Textarea
+                          id={`edit-${f.key}`}
+                          name={f.key}
+                          value={formData[f.key as keyof typeof formData] || ""}
+                          onChange={handleInputChange}
+                          required={f.required}
+                          rows={3}
+                          placeholder={`Enter ${f.label.toLowerCase()}...`}
+                          className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 resize-none"
+                        />
+                      ) : (
+                        <Input
+                          id={`edit-${f.key}`}
+                          type={f.key.toLowerCase().includes("phone") ? "tel" : "text"}
+                          name={f.key}
+                          value={formData[f.key as keyof typeof formData] || ""}
+                          onChange={handleInputChange}
+                          required={f.required}
+                          placeholder={`e.g. ${f.label}`}
+                          className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
+                        />
+                      )}
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div key={f.key}>
+                      <Label htmlFor={`edit-custom-${f.key}`} className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 block">
+                        {f.label} {f.required && <span className="text-rose-500">*</span>}
+                      </Label>
+                      <Input
+                        id={`edit-custom-${f.key}`}
+                        type="text"
+                        value={customValues[f.key] || ""}
+                        onChange={(e) =>
+                          setCustomValues((prev) => ({ ...prev, [f.key]: e.target.value }))
+                        }
+                        required={f.required}
+                        placeholder={`Enter ${f.label.toLowerCase()}...`}
+                        className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  );
+                }
+              });
+          })()}
 
           <div className="flex gap-3 pt-3">
             <Button

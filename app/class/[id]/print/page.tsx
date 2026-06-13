@@ -28,6 +28,7 @@ interface School {
   signatureUrl: string;
   idCardLayout?: number | null;
   idCardTheme?: string | null;
+  idCardLayoutConfig?: any;
 }
 interface Student {
   id: string;
@@ -40,12 +41,14 @@ interface Student {
   motherPhone: string;
   address: string;
   profilePictureUrl: string;
+  customValues?: any;
 }
 interface ClassData {
   id: string;
   name: string;
   school: School;
   students: Student[];
+  customValues?: any;
 }
 
 // ─── Exact Math & Dimensions (NO SCALING) ──────────────────────────────────────
@@ -149,7 +152,7 @@ export default function PrintPage() {
       const dbLayout = classData.school.idCardLayout;
       const dbThemeRaw = classData.school.idCardTheme;
 
-      let finalLayout = dbLayout || 1;
+      let finalLayout = (dbLayout !== null && dbLayout !== undefined) ? dbLayout : 1;
       let finalTheme = DEFAULT_THEME;
 
       if (dbThemeRaw) {
@@ -416,6 +419,7 @@ export default function PrintPage() {
               school={classData.school}
               student={student}
               classNameStr={classData.name}
+              classCustomValues={classData.customValues}
             />
           </div>
         ))}
@@ -573,6 +577,7 @@ export default function PrintPage() {
                                 school={classData.school}
                                 student={student}
                                 classNameStr={classData.name}
+                                classCustomValues={classData.customValues}
                               />
                             </div>
                           );

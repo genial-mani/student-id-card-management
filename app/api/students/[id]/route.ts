@@ -75,6 +75,7 @@ export async function PUT(
       address,
       classId,
       profilePictureUrl,
+      customValues,
     } = body;
 
     const oldPhotoUrl = student.profilePictureUrl;
@@ -89,10 +90,10 @@ export async function PUT(
       data: {
         schoolId: schoolId || student.schoolId,
         name: name || student.name,
-        idNo: idNo || student.idNo,
+        idNo: idNo !== undefined ? idNo : student.idNo,
         camSno: camSno !== undefined ? camSno : student.camSno,
-        fatherName: fatherName || student.fatherName,
-        motherName: motherName || student.motherName,
+        fatherName: fatherName !== undefined ? fatherName : student.fatherName,
+        motherName: motherName !== undefined ? motherName : student.motherName,
         fatherPhone: fatherPhone !== undefined ? fatherPhone : student.fatherPhone,
         motherPhone: motherPhone !== undefined ? motherPhone : student.motherPhone,
         address: address !== undefined ? address : student.address,
@@ -101,6 +102,7 @@ export async function PUT(
           profilePictureUrl !== undefined
             ? profilePictureUrl
             : student.profilePictureUrl,
+        customValues: customValues !== undefined ? customValues : student.customValues,
       },
       include: { school: true, class: true },
     });

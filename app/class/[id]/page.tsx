@@ -33,6 +33,9 @@ interface ClassData {
     signatureUrl: string;
     idCardLayout?: number | null;
     idCardTheme?: string | null;
+    customFieldsConfig?: any;
+    customValues?: any;
+    idCardLayoutConfig?: any;
   };
   students: Student[];
 }
@@ -299,7 +302,7 @@ export default function ClassPage() {
       const dbLayout = classData.school.idCardLayout;
       const dbThemeRaw = classData.school.idCardTheme;
 
-      let finalLayout = dbLayout || DEFAULT_LAYOUT;
+      let finalLayout = (dbLayout !== null && dbLayout !== undefined) ? dbLayout : DEFAULT_LAYOUT;
       let finalTheme = DEFAULT_THEME;
 
       if (dbThemeRaw) {
@@ -577,6 +580,7 @@ export default function ClassPage() {
                   onPreview={(student) => setSelectedPreviewStudent(student)}
                   sortBy={sortBy}
                   onSortChange={setSortBy}
+                  customFieldsConfig={classData?.school?.customFieldsConfig}
                 />
               </div>
             ) : (
@@ -690,9 +694,11 @@ export default function ClassPage() {
                 classId: editingStudent.classId || "",
                 profilePictureUrl: editingStudent.profilePictureUrl || "",
                 camSno: editingStudent.camSno || "",
+                customValues: editingStudent.customValues,
               }}
               classes={classesList}
               schoolName={classData.school.name}
+              schoolId={classData.school.id}
               onClose={() => setEditingStudent(null)}
               onSuccess={fetchClass}
             />
@@ -733,13 +739,7 @@ export default function ClassPage() {
                       layout={selectedLayout}
                       theme={theme}
                       school={classData.school}
-                      student={{
-                        name: selectedPreviewStudent.name,
-                        fatherName: selectedPreviewStudent.fatherName || "",
-                        fatherPhone: selectedPreviewStudent.fatherPhone || "",
-                        address: selectedPreviewStudent.address || "",
-                        profilePictureUrl: selectedPreviewStudent.profilePictureUrl || "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
-                      }}
+                      student={selectedPreviewStudent}
                       classNameStr={classData.name}
                     />
                   </div>

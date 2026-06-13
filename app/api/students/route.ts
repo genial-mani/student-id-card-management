@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       address,
       classId,
       profilePictureUrl,
+      customValues,
     } = body;
 
     if (!schoolId || !name || !classId) {
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
       data: {
         schoolId,
         name,
-        idNo,
+        idNo: idNo || '',
         camSno: camSno || '',
         fatherName: fatherName || '',
         motherName: motherName || '',
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
         address: address || '',
         classId,
         profilePictureUrl: profilePictureUrl || '',
+        customValues: customValues || null,
       },
       include: { school: true, class: true },
     });
