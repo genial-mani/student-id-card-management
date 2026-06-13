@@ -25,6 +25,20 @@ export async function POST(request: NextRequest) {
         tokenVersion: 0,
       });
 
+      // Record LOGIN Audit Log
+      try {
+        await prisma.auditLog.create({
+          data: {
+            userId: 'admin',
+            username: adminUsername,
+            role: 'admin',
+            action: 'LOGIN',
+          },
+        });
+      } catch (err) {
+        console.error('Failed to write login log for admin:', err);
+      }
+
       const response = NextResponse.json({
         success: true,
         user: { username: adminUsername, role: 'admin' },
@@ -42,7 +56,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check database users
-    const user = await prisma.user.findUnique({ where: { username } });
+    const user = await prisma.user.findUnique({
+      where: { username },
+      include: { school: true }
+    });
 
     if (!user) {
       return NextResponse.json(
@@ -68,6 +85,22 @@ export async function POST(request: NextRequest) {
       tokenVersion: user.tokenVersion,
     });
 
+    // Record LOGIN Audit Log
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          username: user.username,
+          role: user.role,
+          action: 'LOGIN',
+          schoolId: user.schoolId || undefined,
+          schoolName: user.school?.name || undefined,
+        },
+      });
+    } catch (err) {
+      console.error('Failed to write login log for user:', err);
+    }
+
     const response = NextResponse.json({
       success: true,
       user: {
@@ -76,6 +109,7 @@ export async function POST(request: NextRequest) {
         schoolId: user.schoolId,
       },
     });
+
 
     response.cookies.set('auth_token', token, {
       httpOnly: true,

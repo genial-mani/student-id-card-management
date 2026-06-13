@@ -111,7 +111,8 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
       {/* ── Scrollable Navigation Items ───────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
         {/* Dashboard/Overview Link */}
-        <Link
+        {user?.role === "admin" && (
+          <Link
           href="/"
           onClick={onClose}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 border relative ${
@@ -132,6 +133,34 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
           </div>
           <span className="text-sm font-medium">Dashboard</span>
         </Link>
+        )}
+
+        {/* Audit Logs — admin only */}
+        {user?.role === "admin" && (
+          <Link
+            href="/admin/logs"
+            onClick={onClose}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 border relative ${
+              pathname === "/admin/logs"
+                ? "bg-indigo-50/50 border-indigo-100/50 text-indigo-600 font-semibold shadow-xs"
+                : "text-slate-605 hover:text-slate-900 hover:bg-slate-50 border-transparent hover:translate-x-1"
+            }`}
+          >
+            {pathname === "/admin/logs" && (
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-600 rounded-r-md" />
+            )}
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+              pathname === "/admin/logs"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10"
+                : "bg-slate-100 text-slate-500 border border-slate-200/40"
+            }`}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+            </div>
+            <span className="text-sm font-medium">Session Logs</span>
+          </Link>
+        )}
 
         <div className="pt-4 pb-1">
           <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest px-2">

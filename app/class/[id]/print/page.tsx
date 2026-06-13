@@ -26,6 +26,8 @@ interface School {
   phone: string;
   logoUrl: string;
   signatureUrl: string;
+  idCardLayout?: number | null;
+  idCardTheme?: string | null;
 }
 interface Student {
   id: string;
@@ -82,6 +84,12 @@ const DEFAULT_THEME: CardTheme = {
   background: "#f6fff8",
   textMain: "#ffffff",
   textSub: "#4b5563",
+  schoolNameFont: "",
+  schoolNameSize: "",
+  schoolNameWeight: "",
+  schoolCaptionFont: "",
+  schoolCaptionSize: "",
+  schoolCaptionWeight: "",
 };
 
 function loadDesign(id: string): { layout: number; theme: CardTheme } {
@@ -134,10 +142,31 @@ export default function PrintPage() {
   useEffect(() => {
     if (!classId) return;
     fetchData();
-    const { layout: l, theme: t } = loadDesign(classId);
-    setLayout(l);
-    setTheme(t);
   }, [classId, fetchData]);
+
+  useEffect(() => {
+    if (classData) {
+      const dbLayout = classData.school.idCardLayout;
+      const dbThemeRaw = classData.school.idCardTheme;
+
+      let finalLayout = dbLayout || 1;
+      let finalTheme = DEFAULT_THEME;
+
+      if (dbThemeRaw) {
+        try {
+          finalTheme = JSON.parse(dbThemeRaw);
+        } catch (e) {
+          console.error("Failed to parse dbThemeRaw", e);
+        }
+      } else {
+        const { layout: l, theme: t } = loadDesign(classData.school.id);
+        finalLayout = l;
+        finalTheme = t;
+      }
+      setLayout(finalLayout);
+      setTheme(finalTheme);
+    }
+  }, [classData]);
 
   // Give images 1.5 seconds to fully load from Cloudinary before allowing PDF generation
   useEffect(() => {

@@ -64,3 +64,15 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+model AuditLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String
+  username   String
+  role       String
+  action     String   // "LOGIN" | "LOGOUT"
+  schoolId   String?  @db.ObjectId
+  schoolName String?
+  timestamp  DateTime @default(now())
+}
+

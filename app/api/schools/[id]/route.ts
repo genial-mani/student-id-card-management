@@ -37,18 +37,19 @@ export async function GET(
   }
 }
 
-// PUT update a school — admin only
+// PUT update a school — admin or school staff
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { role } = getAuth(request);
-    if (role !== 'admin') {
+    const { role, schoolId } = getAuth(request);
+    const { id } = await params;
+
+    if (role !== 'admin' && schoolId !== id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { id } = await params;
     const body = await request.json();
     const { name, caption, address, phone, logoUrl, signatureUrl, idCardLayout, idCardTheme } = body;
 

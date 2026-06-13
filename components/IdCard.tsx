@@ -6,6 +6,12 @@ export interface CardTheme {
   background: string;
   textMain: string;
   textSub: string;
+  schoolNameFont?: string;
+  schoolNameSize?: string;
+  schoolNameWeight?: string;
+  schoolCaptionFont?: string;
+  schoolCaptionSize?: string;
+  schoolCaptionWeight?: string;
 }
 
 interface IdCardProps {
@@ -17,6 +23,7 @@ interface IdCardProps {
     address?: string;
     logoUrl: string;
     signatureUrl?: string;
+    phone?: string;
   };
   student: {
     name: string;
@@ -45,6 +52,18 @@ export default function IdCard({
 
   // INNER SAFE ZONE: 24px padding ensures no content gets cut off by the blade.
   const safeZoneClass = "relative z-10 flex flex-col h-full p-6";
+
+  const schoolNameStyle = {
+    fontFamily: theme.schoolNameFont ? `'${theme.schoolNameFont}', sans-serif` : undefined,
+    fontSize: theme.schoolNameSize ? `${theme.schoolNameSize}px` : undefined,
+    fontWeight: theme.schoolNameWeight || undefined,
+  };
+
+  const schoolCaptionStyle = {
+    fontFamily: theme.schoolCaptionFont ? `'${theme.schoolCaptionFont}', sans-serif` : undefined,
+    fontSize: theme.schoolCaptionSize ? `${theme.schoolCaptionSize}px` : undefined,
+    fontWeight: theme.schoolCaptionWeight || undefined,
+  };
 
   // Helper to render the required student details consistently across layouts
   // v should be false default
@@ -137,14 +156,14 @@ export default function IdCard({
             />
             <h1
               className="text-4xl font-extrabold uppercase tracking-wider drop-shadow-md px-2 leading-tight"
-              style={{ color: theme.textMain }}
+              style={{ color: theme.textMain, ...schoolNameStyle }}
             >
               {school.name}
             </h1>
             {school.caption && (
               <p
                 className="text-xl italic font-medium mt-1"
-                style={{ color: theme.textMain }}
+                style={{ color: theme.textMain, ...schoolCaptionStyle }}
               >
                 {school.caption}
               </p>
@@ -220,12 +239,12 @@ export default function IdCard({
             <div className="flex flex-col text-left">
               <h1
                 className="text-3xl font-extrabold uppercase leading-tight"
-                style={{ color: theme.textMain }}
+                style={{ color: theme.textMain, ...schoolNameStyle }}
               >
                 {school.name}
               </h1>
               {school.caption && (
-                <p className="text-lg italic" style={{ color: theme.textMain }}>
+                <p className="text-lg italic" style={{ color: theme.textMain, ...schoolCaptionStyle }}>
                   {school.caption}
                 </p>
               )}
@@ -289,7 +308,7 @@ export default function IdCard({
             />
             <h1
               className="text-4xl font-black uppercase tracking-widest px-8"
-              style={{ color: theme.primary }}
+              style={{ color: theme.primary, ...schoolNameStyle }}
             >
               {school.name}
             </h1>
@@ -358,7 +377,7 @@ export default function IdCard({
             <div className="pr-2">
               <h1
                 className="text-4xl font-black uppercase leading-tight"
-                style={{ color: theme.primary }}
+                style={{ color: theme.primary, ...schoolNameStyle }}
               >
                 {school.name}
               </h1>
@@ -435,7 +454,7 @@ export default function IdCard({
             />
             <h1
               className="text-4xl font-extrabold uppercase text-center leading-tight"
-              style={{ color: theme.textMain }}
+              style={{ color: theme.textMain, ...schoolNameStyle }}
             >
               {school.name}
             </h1>
@@ -526,7 +545,7 @@ export default function IdCard({
             <div className="flex flex-col text-right">
               <h1
                 className="text-3xl font-black uppercase"
-                style={{ color: theme.primary }}
+                style={{ color: theme.primary, ...schoolNameStyle }}
               >
                 {school.name}
               </h1>
@@ -600,10 +619,18 @@ export default function IdCard({
               />
             </div>
             <div className="text-left">
-              <h1 className="text-3xl font-extrabold uppercase text-white drop-shadow-md">
+              <h1 
+                className="text-3xl font-extrabold uppercase text-white drop-shadow-md"
+                style={schoolNameStyle}
+              >
                 {school.name}
               </h1>
-              <p className="text-lg text-white/90">{school.caption}</p>
+              <p 
+                className="text-lg text-white/90"
+                style={schoolCaptionStyle}
+              >
+                {school.caption}
+              </p>
             </div>
           </div>
 
@@ -698,7 +725,7 @@ export default function IdCard({
             <div className="text-right w-2/3">
               <h1
                 className="text-3xl font-extrabold uppercase leading-tight"
-                style={{ color: theme.textMain }}
+                style={{ color: theme.textMain, ...schoolNameStyle }}
               >
                 {school.name}
               </h1>
@@ -775,7 +802,7 @@ export default function IdCard({
             />
             <h1
               className="text-4xl font-black uppercase"
-              style={{ color: theme.primary }}
+              style={{ color: theme.primary, ...schoolNameStyle }}
             >
               {school.name}
             </h1>
@@ -845,14 +872,14 @@ export default function IdCard({
             <div className="flex flex-col items-center justify-center w-full">
               <h1
                 className="text-4xl font-extrabold uppercase leading-tight drop-shadow-lg"
-                style={{ color: "#ffffff" }}
+                style={{ color: "#ffffff", ...schoolNameStyle }}
               >
                 {school.name}
               </h1>
               {school.caption && (
                 <p
                   className="text-xl italic drop-shadow-md"
-                  style={{ color: "rgba(255,255,255,0.85)" }}
+                  style={{ color: "rgba(255,255,255,0.85)", ...schoolCaptionStyle }}
                 >
                   {school.caption}
                 </p>
@@ -958,11 +985,17 @@ export default function IdCard({
             className="w-30 h-30 object-contain bg-white rounded-full p-1 shadow-md mb-3"
           />
           <div>
-          <h1 className="text-5xl font-extrabold uppercase leading-tight drop-shadow-md text-white px-4">
+          <h1 
+            className="text-5xl font-extrabold uppercase leading-tight drop-shadow-md text-white px-4"
+            style={schoolNameStyle}
+          >
             {school.name}
           </h1>
           {school.caption && (
-            <p className="text-[25px] italic drop-shadow-md text-white/90">
+            <p 
+              className="text-[25px] italic drop-shadow-md text-white/90"
+              style={schoolCaptionStyle}
+            >
               {school.caption}
             </p>
           )}
@@ -1040,6 +1073,135 @@ export default function IdCard({
   );
   }
 
+  if (layout === 12) {
+    return (
+      <div
+        className="relative box-border overflow-hidden shadow-2xl mx-auto w-168.25 h-271.75 bg-[url('@/assets/id-card-layout-12.jpeg')] bg-cover bg-center bg-no-repeat"
+        style={cardContainerStyle}
+      >
+        <div className={safeZoneClass}>
+          {/* School Header Info */}
+          <div className="flex flex-col items-center text-center mt-3 relative w-full">
+            {/* School Name */}
+            <h1
+              className="text-4xl font-extrabold uppercase leading-tight drop-shadow-md px-4"
+              style={{ color: theme.primary, ...schoolNameStyle }}
+            >
+              {school.name}
+            </h1>
+
+            {/* Sub-header block with Logo absolutely placed on left, details centered */}
+            <div className="relative w-full min-h-[140px] mt-4 flex flex-col items-center justify-center px-12">
+              {/* Logo */}
+              {school.logoUrl && (
+                <img
+                  src={school.logoUrl}
+                  alt="Logo"
+                  crossOrigin="anonymous"
+                  className="absolute left-4 top-1 w-24 h-24 object-contain bg-white rounded-full p-1 shadow-md z-20"
+                />
+              )}
+
+              {/* Recognition, Address & Phone (Centered) */}
+              <div className="flex flex-col items-center text-center select-none w-full max-w-[420px] mx-auto">
+                {school.caption && (
+                  <p 
+                    className="text-[17px] font-bold text-gray-700 italic leading-tight"
+                    style={schoolCaptionStyle}
+                  >
+                    {school.caption}
+                  </p>
+                )}
+                {school.address && (
+                  <p className="text-[18px] font-black text-indigo-900 leading-snug mt-1">
+                    {school.address}
+                  </p>
+                )}
+                {school.phone && (
+                  <p className="text-[18px] font-black text-indigo-900 leading-snug mt-0.5">
+                    Ph.No. {school.phone}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Underlined Document Title */}
+            <h2 className="text-2xl font-black text-indigo-900 uppercase tracking-widest underline decoration-2 mt-4 select-none">
+              STUDENT ID CARD
+            </h2>
+          </div>
+
+          {/* Student Photo & Class Card row */}
+          <div className="relative w-full h-[250px] mt-6 flex justify-between px-6">
+            {/* Student Photo */}
+            <div className="w-[220px] h-[220px] rounded-xl border-4 border-white shadow-xl overflow-hidden shrink-0">
+              <img
+                src={student.profilePictureUrl}
+                alt={student.name}
+                crossOrigin="anonymous"
+                className="w-full h-full object-cover bg-gray-55"
+              />
+            </div>
+
+            {/* Class Card */}
+            <div className="w-[180px] h-[190px] bg-white border-[3px] border-black rounded-xl flex flex-col items-center p-2 select-none">
+              <span className="text-xl font-bold uppercase tracking-wider text-gray-800">
+                : CLASS :
+              </span>
+              <span className="text-6xl font-black text-gray-900 mt-4 uppercase">
+                {classNameStr}
+              </span>
+            </div>
+          </div>
+
+          {/* Student Name centered in white bar */}
+          <div className="absolute left-0 right-0 top-[590px] h-[80px] flex items-center justify-center">
+            <h2 className="text-[40px] font-black uppercase text-[#1e3a8a] tracking-wider text-center px-4 leading-none">
+              {student.name}
+            </h2>
+          </div>
+
+          {/* Bottom section (student details & signature) */}
+          {/* Student details in white text */}
+          <div className="absolute left-10 top-[715px] flex flex-col gap-4 text-[26px] font-black text-white tracking-wide uppercase font-sans text-left">
+            <div className="flex gap-2">
+              <span className="w-36 opacity-90">F. Name</span>
+              <span>:</span>
+              <span className="ml-2">{student.fatherName}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="w-36 opacity-90">Cell</span>
+              <span>:</span>
+              <span className="ml-2">{student.fatherPhone}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="w-36 opacity-90">Village</span>
+              <span>:</span>
+              <span className="ml-2 leading-tight max-w-[260px]">{student.address}</span>
+            </div>
+          </div>
+
+          {/* Self-scaling signature container inside white oval */}
+          <div className="absolute right-10 bottom-12 w-[240px] h-[120px] bg-white rounded-[50%] flex flex-col items-center justify-center p-3 border border-gray-300 shadow-lg overflow-hidden">
+            {school.signatureUrl ? (
+              <img
+                src={school.signatureUrl}
+                alt="Signature"
+                crossOrigin="anonymous"
+                className="max-w-[85%] max-h-[60%] object-contain mb-1"
+              />
+            ) : (
+              <div className="h-10 mb-1" />
+            )}
+            <span className="text-base font-serif italic font-extrabold text-gray-800 leading-none select-none">
+              Signature
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // --- LAYOUT 11: Floating Inner Card ---
   return (
     <div
@@ -1051,7 +1213,7 @@ export default function IdCard({
           <div className="flex flex-col">
             <h1
               className="text-3xl font-black uppercase tracking-tight"
-              style={{ color: theme.primary }}
+              style={{ color: theme.primary, ...schoolNameStyle }}
             >
               {school.name}
             </h1>

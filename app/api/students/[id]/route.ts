@@ -41,26 +41,25 @@ export async function GET(
   }
 }
 
-// PUT update a student — admin only
+// PUT update a student — admin or school staff
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { role } = getAuth(request);
-
-    if (role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Forbidden — only admins can edit students' },
-        { status: 403 }
-      );
-    }
-
+    const { role, schoolId: userSchoolId } = getAuth(request);
     const { id } = await params;
     const student = await prisma.student.findUnique({ where: { id } });
 
     if (!student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
+    if (role !== 'admin' && student.schoolId !== userSchoolId) {
+      return NextResponse.json(
+        { error: 'Forbidden — you can only edit students in your own school' },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
@@ -121,20 +120,19 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { role } = getAuth(request);
-
-    if (role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Forbidden — only admins can delete students' },
-        { status: 403 }
-      );
-    }
-
+    const { role, schoolId } = getAuth(request);
     const { id } = await params;
     const student = await prisma.student.findUnique({ where: { id } });
 
     if (!student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
+    if (role !== 'admin' && student.schoolId !== schoolId) {
+      return NextResponse.json(
+        { error: 'Forbidden — you can only delete students in your own school' },
+        { status: 403 }
+      );
     }
 
     if (student.profilePictureUrl) {

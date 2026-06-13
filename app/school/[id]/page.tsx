@@ -11,6 +11,7 @@ import SchoolForm from "@/components/SchoolForm";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
+import IdCard, { CardTheme } from "@/components/IdCard";
 
 // Imported Assets
 import card1 from "@/assets/5_5918cf6f-84b7-4ed7-b3d9-0b78a62d3087.webp";
@@ -23,6 +24,8 @@ import printer2 from "@/assets/RMGT340CCD-1-removebg-preview.png";
 import printer3 from "@/assets/solvent-printing-machines.png";
 import balaji from "@/assets/tirupati-balaji-hd-wallpaper-for-android-2745524-removebg-preview.png";
 import idcard2 from "@/assets/Vertical-Employee-ID-Card-Format-Template-removebg-preview.png";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, AddSquareIcon, PaintBoardIcon, ShieldKeyIcon } from "@hugeicons/core-free-icons";
 
 interface School {
   id: string;
@@ -33,6 +36,8 @@ interface School {
   logoUrl: string;
   signatureUrl: string;
   classes: Class[];
+  idCardLayout?: number | null;
+  idCardTheme?: string | null;
 }
 
 interface Class {
@@ -270,6 +275,89 @@ const AdBanner = () => {
 };
 // ────────────────────────────────────────────────────────────────────────────
 
+const DUMMY_STUDENT = {
+  id: "dummy1",
+  name: "A. Punarvi",
+  idNo: "STU-001",
+  camSno: "CAM-990",
+  fatherName: "Anil Kumar",
+  motherName: "Lakshmi",
+  fatherPhone: "9876543210",
+  motherPhone: "9876512340",
+  address: "Kosgi",
+  profilePictureUrl:
+    "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
+};
+
+const GOOGLE_FONTS = [
+  // Elegant Serifs
+  "Cinzel",
+  "Cinzel Decorative",
+  "Playfair Display",
+  "Lora",
+  "Merriweather",
+  "Cormorant Garamond",
+  "Marcellus",
+  "Crete Round",
+  "Philosopher",
+  
+  // Trendy Sans-Serifs
+  "Poppins",
+  "Montserrat",
+  "Inter",
+  "Outfit",
+  "Cabin",
+  "Josefin Sans",
+  
+  // Decorative Display
+  "Berkshire Swash",
+  "Righteous",
+  "Alfa Slab One",
+  "Carter One",
+  "Uncial Antiqua",
+  "Abril Fatface",
+  "Bungee",
+  "Monoton",
+  "Special Elite",
+  "Bangers",
+  "Fredericka the Great",
+  "Bowlby One SC",
+  "Chewy",
+  "Fascinate Inline",
+  "Ultra"
+];
+
+const FONT_WEIGHTS = [
+  { value: "400", label: "Regular" },
+  { value: "500", label: "Medium" },
+  { value: "600", label: "Semi-Bold" },
+  { value: "700", label: "Bold" },
+  { value: "800", label: "Extra-Bold" },
+  { value: "900", label: "Black" }
+];
+
+const DEFAULT_THEME: CardTheme = {
+  primary: "#e85d04",
+  secondary: "#ffecd1",
+  background: "#f6fff8",
+  textMain: "#ffffff",
+  textSub: "#4b5563",
+  schoolNameFont: "",
+  schoolNameSize: "",
+  schoolNameWeight: "",
+  schoolCaptionFont: "",
+  schoolCaptionSize: "",
+  schoolCaptionWeight: "",
+};
+
+const COLOR_FIELDS: [keyof CardTheme, string][] = [
+  ["primary", "Primary"],
+  ["secondary", "Secondary"],
+  ["background", "Background"],
+  ["textMain", "Header Text"],
+  ["textSub", "Body Text"],
+];
+
 export default function SchoolPage() {
   const params = useParams();
   const router = useRouter();
@@ -284,6 +372,67 @@ export default function SchoolPage() {
   const [showCreds, setShowCreds] = useState(false);
   const [showSchoolForm, setShowSchoolForm] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Design Studio State
+  const [isDesignMode, setIsDesignMode] = useState(false);
+  const [selectedLayout, setSelectedLayout] = useState(1);
+  const [theme, setTheme] = useState<CardTheme>(DEFAULT_THEME);
+  const [savingLayout, setSavingLayout] = useState(false);
+
+  useEffect(() => {
+    if (school) {
+      if (school.idCardLayout !== null && school.idCardLayout !== undefined) {
+        setSelectedLayout(school.idCardLayout);
+      }
+      if (school.idCardTheme) {
+        try {
+          setTheme(JSON.parse(school.idCardTheme));
+        } catch (e) {
+          console.error("Failed to parse school.idCardTheme", e);
+        }
+      }
+    }
+  }, [school]);
+
+  const handleLayoutChange = (num: number) => {
+    setSelectedLayout(num);
+  };
+
+  const handleColorChange = (key: keyof CardTheme, value: string) => {
+    setTheme((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleReset = () => {
+    setSelectedLayout(1);
+    setTheme(DEFAULT_THEME);
+  };
+
+  const handleFixFinalLayout = async () => {
+    setSavingLayout(true);
+    try {
+      const response = await fetch(`/api/schools/${school?.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idCardLayout: selectedLayout,
+          idCardTheme: JSON.stringify(theme),
+        }),
+      });
+
+      if (response.ok) {
+        alert("Layout saved successfully!");
+        fetchSchool();
+      } else {
+        const err = await response.json();
+        alert(err.error || "Failed to save layout");
+      }
+    } catch (error) {
+      console.error("Error saving layout:", error);
+      alert("Failed to save layout");
+    } finally {
+      setSavingLayout(false);
+    }
+  };
 
   const fetchSchool = useCallback(async () => {
     try {
@@ -378,7 +527,7 @@ export default function SchoolPage() {
       />
       <Header onMenuClick={() => setIsSidebarOpen(true)} />
       <div className="lg:ml-64 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8 flex items-center justify-center w-full lg:max-w-[calc(100%-256px)] mx-auto">
-        <div className="w-full max-w-full flex flex-col mx-auto">
+        <div className="w-full max-w-full flex flex-col mx-auto mt-3">
           {/* ── School header card ───────────────────────────────────────── */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6 mb-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -457,21 +606,27 @@ export default function SchoolPage() {
                     onClick={() => setShowCreds(true)}
                     className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200"
                   >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-                      />
-                    </svg>
+                    <HugeiconsIcon icon={ShieldKeyIcon} size={18} strokeWidth={2} />
                     <span className="hidden sm:inline">View Credentials</span>
                     <span className="sm:hidden">Credentials</span>
+                  </Button>
+                )}
+
+                {/* Design Studio button */}
+                {user && (
+                  <Button
+                    onClick={() => setIsDesignMode(!isDesignMode)}
+                    className={`font-medium flex items-center gap-1.5 sm:gap-2 transition-colors ${
+                      isDesignMode
+                        ? "bg-gray-900 hover:bg-gray-800 text-white"
+                        : "bg-indigo-50 hover:bg-indigo-100 text-indigo-750 border border-indigo-200"
+                    }`}
+                  >
+                    <HugeiconsIcon icon={PaintBoardIcon} size={18} strokeWidth={2} />
+                    <span className="hidden sm:inline">
+                      {isDesignMode ? "Exit Studio" : "Design Studio"}
+                    </span>
+                    <span className="sm:hidden">Design</span>
                   </Button>
                 )}
 
@@ -480,25 +635,314 @@ export default function SchoolPage() {
                   onClick={() => setShowClass(true)}
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
+                  <HugeiconsIcon icon={Add01Icon} size={18} strokeWidth={2} />
                   <span className="hidden sm:inline">Create Class</span>
                   <span className="sm:hidden">Add Class</span>
                 </Button>
               </div>
             </div>
           </div>
+
+          {/* ── Design Studio ───────────────────────────────── */}
+          {isDesignMode && (
+            <div className="bg-white rounded-xl shadow-sm border-2 border-indigo-100 p-4 sm:p-5 lg:p-6 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2.5 sm:gap-3 mb-4 sm:mb-5">
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-xl font-bold text-indigo-900">
+                    ID Card Design Studio
+                  </h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Design layout and colors are saved directly to this school's global settings.
+                  </p>
+                </div>
+                 <div className="flex flex-wrap items-center gap-2 self-start">
+                  <button
+                    onClick={handleFixFinalLayout}
+                    disabled={savingLayout}
+                    className="flex items-center gap-1.5 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap disabled:opacity-50 cursor-pointer shadow-xs"
+                  >
+                    {savingLayout ? "Saving..." : "Save Layout"}
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    className="flex items-center gap-1.5 text-xs sm:text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-1.5 px-2.5 sm:px-3 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                  >
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                    Reset to Default
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Color pickers ────────────────────────────────────────── */}
+              <div className="p-3 sm:p-4 bg-gray-50 rounded-xl mb-6">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
+                  Colour Theme
+                </p>
+                <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
+                  {COLOR_FIELDS.map(([key, label]) => (
+                    <div key={key} className="flex flex-col items-center gap-2">
+                      <div className="relative">
+                        <input
+                          type="color"
+                          value={theme[key] || DEFAULT_THEME[key]}
+                          onChange={(e) =>
+                            handleColorChange(key, e.target.value)
+                          }
+                          className="w-10 sm:w-12 h-10 sm:h-12 rounded-xl cursor-pointer border-2 border-white shadow-md appearance-none p-0.5"
+                          style={{ backgroundColor: theme[key] || DEFAULT_THEME[key] }}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-gray-600 text-center leading-tight line-clamp-2">
+                        {label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Typography settings ────────────────────────────────────── */}
+              <div className="p-4 sm:p-5 bg-gray-50 rounded-xl mb-6 border border-indigo-50/50">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 5h12M9 5v14m0 0H7m2 0h3m4-9h6m-3-3v6m0 0h-2m2 0h2" />
+                  </svg>
+                  Typography Settings
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* School Name Typography Column */}
+                  <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-xs flex flex-col gap-4">
+                    <h3 className="text-sm font-bold text-gray-800 border-b pb-2 flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 bg-indigo-500 rounded-full"></span>
+                      School Name Styling
+                    </h3>
+                    
+                    {/* Font Family */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-gray-500">Font Family</label>
+                      <select
+                        value={theme.schoolNameFont || ""}
+                        onChange={(e) => handleColorChange("schoolNameFont", e.target.value)}
+                        className="w-full text-sm bg-white border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-200 outline-hidden font-medium text-gray-850"
+                      >
+                        <option value="">Default Theme Font</option>
+                        {GOOGLE_FONTS.map((font) => (
+                          <option key={font} value={font} style={{ fontFamily: font }}>
+                            {font}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Font Size Selector with Slider */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-bold text-gray-500">Font Size</label>
+                        <span className="text-xs font-bold text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded">
+                          {theme.schoolNameSize || "Default"}
+                          {theme.schoolNameSize ? "px" : ""}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min="20"
+                          max="70"
+                          value={theme.schoolNameSize || "36"}
+                          onChange={(e) => handleColorChange("schoolNameSize", e.target.value)}
+                          className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleColorChange("schoolNameSize", "")}
+                          disabled={!theme.schoolNameSize}
+                          className="text-[10px] font-bold text-gray-400 hover:text-red-500 disabled:opacity-30 disabled:hover:text-gray-400 cursor-pointer"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Font Weight */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-gray-500">Font Weight</label>
+                      <select
+                        value={theme.schoolNameWeight || ""}
+                        onChange={(e) => handleColorChange("schoolNameWeight", e.target.value)}
+                        className="w-full text-sm bg-white border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-200 outline-hidden font-medium text-gray-850"
+                      >
+                        <option value="">Default Weight</option>
+                        {FONT_WEIGHTS.map((fw) => (
+                          <option key={fw.value} value={fw.value}>
+                            {fw.label} ({fw.value})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* School Caption Typography Column */}
+                  <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-xs flex flex-col gap-4">
+                    <h3 className="text-sm font-bold text-gray-800 border-b pb-2 flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></span>
+                      School Caption Styling
+                    </h3>
+                    
+                    {/* Font Family */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-gray-500">Font Family</label>
+                      <select
+                        value={theme.schoolCaptionFont || ""}
+                        onChange={(e) => handleColorChange("schoolCaptionFont", e.target.value)}
+                        className="w-full text-sm bg-white border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-200 outline-hidden font-medium text-gray-850"
+                      >
+                        <option value="">Default Theme Font</option>
+                        {GOOGLE_FONTS.map((font) => (
+                          <option key={font} value={font} style={{ fontFamily: font }}>
+                            {font}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Font Size Selector with Slider */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-bold text-gray-500">Font Size</label>
+                        <span className="text-xs font-bold text-emerald-650 bg-emerald-50 px-2 py-0.5 rounded">
+                          {theme.schoolCaptionSize || "Default"}
+                          {theme.schoolCaptionSize ? "px" : ""}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min="12"
+                          max="40"
+                          value={theme.schoolCaptionSize || "18"}
+                          onChange={(e) => handleColorChange("schoolCaptionSize", e.target.value)}
+                          className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleColorChange("schoolCaptionSize", "")}
+                          disabled={!theme.schoolCaptionSize}
+                          className="text-[10px] font-bold text-gray-400 hover:text-red-500 disabled:opacity-30 disabled:hover:text-gray-400 cursor-pointer"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Font Weight */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-gray-500">Font Weight</label>
+                      <select
+                        value={theme.schoolCaptionWeight || ""}
+                        onChange={(e) => handleColorChange("schoolCaptionWeight", e.target.value)}
+                        className="w-full text-sm bg-white border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-200 outline-hidden font-medium text-gray-850"
+                      >
+                        <option value="">Default Weight</option>
+                        {FONT_WEIGHTS.map((fw) => (
+                          <option key={fw.value} value={fw.value}>
+                            {fw.label} ({fw.value})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Layout selector ──────────────────────────────────────── */}
+              <div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-3">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                    Layout
+                  </p>
+                  <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full whitespace-nowrap">
+                    Layout {selectedLayout} selected
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
+                    <div
+                      key={num}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleLayoutChange(num)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          handleLayoutChange(num);
+                        }
+                      }}
+                      className={`group flex flex-col items-center gap-1.5 sm:gap-3 p-1 sm:p-2 rounded-2xl sm:rounded-3xl transition-all duration-200 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-400 ${
+                        selectedLayout === num
+                          ? "scale-[1.01]"
+                          : "hover:opacity-95"
+                      }`}
+                    >
+                      {/* Scaled-down card preview */}
+                      <div
+                        className={`relative overflow-hidden rounded-lg sm:rounded-[1rem] w-32 sm:w-52 md:w-56 h-48 sm:h-80 bg-white ${
+                          selectedLayout === num ? "ring-2 ring-indigo-300" : ""
+                        }`}
+                      >
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div
+                            style={{
+                              transform: "scale(0.2)",
+                              transformOrigin: "center center",
+                              width: "638px",
+                              height: "1015px",
+                              pointerEvents: "none",
+                            }}
+                          >
+                            <IdCard
+                              layout={num}
+                              theme={theme}
+                              school={{
+                                name: school.name,
+                                caption: school.caption,
+                                address: school.address,
+                                logoUrl: school.logoUrl,
+                                signatureUrl: school.signatureUrl,
+                                phone: school.phone,
+                              }}
+                              student={DUMMY_STUDENT}
+                              classNameStr="Demo Class"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-xs font-bold transition-colors line-clamp-1 ${
+                          selectedLayout === num
+                            ? "text-indigo-600"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        Layout {num}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Stats ────────────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">

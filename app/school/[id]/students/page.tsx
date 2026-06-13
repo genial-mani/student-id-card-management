@@ -31,6 +31,7 @@ interface School {
   caption?: string;
   address?: string;
   signatureUrl?: string;
+  phone?: string;
   idCardLayout?: number | null;
   idCardTheme?: string | null;
   classes: Class[];
@@ -42,6 +43,12 @@ const DEFAULT_THEME: CardTheme = {
   background: "#f6fff8",
   textMain: "#ffffff",
   textSub: "#4b5563",
+  schoolNameFont: "",
+  schoolNameSize: "",
+  schoolNameWeight: "",
+  schoolCaptionFont: "",
+  schoolCaptionSize: "",
+  schoolCaptionWeight: "",
 };
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -52,6 +59,7 @@ export default function AllStudentsPage() {
   const schoolId = params.id as string;
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const canEditOrDelete = isAdmin || (user?.role === "user" && user?.schoolId === schoolId);
 
   const [school, setSchool] = useState<School | null>(null);
   const [loading, setLoading] = useState(true);
@@ -334,6 +342,25 @@ export default function AllStudentsPage() {
             {/* Top row: Title, breadcrumb, info on left; Export button on right */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
               <div className="min-w-0">
+                <button
+                  onClick={() => router.push(`/school/${schoolId}`)}
+                  className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-550 hover:text-indigo-600 transition-colors cursor-pointer"
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2.5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                    />
+                  </svg>
+                  <span>Back to School</span>
+                </button>
                 <p className="text-xs text-gray-400 mb-1 truncate">
                   <Link href={`/school/${schoolId}`} className="hover:underline">
                     {school.name}
@@ -471,7 +498,7 @@ export default function AllStudentsPage() {
               <div className="animate-in fade-in duration-200">
                 <StudentListTable
                   students={paginatedStudents}
-                  isAdmin={isAdmin}
+                  isAdmin={canEditOrDelete}
                   onEdit={(student) => setEditingStudent(student)}
                   onDelete={handleDeleteClick}
                   onPreview={(student) => setSelectedPreviewStudent(student)}
@@ -497,7 +524,7 @@ export default function AllStudentsPage() {
                           <StudentCard
                             key={student.id}
                             student={student}
-                            isAdmin={isAdmin}
+                            isAdmin={canEditOrDelete}
                             onEdit={(student) => setEditingStudent(student)}
                             onDelete={handleDeleteClick}
                             onPreview={(student) => setSelectedPreviewStudent(student)}
@@ -513,7 +540,7 @@ export default function AllStudentsPage() {
                     <StudentCard
                       key={student.id}
                       student={student}
-                      isAdmin={isAdmin}
+                      isAdmin={canEditOrDelete}
                       onEdit={(student) => setEditingStudent(student)}
                       onDelete={handleDeleteClick}
                       onPreview={(student) => setSelectedPreviewStudent(student)}
@@ -649,6 +676,7 @@ export default function AllStudentsPage() {
                 address: school.address || "",
                 logoUrl: school.logoUrl || "",
                 signatureUrl: school.signatureUrl || "",
+                phone: school.phone || "",
               };
 
               const studentForCard = {
