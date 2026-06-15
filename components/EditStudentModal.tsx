@@ -13,6 +13,7 @@ import Cropper from "react-easy-crop";
 interface StudentData {
   id: string;
   name: string;
+  idNo?: string;
   fatherName: string;
   fatherPhone: string;
   address: string;
@@ -59,6 +60,8 @@ export default function EditStudentModal({
     fatherPhone: student.fatherPhone || "",
     address: student.address || "",
     classId: student.classId || "",
+    idNo: student.idNo || "",
+    camSno: student.camSno || "",
   });
 
   const [customFieldsConfig, setCustomFieldsConfig] = useState<any>(null);
@@ -193,7 +196,15 @@ export default function EditStudentModal({
       let finalPictureUrl = student.profilePictureUrl || "";
 
       if (profilePictureFile) {
-        const generatedCamId = student.camSno || crypto.randomUUID().replace(/-/g, '').substring(0, 12);
+        const randomSuffix = typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID().replace(/-/g, "").substring(0, 8)
+          : Math.random().toString(36).substring(2, 10);
+        
+        const cleanCamId = (formData.camSno || student.camSno || student.id || randomSuffix)
+          .trim()
+          .replace(/[^a-zA-Z0-9_-]/g, "_");
+
+        const generatedCamId = `${cleanCamId}_${Date.now()}_${randomSuffix}`;
         const folderName = schoolName.trim().split(/\s+/)[0];
 
         finalPictureUrl = await uploadImageToCloudinary(
@@ -214,6 +225,8 @@ export default function EditStudentModal({
           fatherPhone: formData.fatherPhone.trim(),
           address: formData.address.trim(),
           classId: formData.classId,
+          idNo: formData.idNo.trim(),
+          camSno: formData.camSno.trim(),
           profilePictureUrl: finalPictureUrl,
           customValues,
         }),

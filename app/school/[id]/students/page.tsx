@@ -721,6 +721,7 @@ export default function AllStudentsPage() {
               student={{
                 id: editingStudent.id,
                 name: editingStudent.name,
+                idNo: editingStudent.idNo || "",
                 fatherName: editingStudent.fatherName || "",
                 fatherPhone: editingStudent.fatherPhone || "",
                 address: editingStudent.address || "",

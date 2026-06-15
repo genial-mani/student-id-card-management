@@ -709,6 +709,7 @@ export default function ClassPage() {
               student={{
                 id: editingStudent.id,
                 name: editingStudent.name,
+                idNo: editingStudent.idNo || "",
                 fatherName: editingStudent.fatherName || "",
                 fatherPhone: editingStudent.fatherPhone || "",
                 address: editingStudent.address || "",
