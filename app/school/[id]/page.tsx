@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -409,7 +409,7 @@ const DraggableField = ({
           e.stopPropagation();
           setSelectedFieldKey(fieldKey);
         }}
-        className={`absolute select-none flex items-center justify-center border cursor-move ${selectedFieldKey === fieldKey ? "border-indigo-650 bg-indigo-50/20 ring-1 ring-indigo-650 shadow-sm" : "border-slate-300 bg-white/70"
+        className={`absolute select-none flex items-center justify-center border cursor-move ${selectedFieldKey === fieldKey ? "border-indigo-650 ring-1 ring-indigo-650" : "border-slate-300"
           }`}
         style={{
           width: f.width ? `${f.width}px` : (isImage ? "120px" : "auto"),
@@ -435,11 +435,14 @@ export default function SchoolPage() {
   const isAdmin = user?.role === "admin";
 
   const [school, setSchool] = useState<School | null>(null);
+  const [allSchools, setAllSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [showClass, setShowClass] = useState(false);
   const [showCreds, setShowCreds] = useState(false);
   const [showSchoolForm, setShowSchoolForm] = useState(false);
+  const [showEditSchool, setShowEditSchool] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Tabs & Custom Configurations State
@@ -569,6 +572,23 @@ export default function SchoolPage() {
 
   const handleLayoutChange = (num: number) => {
     setSelectedLayout(num);
+    if (num >= 13) {
+      const shared = sharedLayouts[num - 13];
+      if (shared) {
+        setIdCardLayoutConfig(shared.config);
+        setTheme(shared.theme);
+      }
+    } else if (num === 0) {
+      if (school?.idCardLayoutConfig) {
+        try {
+          setIdCardLayoutConfig(
+            typeof school.idCardLayoutConfig === "string"
+              ? JSON.parse(school.idCardLayoutConfig)
+              : school.idCardLayoutConfig
+          );
+        } catch {}
+      }
+    }
   };
 
   const handleColorChange = (key: keyof CardTheme, value: string) => {
@@ -674,6 +694,7 @@ export default function SchoolPage() {
 
       if (response.ok) {
         alert("Forms setup saved successfully!");
+        window.dispatchEvent(new Event("schools-updated"));
         fetchSchool();
       } else {
         const err = await response.json();
@@ -873,6 +894,7 @@ export default function SchoolPage() {
 
       if (response.ok) {
         alert("Layout saved successfully!");
+        window.dispatchEvent(new Event("schools-updated"));
         fetchSchool();
       } else {
         const err = await response.json();
@@ -883,6 +905,28 @@ export default function SchoolPage() {
       alert("Failed to save layout");
     } finally {
       setSavingLayout(false);
+    }
+  };
+
+  const handleDeleteSchool = async () => {
+    console.log("handleDeleteSchool executing... Sending DELETE request for:", schoolId);
+    try {
+      const res = await fetch(`/api/schools/${schoolId}`, { method: "DELETE" });
+      console.log("DELETE response status:", res.status);
+      if (res.ok) {
+        alert("School deleted successfully!");
+        window.dispatchEvent(new Event("schools-updated"));
+        router.push("/");
+      } else {
+        const data = await res.json();
+        console.log("DELETE failed: ", data);
+        alert(data.error || "Failed to delete school");
+      }
+    } catch (err) {
+      console.error("DELETE catch block error:", err);
+      alert("Failed to delete school");
+    } finally {
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -904,6 +948,45 @@ export default function SchoolPage() {
   useEffect(() => {
     if (schoolId) fetchSchool();
   }, [schoolId, fetchSchool]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetch("/api/schools")
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) setAllSchools(data);
+        })
+        .catch(console.error);
+    }
+  }, [isAdmin]);
+
+  const sharedLayouts = useMemo(() => {
+    return allSchools
+      .filter((s) => s.id !== schoolId && s.idCardLayoutConfig)
+      .map((s) => {
+        let config = s.idCardLayoutConfig;
+        if (typeof config === "string") {
+          try {
+            config = JSON.parse(config);
+          } catch {
+            config = null;
+          }
+        }
+        let themeObj = DEFAULT_THEME;
+        if (s.idCardTheme) {
+          try {
+            themeObj = JSON.parse(s.idCardTheme);
+          } catch {}
+        }
+        return {
+          schoolId: s.id,
+          schoolName: s.name,
+          config,
+          theme: themeObj
+        };
+      })
+      .filter((l) => l.config && l.config.backgroundUrl);
+  }, [allSchools, schoolId]);
 
   // ── Shell wrapper ──────────────────────────────────────────────────────────
 
@@ -1064,8 +1147,32 @@ export default function SchoolPage() {
                   </Button>
                 )}
 
-                {/* Design Studio button */}
-                {user && (
+                {/* Edit details — admin only */}
+                {isAdmin && (
+                  <Button
+                    onClick={() => setShowEditSchool(true)}
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200"
+                  >
+                    <span className="mr-1">✎</span>
+                    <span className="hidden sm:inline">Edit Details</span>
+                    <span className="sm:hidden">Edit</span>
+                  </Button>
+                )}
+
+                {/* Delete School — admin only */}
+                {isAdmin && (
+                  <Button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200"
+                  >
+                    <span className="mr-1">🗑️</span>
+                    <span className="hidden sm:inline">Delete School</span>
+                    <span className="sm:hidden">Delete</span>
+                  </Button>
+                )}
+
+                {/* Design Studio button — admin only */}
+                {isAdmin && (
                   <Button
                     onClick={() => setIsDesignMode(!isDesignMode)}
                     className={`font-medium flex items-center gap-1.5 sm:gap-2 transition-colors ${isDesignMode
@@ -1116,15 +1223,17 @@ export default function SchoolPage() {
                 ⚙️ Form Setup
               </button>
             )}
-            <button
-              onClick={() => { setActiveTab("designer"); setIsDesignMode(true); }}
-              className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === "designer"
-                ? "border-indigo-650 text-indigo-650 font-extrabold"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-            >
-              🎨 ID Card Studio
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => { setActiveTab("designer"); setIsDesignMode(true); }}
+                className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === "designer"
+                  ? "border-indigo-650 text-indigo-650 font-extrabold"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+              >
+                🎨 ID Card Studio
+              </button>
+            )}
           </div>
 
           {/* ── TAB 1: Directory & Classes ──────────────────────── */}
@@ -1857,7 +1966,7 @@ export default function SchoolPage() {
                               displayContent = school.logoUrl ? (
                                 <img src={school.logoUrl} alt="Logo" className="w-full h-full object-contain pointer-events-none" />
                               ) : (
-                                <div className="w-full h-full bg-slate-100 border flex items-center justify-center text-[10px] font-bold text-slate-400">Logo</div>
+                                <div className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Logo</div>
                               );
                             } else if (fieldKey === "student_photo") {
                               displayContent = (
@@ -1867,7 +1976,7 @@ export default function SchoolPage() {
                               displayContent = school.signatureUrl ? (
                                 <img src={school.signatureUrl} alt="Sign" className="w-full h-full object-contain pointer-events-none" />
                               ) : (
-                                <div className="w-full h-full bg-slate-100 border flex items-center justify-center text-[10px] font-bold text-slate-400">Signature</div>
+                                <div className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Signature</div>
                               );
                             } else {
                               let label = "";
@@ -1966,9 +2075,9 @@ export default function SchoolPage() {
                           { key: "student_address", label: "Student Address" },
                           { key: "principal_signature", label: "Signature" },
                           // Add dynamic configurations custom fields
-                          ...(customFieldsConfig.school || []).filter((f: any) => !f.default && f.enabled).map((f: any) => ({ key: `school_custom_${f.key}`, label: `Sch Custom: ${f.label}` })),
-                          ...(customFieldsConfig.class || []).filter((f: any) => !f.default && f.enabled).map((f: any) => ({ key: `class_custom_${f.key}`, label: `Cls Custom: ${f.label}` })),
-                          ...(customFieldsConfig.student || []).filter((f: any) => !f.default && f.enabled).map((f: any) => ({ key: `student_custom_${f.key}`, label: `Stu Custom: ${f.label}` }))
+                          ...(customFieldsConfig.school || []).filter((f: any) => !f.default && f.enabled).map((f: any) => ({ key: `school_custom_${f.key}`, label: `(School) ${f.label}` })),
+                          ...(customFieldsConfig.class || []).filter((f: any) => !f.default && f.enabled).map((f: any) => ({ key: `class_custom_${f.key}`, label: `(Class) ${f.label}` })),
+                          ...(customFieldsConfig.student || []).filter((f: any) => !f.default && f.enabled).map((f: any) => ({ key: `student_custom_${f.key}`, label: `(Student) ${f.label}` }))
                         ].map((item) => {
                           // Filter elements to only show if enabled in Form configurations
                           const actualKey = item.key.replace(/^(school_custom_|student_custom_|class_custom_)/, "");
@@ -2124,83 +2233,108 @@ export default function SchoolPage() {
                 </div>
               )}
 
-              {/* ── Preset Layout Selector ── */}
-              <div className="mt-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-3 text-left">
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                    Available Layout Layouts
-                  </p>
+              {/* Preset Layout Selection */}
+              <div className="mt-8 pt-8 border-t border-gray-200 text-left">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-gray-800">Select Preset Layout</h3>
+                    <p className="text-xs text-gray-500 font-medium">
+                      Choose from our designed standard templates or click Layout 0 to construct a fully customized layout from scratch.
+                    </p>
+                  </div>
                   <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full whitespace-nowrap">
-                    {selectedLayout === 0 ? "Custom Designer Layout" : `Layout ${selectedLayout}`} selected
+                    {selectedLayout === 0 
+                      ? "Custom Designer Layout" 
+                      : selectedLayout >= 13 
+                        ? `Shared Layout ${selectedLayout - 12} (${sharedLayouts[selectedLayout - 13]?.schoolName})`
+                        : `Layout ${selectedLayout}`} selected
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
-                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
-                    <div
-                      key={num}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleLayoutChange(num)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          handleLayoutChange(num);
-                        }
-                      }}
-                      className={`group flex flex-col items-center gap-1.5 sm:gap-3 p-1 sm:p-2 rounded-2xl sm:rounded-3xl transition-all duration-200 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-400 ${selectedLayout === num
-                        ? "scale-[1.01]"
-                        : "hover:opacity-95"
-                        }`}
-                    >
-                      {/* Scaled-down card preview */}
+                  {[
+                    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+                    ...sharedLayouts.map((_, idx) => 13 + idx)
+                  ].map((num) => {
+                    const isShared = num >= 13;
+                    const sharedLayout = isShared ? sharedLayouts[num - 13] : null;
+                    const sharedConfig = sharedLayout?.config;
+                    const sharedTheme = sharedLayout?.theme;
+
+                    return (
                       <div
-                        className={`relative overflow-hidden rounded-lg sm:rounded-[1rem] w-32 sm:w-52 md:w-56 h-48 sm:h-80 bg-white ${selectedLayout === num ? "ring-2 ring-indigo-300" : ""
+                        key={num}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleLayoutChange(num)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            handleLayoutChange(num);
+                          }
+                        }}
+                        className={`group flex flex-col items-center gap-1.5 sm:gap-3 p-1 sm:p-2 rounded-2xl sm:rounded-3xl transition-all duration-200 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-400 ${selectedLayout === num
+                          ? "scale-[1.01]"
+                          : "hover:opacity-95"
                           }`}
                       >
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          {num === 0 && !idCardLayoutConfig.backgroundUrl ? (
-                            <div className="text-[10px] font-extrabold text-slate-400 text-center px-4 select-none">
-                              Click to design custom layout
-                            </div>
-                          ) : (
-                            <div
-                              style={{
-                                transform: "scale(0.2)",
-                                transformOrigin: "center center",
-                                width: "638px",
-                                height: "1015px",
-                                pointerEvents: "none",
-                              }}
-                            >
-                              <IdCard
-                                layout={num}
-                                theme={theme}
-                                school={{
-                                  name: school.name,
-                                  caption: school.caption,
-                                  address: school.address,
-                                  logoUrl: school.logoUrl,
-                                  signatureUrl: school.signatureUrl,
-                                  phone: school.phone,
-                                  idCardLayoutConfig: idCardLayoutConfig,
+                        {/* Scaled-down card preview */}
+                        <div
+                          className={`relative overflow-hidden rounded-lg sm:rounded-[1rem] w-32 sm:w-52 md:w-56 h-48 sm:h-80 bg-white ${selectedLayout === num ? "ring-2 ring-indigo-300" : ""
+                            }`}
+                        >
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            {num === 0 && !idCardLayoutConfig.backgroundUrl ? (
+                              <div className="text-[10px] font-extrabold text-slate-400 text-center px-4 select-none">
+                                Click to design custom layout
+                              </div>
+                            ) : isShared && !sharedConfig?.backgroundUrl ? (
+                              <div className="text-[10px] font-extrabold text-slate-400 text-center px-4 select-none">
+                                No Background
+                              </div>
+                            ) : (
+                              <div
+                                style={{
+                                  transform: "scale(0.2)",
+                                  transformOrigin: "center center",
+                                  width: "638px",
+                                  height: "1015px",
+                                  pointerEvents: "none",
                                 }}
-                                student={DUMMY_STUDENT}
-                                classNameStr="Demo Class"
-                              />
-                            </div>
-                          )}
+                              >
+                                <IdCard
+                                  layout={isShared ? 0 : num}
+                                  theme={isShared ? (sharedTheme || theme) : theme}
+                                  school={{
+                                    name: school.name,
+                                    caption: school.caption,
+                                    address: school.address,
+                                    logoUrl: school.logoUrl,
+                                    signatureUrl: school.signatureUrl,
+                                    phone: school.phone,
+                                    idCardLayoutConfig: isShared ? sharedConfig : idCardLayoutConfig,
+                                  }}
+                                  student={DUMMY_STUDENT}
+                                  classNameStr="Demo Class"
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
+                        <span
+                          className={`text-xs font-bold transition-colors line-clamp-1 ${selectedLayout === num
+                            ? "text-indigo-600"
+                            : "text-gray-500"
+                            }`}
+                        >
+                          {num === 0 
+                            ? "Custom Designer" 
+                            : isShared 
+                              ? `Shared Layout ${num - 12} (${sharedLayout?.schoolName})` 
+                              : `Layout ${num}`}
+                        </span>
                       </div>
-                      <span
-                        className={`text-xs font-bold transition-colors line-clamp-1 ${selectedLayout === num
-                          ? "text-indigo-600"
-                          : "text-gray-500"
-                          }`}
-                      >
-                        {num === 0 ? "Custom Designer" : `Layout ${num}`}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -2230,12 +2364,63 @@ export default function SchoolPage() {
         />
       )}
 
+      {showEditSchool && school && isAdmin && (
+        <SchoolForm
+          school={{
+            id: school.id,
+            name: school.name,
+            caption: school.caption,
+            address: school.address,
+            phone: school.phone,
+            logoUrl: school.logoUrl,
+            signatureUrl: school.signatureUrl,
+            idCardLayout: school.idCardLayout,
+          }}
+          onClose={() => setShowEditSchool(false)}
+          onSuccess={() => {
+            setShowEditSchool(false);
+            fetchSchool();
+            window.dispatchEvent(new Event("schools-updated"));
+          }}
+        />
+      )}
+
       {showCreds && isAdmin && (
         <CredentialsModal
           schoolId={schoolId}
           schoolName={school.name}
           onClose={() => setShowCreds(false)}
         />
+      )}
+
+      {showDeleteConfirm && school && isAdmin && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 text-left animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-rose-600 mb-4">
+              <span className="text-3xl">⚠️</span>
+              <h3 className="text-lg font-bold text-slate-950">Delete School</h3>
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed mb-6">
+              Are you sure you want to delete <strong className="text-slate-900">{school.name}</strong> and all its students, classes, and credentials? This action is permanent and cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold rounded-xl transition-colors cursor-pointer border-0"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteSchool}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer shadow-md hover:shadow-lg active:scale-95 border-0"
+              >
+                Delete School
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

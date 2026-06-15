@@ -142,8 +142,8 @@ export default function IdCard({
     </div>
   );
 
-  // --- LAYOUT 0: Custom Dynamic Layout ---
-  if (layout === 0) {
+  // --- LAYOUT 0 or >= 13: Custom / Shared Dynamic Layout ---
+  if (layout === 0 || layout >= 13) {
     let layoutConfig = school.idCardLayoutConfig;
     if (typeof layoutConfig === "string") {
       try {

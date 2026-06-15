@@ -37,16 +37,16 @@ export async function GET(
   }
 }
 
-// PUT update a school — admin or school staff
+// PUT update a school — admin only
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { role, schoolId } = getAuth(request);
+    const { role } = getAuth(request);
     const { id } = await params;
 
-    if (role !== 'admin' && schoolId !== id) {
+    if (role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -99,7 +99,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'School not found' }, { status: 404 });
     }
 
+    // Delete associated students, classes, and users first to prevent orphans
+    await prisma.student.deleteMany({ where: { schoolId: id } });
+    await prisma.class.deleteMany({ where: { schoolId: id } });
+    await prisma.user.deleteMany({ where: { schoolId: id } });
     await prisma.school.delete({ where: { id } });
+    
     return NextResponse.json({ message: 'School deleted successfully' });
   } catch {
     return NextResponse.json({ error: 'Failed to delete school' }, { status: 500 });

@@ -28,14 +28,38 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
   const pathname = usePathname();
 
   useEffect(() => {
-    fetchSchools();
+    fetchSchools(false);
   }, [user]);
 
-  const fetchSchools = async () => {
+  useEffect(() => {
+    const handleCacheReset = () => {
+      fetchSchools(true);
+    };
+    window.addEventListener("schools-updated", handleCacheReset);
+    return () => {
+      window.removeEventListener("schools-updated", handleCacheReset);
+    };
+  }, []);
+
+  const fetchSchools = async (forceRefetch = false) => {
+    if (!forceRefetch) {
+      const cached = localStorage.getItem("sidebar_schools");
+      if (cached) {
+        try {
+          setSchools(JSON.parse(cached));
+          return;
+        } catch (e) {
+          // fallback to api
+        }
+      }
+    }
+
     try {
       const response = await fetch("/api/schools");
       if (response.ok) {
-        setSchools(await response.json());
+        const data = await response.json();
+        setSchools(data);
+        localStorage.setItem("sidebar_schools", JSON.stringify(data));
       }
     } catch (error) {
       console.error("Failed to fetch schools:", error);

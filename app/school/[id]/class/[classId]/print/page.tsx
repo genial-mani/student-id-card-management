@@ -128,18 +128,40 @@ export default function PrintPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch(`/api/classes/${classId}`);
-      if (res.status === 403) {
-        setForbidden(true);
-        return;
+      if (classId === "all") {
+        const res = await fetch(`/api/schools/${schoolId}`);
+        if (res.status === 403) {
+          setForbidden(true);
+          return;
+        }
+        if (res.ok) {
+          const schoolObj = await res.json();
+          const classMap = new Map((schoolObj.classes || []).map((c: any) => [c.id, c.name]));
+          const studentsWithClass = (schoolObj.students || []).map((s: any) => ({
+            ...s,
+            className: classMap.get(s.classId) || "N/A",
+          }));
+          setClassData({
+            id: "all",
+            name: "All Students",
+            school: schoolObj,
+            students: studentsWithClass,
+          });
+        }
+      } else {
+        const res = await fetch(`/api/classes/${classId}`);
+        if (res.status === 403) {
+          setForbidden(true);
+          return;
+        }
+        if (res.ok) setClassData(await res.json());
       }
-      if (res.ok) setClassData(await res.json());
     } catch {
       /**/
     } finally {
       setLoading(false);
     }
-  }, [classId]);
+  }, [classId, schoolId]);
 
   useEffect(() => {
     if (!classId) return;
@@ -377,7 +399,7 @@ export default function PrintPage() {
             Add students to this class first.
           </p>
           <Link
-            href={`/school/${schoolId}/class/${classId}`}
+            href={`/school/${schoolId}/students`}
             className="bg-blue-600 text-white py-2 px-5 rounded-xl text-sm"
           >
             Go Back
@@ -417,7 +439,7 @@ export default function PrintPage() {
               theme={theme}
               school={classData.school}
               student={student}
-              classNameStr={classData.name}
+              classNameStr={(student as any).className || classData.name}
               classCustomValues={classData.customValues}
             />
           </div>
@@ -430,7 +452,7 @@ export default function PrintPage() {
           <div className="px-4 sm:px-6 py-3">
             <div className="flex items-center gap-3 mb-2">
               <Link
-                href={`/school/${schoolId}/class/${classId}`}
+                href={`/school/${schoolId}/students`}
                 className="text-gray-400 hover:text-gray-700 transition-colors shrink-0"
               >
                 <svg
@@ -575,7 +597,7 @@ export default function PrintPage() {
                                 theme={theme}
                                 school={classData.school}
                                 student={student}
-                                classNameStr={classData.name}
+                                classNameStr={(student as any).className || classData.name}
                                 classCustomValues={classData.customValues}
                               />
                             </div>

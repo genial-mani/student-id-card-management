@@ -10,6 +10,16 @@ import { Textarea } from "@/components/ui/textarea";
 interface SchoolFormProps {
   onClose: () => void;
   onSuccess: () => void;
+  school?: {
+    id: string;
+    name: string;
+    caption: string;
+    address: string;
+    phone: string;
+    logoUrl: string;
+    signatureUrl: string;
+    idCardLayout?: number | null;
+  };
 }
 
 interface Credentials {
@@ -18,13 +28,13 @@ interface Credentials {
   schoolName: string;
 }
 
-export default function SchoolForm({ onClose, onSuccess }: SchoolFormProps) {
+export default function SchoolForm({ onClose, onSuccess, school }: SchoolFormProps) {
   const [formData, setFormData] = useState({
-    name: "",
-    caption: "",
-    address: "",
-    phone: "",
-    idCardLayout: 1,
+    name: school?.name || "",
+    caption: school?.caption || "",
+    address: school?.address || "",
+    phone: school?.phone || "",
+    idCardLayout: school?.idCardLayout || 1,
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
@@ -53,32 +63,38 @@ export default function SchoolForm({ onClose, onSuccess }: SchoolFormProps) {
     e.preventDefault();
     setLoading(true);
     try {
-      let logoUrl = "";
-      let signatureUrl = "";
+      let logoUrl = school?.logoUrl || "";
+      let signatureUrl = school?.signatureUrl || "";
       if (logoFile) logoUrl = await uploadImageToCloudinary(logoFile);
       if (signatureFile)
         signatureUrl = await uploadImageToCloudinary(signatureFile);
 
-      const response = await fetch("/api/schools", {
-        method: "POST",
+      const url = school ? `/api/schools/${school.id}` : "/api/schools";
+      const method = school ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, logoUrl, signatureUrl }),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setCredentials({
-          username: data.credentials.username,
-          password: data.credentials.password,
-          schoolName: formData.name,
-        });
+        window.dispatchEvent(new Event("schools-updated"));
+        if (!school) {
+          const data = await response.json();
+          setCredentials({
+            username: data.credentials.username,
+            password: data.credentials.password,
+            schoolName: formData.name,
+          });
+        }
         onSuccess();
       } else {
         const err = await response.json();
-        alert(err.error || "Failed to create school");
+        alert(err.error || `Failed to ${school ? "update" : "create"} school`);
       }
     } catch {
-      alert("Failed to create school");
+      alert(`Failed to ${school ? "update" : "create"} school`);
     } finally {
       setLoading(false);
     }
@@ -263,13 +279,13 @@ export default function SchoolForm({ onClose, onSuccess }: SchoolFormProps) {
     );
   }
 
-  // ── Create form ──────────────────────────────────────────────────────────
+  // ── Create/Edit form ──────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-3">
       <div className="bg-white rounded-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto">
         <div className="p-4 sm:p-6">
           <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-5">
-            Create School
+            {school ? "Update School Details" : "Create School"}
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
@@ -336,19 +352,25 @@ export default function SchoolForm({ onClose, onSuccess }: SchoolFormProps) {
             </div>
 
             {[
-              { label: "School Logo", key: "logo" as const },
-              { label: "Signature Photo", key: "signature" as const },
-            ].map(({ label, key }) => (
+              { label: "School Logo", key: "logo" as const, currentUrl: school?.logoUrl },
+              { label: "Signature Photo", key: "signature" as const, currentUrl: school?.signatureUrl },
+            ].map(({ label, key, currentUrl }) => (
               <div key={key}>
                 <Label htmlFor={key} className="text-xs sm:text-sm">
                   {label}
                 </Label>
+                {currentUrl && (
+                  <div className="flex items-center gap-3 my-1.5">
+                    <img src={currentUrl} alt={label} className="w-12 h-12 object-contain border rounded bg-gray-50 p-0.5" />
+                    <span className="text-xs text-gray-500">Current {label.toLowerCase()}</span>
+                  </div>
+                )}
                 <Input
                   id={key}
                   type="file"
                   accept="image/*"
                   onChange={(e) => handleFileChange(e, key)}
-                  className="text-xs sm:text-sm file:mr-2 sm:file:mr-3 file:py-1 sm:file:py-1.5 file:px-2 sm:file:px-3 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  className="text-xs sm:text-sm file:mr-2 sm:file:mr-3 file:py-1 sm:file:py-1.5 file:px-2 sm:file:px-3 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mt-1"
                 />
               </div>
             ))}
@@ -359,7 +381,7 @@ export default function SchoolForm({ onClose, onSuccess }: SchoolFormProps) {
                 className="flex-1 text-xs sm:text-sm"
                 disabled={loading}
               >
-                {loading ? "Creating..." : "Create School"}
+                {loading ? (school ? "Updating..." : "Creating...") : (school ? "Update Details" : "Create School")}
               </Button>
               <Button
                 type="button"

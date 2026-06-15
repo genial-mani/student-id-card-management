@@ -503,22 +503,7 @@ export default function ClassPage() {
                   </button>
                 )}
 
-                {/* Print / Export — everyone */}
-                {user?.role === "admin" && classData.students.length > 0 && (
-                  <Link
-                    href={`/school/${schoolId}/class/${classId}/print`}
-                    className="py-2 px-3 sm:px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-750 border border-indigo-200 transition-colors h-10 shadow-sm"
-                  >
-                    <HugeiconsIcon
-                      icon={PrinterIcon}
-                      size={18}
-                      color="currentColor"
-                      strokeWidth={2}
-                    />
-                    <span className="hidden sm:inline">Print / Export PDF</span>
-                    <span className="sm:hidden">Print</span>
-                  </Link>
-                )}
+
 
                 {/* Add student */}
                 <button

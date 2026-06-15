@@ -13,7 +13,7 @@ import StudentCard from "@/components/StudentCard";
 import StudentListTable from "@/components/StudentListTable";
 import { Student } from "@/types/student";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { UserGroupIcon, IdentityCardIcon, Search01Icon, GridIcon, ListViewIcon, Search02Icon, LockIcon, ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { UserGroupIcon, IdentityCardIcon, Search01Icon, GridIcon, ListViewIcon, Search02Icon, LockIcon, ArrowLeft01Icon, ArrowRight01Icon, PrinterIcon } from "@hugeicons/core-free-icons";
 import IdCard, { CardTheme } from "@/components/IdCard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -409,21 +409,66 @@ export default function AllStudentsPage() {
                   </span>
                 </h1>
               </div>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {isAdmin && (
+                  selectedClassId ? (
+                    filteredStudents.length > 0 ? (
+                      <Link
+                        href={`/school/${schoolId}/class/${selectedClassId}/print`}
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-750 border border-indigo-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm"
+                        title="Print ID Cards for the selected class"
+                      >
+                        <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
+                        <span>Print / Export PDF</span>
+                      </Link>
+                    ) : (
+                      <button
+                        disabled
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-gray-50 text-gray-400 border border-gray-200 rounded-xl text-xs sm:text-sm font-bold h-10 opacity-60 cursor-not-allowed border-0"
+                        title="No students in the selected class to print"
+                      >
+                        <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
+                        <span>Print / Export PDF</span>
+                      </button>
+                    )
+                  ) : (
+                    allStudents.length > 0 ? (
+                      <Link
+                        href={`/school/${schoolId}/class/all/print`}
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-750 border border-indigo-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm animate-pulse"
+                        title="Print ID Cards for all students in the school"
+                      >
+                        <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
+                        <span>Print All Students</span>
+                      </Link>
+                    ) : (
+                      <button
+                        disabled
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-gray-50 text-gray-400 border border-gray-200 rounded-xl text-xs sm:text-sm font-bold h-10 opacity-60 cursor-not-allowed border-0"
+                        title="No students in the school to print"
+                      >
+                        <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
+                        <span>Print All Students</span>
+                      </button>
+                    )
+                  )
+                )}
 
-              {isAdmin && (
-                <div className="shrink-0">
-                  <button
-                    onClick={handleExportToExcel}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 w-full sm:w-auto justify-center"
-                    title="Export all student data to Excel (CSV)"
-                  >
-                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    <span>Export Excel</span>
-                  </button>
-                </div>
-              )}
+                {isAdmin && (
+                  <div className="shrink-0">
+                    <button
+                      onClick={handleExportToExcel}
+                      className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 w-full sm:w-auto justify-center h-10"
+                      title="Export all student data to Excel (CSV)"
+                    >
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      <span>Export Excel</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Bottom row: Search & Filter Controls (fully responsive flex layout) */}
