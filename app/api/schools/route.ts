@@ -67,14 +67,27 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Auto-generate user credentials for this school
-    const { username, password } = generateCredentials(name);
-    const hashedPassword = await hashPassword(password);
+    // Auto-generate admin user credentials for this school
+    const adminCreds = generateCredentials(name + ' Admin');
+    const hashedAdminPassword = await hashPassword(adminCreds.password);
 
     await prisma.user.create({
       data: {
-        username,
-        password: hashedPassword,
+        username: adminCreds.username,
+        password: hashedAdminPassword,
+        role: 'school_admin',
+        schoolId: school.id,
+      },
+    });
+
+    // Auto-generate staff user credentials for this school
+    const staffCreds = generateCredentials(name + ' Staff');
+    const hashedStaffPassword = await hashPassword(staffCreds.password);
+
+    await prisma.user.create({
+      data: {
+        username: staffCreds.username,
+        password: hashedStaffPassword,
         role: 'user',
         schoolId: school.id,
       },
@@ -84,7 +97,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         school,
-        credentials: { username, password },
+        credentials: [
+          { role: 'school_admin', username: adminCreds.username, password: adminCreds.password },
+          { role: 'user', username: staffCreds.username, password: staffCreds.password }
+        ],
       },
       { status: 201 }
     );

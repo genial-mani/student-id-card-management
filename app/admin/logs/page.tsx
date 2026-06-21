@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
+import DashboardLayout from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { 
@@ -108,7 +107,7 @@ export default function SessionLogsPage() {
     return (
       <div className="min-h-screen bg-slate-50/50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
           <p className="text-slate-550 text-sm">Verifying access authorization…</p>
         </div>
       </div>
@@ -116,18 +115,8 @@ export default function SessionLogsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50/50">
-      <Header onMenuClick={() => setIsSidebarOpen(true)} />
-      
-      <Sidebar 
-        onCreateSchool={() => {}} 
-        isOpen={isSidebarOpen} 
-        onClose={() => setIsSidebarOpen(false)}
-      />
-
-      {/* Main Content */}
-      <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8 min-w-0">
-        <div className="max-w-5xl mx-auto space-y-6 mt-3">
+    <DashboardLayout>
+      <div className="max-w-5xl mx-auto space-y-6 mt-3">
           
           {/* Breadcrumb & Title */}
           <div className="space-y-1">
@@ -138,7 +127,7 @@ export default function SessionLogsPage() {
               </Link>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
-              <svg className="w-7 h-7 text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
+              <svg className="w-7 h-7 text-violet-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
               <span>Session Audit Logs</span>
@@ -170,7 +159,7 @@ export default function SessionLogsPage() {
                   placeholder="Search user, school or action..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all h-9"
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all h-9"
                 />
               </div>
             </div>
@@ -178,7 +167,7 @@ export default function SessionLogsPage() {
             {/* Table */}
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <div className="w-7 h-7 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-7 h-7 border-3 border-violet-600 border-t-transparent rounded-full animate-spin" />
                 <p className="text-slate-400 text-xs font-semibold">Loading session log entries…</p>
               </div>
             ) : logs.length === 0 ? (
@@ -211,9 +200,9 @@ export default function SessionLogsPage() {
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold capitalize tracking-wide ${
                               log.role === "admin"
                                 ? "bg-amber-50 text-amber-700 border border-amber-100"
-                                : "bg-indigo-50 text-indigo-700 border border-indigo-100"
+                                : "bg-violet-50 text-violet-700 border border-violet-100"
                             }`}>
-                              {log.role}
+                              {log.role === 'user' ? 'staff' : log.role}
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-slate-650 font-semibold max-w-[200px] truncate" title={log.schoolName || ""}>
@@ -222,7 +211,7 @@ export default function SessionLogsPage() {
                           <td className="px-4 py-3 whitespace-nowrap text-center">
                             <span className={`inline-block w-20 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border text-center ${
                               log.action === "LOGIN"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-150"
+                                ? "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-150"
                                 : "bg-rose-50 text-rose-700 border-rose-150"
                             }`}>
                               {log.action}
@@ -278,7 +267,7 @@ export default function SessionLogsPage() {
                         onClick={() => setCurrentPage(page)}
                         className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                           currentPage === page
-                            ? "bg-indigo-600 text-white shadow-xs"
+                            ? "bg-violet-600 text-white shadow-xs"
                             : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                         }`}
                       >
@@ -301,7 +290,6 @@ export default function SessionLogsPage() {
           </div>
 
         </div>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/utils/prismaClient';
+import { bulkDeleteImagesFromCloudinary } from '@/utils/cloudinaryBackend';
 
 function getAuth(request: NextRequest) {
   return {
@@ -43,10 +44,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { role } = getAuth(request);
+    const { role, schoolId } = getAuth(request);
     const { id } = await params;
 
-    if (role !== 'admin') {
+    if (role !== 'admin' && (role !== 'school_admin' || schoolId !== id)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -97,6 +98,13 @@ export async function DELETE(
     const school = await prisma.school.findUnique({ where: { id } });
     if (!school) {
       return NextResponse.json({ error: 'School not found' }, { status: 404 });
+    }
+
+    // Fetch all students to delete their photos in bulk
+    const students = await prisma.student.findMany({ where: { schoolId: id }, select: { profilePictureUrl: true } });
+    const photoUrls = students.map(s => s.profilePictureUrl).filter(Boolean);
+    if (photoUrls.length > 0) {
+      await bulkDeleteImagesFromCloudinary(photoUrls);
     }
 
     // Delete associated students, classes, and users first to prevent orphans

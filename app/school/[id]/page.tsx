@@ -4,16 +4,16 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import Sidebar from "@/components/Sidebar";
+import DashboardLayout from "@/components/DashboardLayout";
 import ClassForm from "@/components/ClassForm";
 import CredentialsModal from "@/components/CredentialsModal";
 import SchoolForm from "@/components/SchoolForm";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import Header from "@/components/Header";
 import IdCard, { CardTheme } from "@/components/IdCard";
 import Draggable from "react-draggable";
 import uploadImageToCloudinary from "@/utils/cloudService";
+import { toast } from "sonner";
 
 // Imported Assets
 import card1 from "@/assets/5_5918cf6f-84b7-4ed7-b3d9-0b78a62d3087.webp";
@@ -27,7 +27,7 @@ import printer3 from "@/assets/solvent-printing-machines.png";
 import balaji from "@/assets/tirupati-balaji-hd-wallpaper-for-android-2745524-removebg-preview.png";
 import idcard2 from "@/assets/Vertical-Employee-ID-Card-Format-Template-removebg-preview.png";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, AddSquareIcon, PaintBoardIcon, ShieldKeyIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AddSquareIcon, Delete01Icon, Folder01Icon, PaintBoardIcon, PencilEdit02Icon, SchoolIcon, Setting07Icon, Share08Icon, ShieldKeyIcon, StudentIcon } from "@hugeicons/core-free-icons";
 
 interface School {
   id: string;
@@ -80,7 +80,7 @@ const AdBanner = () => {
   };
 
   return (
-    <div className="relative bg-white rounded-xl shadow-sm border border-indigo-100 mt-5 mb-8 overflow-hidden flex flex-col">
+    <div className="relative bg-white rounded-xl shadow-sm border border-violet-100 mt-5 mb-8 overflow-hidden flex flex-col">
       {/* Required style for the smooth infinite marquee */}
       <style>{`
         @keyframes marquee-scroll {
@@ -106,11 +106,11 @@ const AdBanner = () => {
       `}</style>
 
       {/* Top Section: Details & Maps */}
-      <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 p-4 sm:p-6 lg:p-8 bg-linear-to-br from-indigo-50/50 to-white">
+      <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 p-4 sm:p-6 lg:p-8 bg-linear-to-br from-violet-50/50 to-white">
         {/* Left Side: Brand & Contact */}
         <div className="flex flex-col gap-4 sm:gap-5 flex-1 justify-center min-w-0">
           <div>
-            <span className="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase tracking-widest rounded-full mb-3">
+            <span className="inline-block px-3 py-1 bg-violet-100 text-violet-700 text-[10px] font-bold uppercase tracking-widest rounded-full mb-3">
               Printing Partner
             </span>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
@@ -120,7 +120,7 @@ const AdBanner = () => {
                 className="w-12 sm:w-16"
               />
               ARUN{" "}
-              <span className="text-indigo-600 block sm:inline">
+              <span className="text-violet-600 block sm:inline">
                 ID CARDS & DIGITAL
               </span>
             </h2>
@@ -134,9 +134,9 @@ const AdBanner = () => {
             {/* Phone */}
             <a
               href="tel:+919000836876"
-              className="flex items-start sm:items-center gap-2 sm:gap-3 p-2 sm:p-0 text-xs sm:text-sm text-gray-700 hover:text-indigo-600 transition-colors group active:bg-indigo-50 sm:active:bg-transparent rounded-lg sm:rounded-none"
+              className="flex items-start sm:items-center gap-2 sm:gap-3 p-2 sm:p-0 text-xs sm:text-sm text-gray-700 hover:text-violet-600 transition-colors group active:bg-violet-50 sm:active:bg-transparent rounded-lg sm:rounded-none"
             >
-              <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center group-hover:border-indigo-300 group-hover:bg-indigo-50 transition-colors shrink-0">
+              <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center group-hover:border-violet-300 group-hover:bg-violet-50 transition-colors shrink-0">
                 <svg
                   className="w-3.5 sm:w-4 h-3.5 sm:h-4"
                   fill="none"
@@ -162,9 +162,9 @@ const AdBanner = () => {
             {/* Email */}
             <a
               href="mailto:arunachugatla341@gmail.com"
-              className="flex items-start sm:items-center gap-2 sm:gap-3 p-2 sm:p-0 text-xs sm:text-sm text-gray-700 hover:text-indigo-600 transition-colors group active:bg-indigo-50 sm:active:bg-transparent rounded-lg sm:rounded-none"
+              className="flex items-start sm:items-center gap-2 sm:gap-3 p-2 sm:p-0 text-xs sm:text-sm text-gray-700 hover:text-violet-600 transition-colors group active:bg-violet-50 sm:active:bg-transparent rounded-lg sm:rounded-none"
             >
-              <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center group-hover:border-indigo-300 group-hover:bg-indigo-50 transition-colors shrink-0">
+              <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center group-hover:border-violet-300 group-hover:bg-violet-50 transition-colors shrink-0">
                 <svg
                   className="w-3.5 sm:w-4 h-3.5 sm:h-4"
                   fill="none"
@@ -249,7 +249,7 @@ const AdBanner = () => {
           ].map(([key, service], idx) => (
             <div
               key={idx}
-              className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-indigo-50 text-indigo-700 text-xs sm:text-sm font-medium rounded-lg border border-indigo-200 shadow-sm flex items-center justify-center shrink-0 hover:bg-indigo-100 transition-colors"
+              className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-violet-50 text-violet-700 text-xs sm:text-sm font-medium rounded-lg border border-violet-200 shadow-sm flex items-center justify-center shrink-0 hover:bg-violet-100 transition-colors"
             >
               {service}
             </div>
@@ -258,7 +258,7 @@ const AdBanner = () => {
       </div>
 
       {/* Bottom Section: Image Scroller */}
-      <div className="bg-[#1E2939] py-4 sm:py-6 overflow-hidden flex whitespace-nowrap border-t border-indigo-950">
+      <div className="bg-[#1E2939] py-4 sm:py-6 overflow-hidden flex whitespace-nowrap border-t border-violet-950">
         <div className="animate-marquee flex gap-3 sm:gap-4 lg:gap-6 px-3 sm:px-4 w-max items-center">
           {/* We duplicate the array to create a seamless infinite loop effect */}
           {[...scrollerImages, ...scrollerImages].map((img, idx) => (
@@ -409,7 +409,7 @@ const DraggableField = ({
           e.stopPropagation();
           setSelectedFieldKey(fieldKey);
         }}
-        className={`absolute select-none flex items-center justify-center border cursor-move ${selectedFieldKey === fieldKey ? "border-indigo-650 ring-1 ring-indigo-650" : "border-slate-300"
+        className={`absolute select-none flex items-center justify-center border cursor-move ${selectedFieldKey === fieldKey ? "border-violet-650 ring-1 ring-violet-650" : "border-slate-300"
           }`}
         style={{
           width: f.width ? `${f.width}px` : (isImage ? "120px" : "auto"),
@@ -433,6 +433,8 @@ export default function SchoolPage() {
   const schoolId = params.id as string;
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isSchoolAdmin = user?.role === "school_admin" && user?.schoolId === schoolId;
+  const canEditSchool = isAdmin || isSchoolAdmin;
 
   const [school, setSchool] = useState<School | null>(null);
   const [allSchools, setAllSchools] = useState<School[]>([]);
@@ -444,6 +446,21 @@ export default function SchoolPage() {
   const [showEditSchool, setShowEditSchool] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const [showOptions, setShowOptions] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) {
+        setShowOptions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Tabs & Custom Configurations State
   const [activeTab, setActiveTab] = useState<"classes" | "forms" | "designer">("classes");
@@ -508,7 +525,7 @@ export default function SchoolPage() {
             ? JSON.parse(school.customFieldsConfig)
             : school.customFieldsConfig;
           if (parsed && parsed.student) {
-            parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone");
+            parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone" && f.key !== "idNo" && f.key !== "camSno");
           }
           setCustomFieldsConfig(parsed);
         } catch (e) {
@@ -530,8 +547,6 @@ export default function SchoolPage() {
           student: [
             { key: "name", label: "Student Name", type: "text", required: true, default: true, enabled: true },
             { key: "profilePictureUrl", label: "Profile Picture", type: "file", required: true, default: true, enabled: true },
-            { key: "idNo", label: "ID Number", type: "text", required: false, default: true, enabled: true },
-            { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
             { key: "fatherName", label: "Father Name", type: "text", required: false, default: true, enabled: true },
             { key: "fatherPhone", label: "Father Phone", type: "text", required: false, default: true, enabled: true },
             { key: "address", label: "Address", type: "text", required: false, default: true, enabled: true }
@@ -586,7 +601,7 @@ export default function SchoolPage() {
               ? JSON.parse(school.idCardLayoutConfig)
               : school.idCardLayoutConfig
           );
-        } catch {}
+        } catch { }
       }
     }
   };
@@ -619,7 +634,7 @@ export default function SchoolPage() {
 
     const exists = customFieldsConfig[category].some((f: any) => f.key === key);
     if (exists) {
-      alert("A field with a similar name already exists.");
+      toast.error("A field with a similar name already exists.");
       return;
     }
 
@@ -693,16 +708,16 @@ export default function SchoolPage() {
       });
 
       if (response.ok) {
-        alert("Forms setup saved successfully!");
+        toast.success("Forms setup saved successfully!");
         window.dispatchEvent(new Event("schools-updated"));
         fetchSchool();
       } else {
         const err = await response.json();
-        alert(err.error || "Failed to save configuration");
+        toast.error(err.error || "Failed to save configuration");
       }
     } catch (error) {
       console.error("Error saving config:", error);
-      alert("Failed to save configuration");
+      toast.error("Failed to save configuration");
     }
   };
 
@@ -717,8 +732,9 @@ export default function SchoolPage() {
         ...prev,
         backgroundUrl: url
       }));
+      toast.success("Background image uploaded successfully! Save layouts to persist.");
     } catch (e) {
-      alert("Failed to upload background image");
+      toast.error("Failed to upload background image");
     } finally {
       setBgUploading(false);
     }
@@ -893,16 +909,16 @@ export default function SchoolPage() {
       });
 
       if (response.ok) {
-        alert("Layout saved successfully!");
+        toast.success("Layout saved successfully!");
         window.dispatchEvent(new Event("schools-updated"));
         fetchSchool();
       } else {
         const err = await response.json();
-        alert(err.error || "Failed to save layout");
+        toast.error(err.error || "Failed to save layout");
       }
     } catch (error) {
       console.error("Error saving layout:", error);
-      alert("Failed to save layout");
+      toast.error("Failed to save layout");
     } finally {
       setSavingLayout(false);
     }
@@ -914,19 +930,37 @@ export default function SchoolPage() {
       const res = await fetch(`/api/schools/${schoolId}`, { method: "DELETE" });
       console.log("DELETE response status:", res.status);
       if (res.ok) {
-        alert("School deleted successfully!");
+        toast.success("School deleted successfully!");
         window.dispatchEvent(new Event("schools-updated"));
         router.push("/");
       } else {
         const data = await res.json();
         console.log("DELETE failed: ", data);
-        alert(data.error || "Failed to delete school");
+        toast.error(data.error || "Failed to delete school");
       }
     } catch (err) {
       console.error("DELETE catch block error:", err);
-      alert("Failed to delete school");
+      toast.error("Failed to delete school");
     } finally {
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: school?.name || "School",
+          text: `Check out ${school?.name} on the ID Card Management System`,
+          url: url,
+        });
+      } catch (err) {
+        console.error("Error sharing:", err);
+      }
+    } else {
+      navigator.clipboard.writeText(url);
+      toast.success("School link copied to clipboard!");
     }
   };
 
@@ -950,7 +984,7 @@ export default function SchoolPage() {
   }, [schoolId, fetchSchool]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (canEditSchool) {
       fetch("/api/schools")
         .then((res) => res.json())
         .then((data) => {
@@ -958,7 +992,7 @@ export default function SchoolPage() {
         })
         .catch(console.error);
     }
-  }, [isAdmin]);
+  }, [canEditSchool]);
 
   const sharedLayouts = useMemo(() => {
     return allSchools
@@ -976,7 +1010,7 @@ export default function SchoolPage() {
         if (s.idCardTheme) {
           try {
             themeObj = JSON.parse(s.idCardTheme);
-          } catch {}
+          } catch { }
         }
         return {
           schoolId: s.id,
@@ -991,16 +1025,11 @@ export default function SchoolPage() {
   // ── Shell wrapper ──────────────────────────────────────────────────────────
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar
-        onCreateSchool={() => setShowSchoolForm(true)}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-      <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 flex items-center justify-center p-4">
+    <DashboardLayout>
+      <div className="flex items-center justify-center p-4">
         {children}
       </div>
-    </div>
+    </DashboardLayout>
   );
 
   if (loading)
@@ -1054,14 +1083,8 @@ export default function SchoolPage() {
   );
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar
-        onCreateSchool={() => setShowSchoolForm(true)}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-      <Header onMenuClick={() => setIsSidebarOpen(true)} />
-      <div className="lg:ml-64 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8 flex items-center justify-center w-full lg:max-w-[calc(100%-256px)] mx-auto">
+    <DashboardLayout>
+      <div className="flex items-center justify-center w-full lg:max-w-[calc(100%-256px)] mx-auto">
         <div className="w-full max-w-full flex flex-col mx-auto mt-3">
           {/* ── School header card ───────────────────────────────────────── */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6 mb-6">
@@ -1136,7 +1159,7 @@ export default function SchoolPage() {
               {/* Action buttons */}
               <div className="flex flex-wrap gap-2 self-start">
                 {/* View Credentials — admin only */}
-                {isAdmin && (
+                {canEditSchool && (
                   <Button
                     onClick={() => setShowCreds(true)}
                     className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200"
@@ -1147,56 +1170,68 @@ export default function SchoolPage() {
                   </Button>
                 )}
 
-                {/* Edit details — admin only */}
-                {isAdmin && (
-                  <Button
-                    onClick={() => setShowEditSchool(true)}
-                    className="bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200"
-                  >
-                    <span className="mr-1">✎</span>
-                    <span className="hidden sm:inline">Edit Details</span>
-                    <span className="sm:hidden">Edit</span>
-                  </Button>
-                )}
-
-                {/* Delete School — admin only */}
-                {isAdmin && (
-                  <Button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200"
-                  >
-                    <span className="mr-1">🗑️</span>
-                    <span className="hidden sm:inline">Delete School</span>
-                    <span className="sm:hidden">Delete</span>
-                  </Button>
-                )}
-
-                {/* Design Studio button — admin only */}
-                {isAdmin && (
-                  <Button
-                    onClick={() => setIsDesignMode(!isDesignMode)}
-                    className={`font-medium flex items-center gap-1.5 sm:gap-2 transition-colors ${isDesignMode
-                      ? "bg-gray-900 hover:bg-gray-800 text-white"
-                      : "bg-indigo-50 hover:bg-indigo-100 text-indigo-750 border border-indigo-200"
-                      }`}
-                  >
-                    <HugeiconsIcon icon={PaintBoardIcon} size={18} strokeWidth={2} />
-                    <span className="hidden sm:inline">
-                      {isDesignMode ? "Exit Studio" : "Design Studio"}
-                    </span>
-                    <span className="sm:hidden">Design</span>
-                  </Button>
-                )}
-
                 {/* Create class */}
                 <Button
                   onClick={() => setShowClass(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-[#7f22fe] hover:bg-[#7f22ff] text-[#fff]"
                 >
                   <HugeiconsIcon icon={Add01Icon} size={18} strokeWidth={2} />
                   <span className="hidden sm:inline">Create Class</span>
                   <span className="sm:hidden">Add Class</span>
                 </Button>
+
+                {/* Options Menu */}
+                {canEditSchool && (
+                  <div className="relative" ref={optionsRef}>
+                    <Button
+                      onClick={() => setShowOptions(!showOptions)}
+                      className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 px-2.5 sm:px-3 h-10"
+                    >
+                      <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </Button>
+
+                    {showOptions && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+                        <button
+                          onClick={() => {
+                            setShowEditSchool(true);
+                            setShowOptions(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                        >
+                          <HugeiconsIcon icon={PencilEdit02Icon} size={16} color="currentColor" strokeWidth={1.5} />
+                          Edit Details
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            handleShare();
+                            setShowOptions(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                        >
+                          <HugeiconsIcon icon={Share08Icon} size={16} color="currentColor" strokeWidth={1.5} />
+                          Share Link
+                        </button>
+
+                        <div className="h-px bg-gray-100 my-1 mx-2"></div>
+
+                        <button
+                          onClick={() => {
+                            setShowDeleteConfirm(true);
+                            setShowOptions(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors"
+                        >
+                          <HugeiconsIcon icon={Delete01Icon} size={16} color="currentColor" strokeWidth={1.5} />
+                          Delete School
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1205,33 +1240,48 @@ export default function SchoolPage() {
           <div className="flex border-b border-gray-200 mb-6 gap-2 sm:gap-4 overflow-x-auto select-none">
             <button
               onClick={() => { setActiveTab("classes"); setIsDesignMode(false); }}
-              className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === "classes"
-                ? "border-indigo-650 text-indigo-650 font-extrabold"
+              className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-2 ${activeTab === "classes"
+                ? "border-violet-650 text-violet-650 font-extrabold"
                 : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
             >
-              📚 Directory & Classes
+              <HugeiconsIcon
+                icon={Folder01Icon}
+                size={20}
+                color="#7f22fe"
+                strokeWidth={1.5}
+              /> Directory & Classes
             </button>
-            {isAdmin && (
+            {canEditSchool && (
               <button
                 onClick={() => { setActiveTab("forms"); setIsDesignMode(false); }}
-                className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === "forms"
-                  ? "border-indigo-650 text-indigo-650 font-extrabold"
+                className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-2 ${activeTab === "forms"
+                  ? "border-violet-650 text-violet-650 font-extrabold"
                   : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
               >
-                ⚙️ Form Setup
+                <HugeiconsIcon
+                  icon={Setting07Icon}
+                  size={20}
+                  color="#7f22fe"
+                  strokeWidth={1.5}
+                /> Form Setup
               </button>
             )}
-            {isAdmin && (
+            {canEditSchool && (
               <button
                 onClick={() => { setActiveTab("designer"); setIsDesignMode(true); }}
-                className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === "designer"
-                  ? "border-indigo-650 text-indigo-650 font-extrabold"
+                className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-2 ${activeTab === "designer"
+                  ? "border-violet-650 text-violet-650 font-extrabold"
                   : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
               >
-                🎨 ID Card Studio
+                <HugeiconsIcon
+                  icon={PaintBoardIcon}
+                  size={20}
+                  color="#7f22fe"
+                  strokeWidth={1.5}
+                /> ID Card Studio
               </button>
             )}
           </div>
@@ -1250,7 +1300,7 @@ export default function SchoolPage() {
                   <p className="text-xs text-gray-500 mt-0.5">Total Students</p>
                 </div>
                 <div className="hidden sm:block bg-white rounded-xl border border-gray-100 p-4 shadow-sm text-left">
-                  <p className="text-2xl font-bold text-gray-900">{isAdmin ? "Admin" : "Staff"}</p>
+                  <p className="text-2xl font-bold text-gray-900">{isAdmin ? "Admin" : isSchoolAdmin ? "School Admin" : "Staff"}</p>
                   <p className="text-xs text-gray-500 mt-0.5">Your Role</p>
                 </div>
               </div>
@@ -1261,16 +1311,16 @@ export default function SchoolPage() {
                   {/* All Students Aggregate Card */}
                   <Link
                     href={`/school/${schoolId}/students`}
-                    className="bg-linear-to-br from-indigo-50/60 to-white rounded-xl border border-indigo-150 p-4 hover:shadow-md hover:border-indigo-300 transition-all group shadow-xs flex items-center justify-between gap-4 cursor-pointer"
+                    className="bg-linear-to-br from-violet-50/60 to-white rounded-xl border border-violet-150 p-4 hover:shadow-md hover:border-violet-300 transition-all group shadow-xs flex items-center justify-between gap-4 cursor-pointer"
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="w-11 h-11 bg-indigo-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-sm shrink-0">
+                      <div className="w-11 h-11 bg-violet-600 text-white rounded-xl flex items-center justify-center transition-colors shadow-sm shrink-0">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
                       </div>
                       <div className="min-w-0 text-left">
-                        <h3 className="text-base font-bold text-gray-950 truncate group-hover:text-indigo-900 transition-colors">
+                        <h3 className="text-base font-bold text-gray-950 truncate group-hover:text-violet-900 transition-colors">
                           All Students
                         </h3>
                         <p className="text-xs text-gray-500 font-semibold mt-0.5">
@@ -1278,7 +1328,7 @@ export default function SchoolPage() {
                         </p>
                       </div>
                     </div>
-                    <svg className="w-4 h-4 text-indigo-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                    <svg className="w-4 h-4 text-violet-300 group-hover:text-violet-600 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </Link>
@@ -1288,16 +1338,16 @@ export default function SchoolPage() {
                     <Link
                       key={cls.id}
                       href={`/school/${school.id}/class/${cls.id}`}
-                      className="bg-white rounded-xl border border-gray-150 p-4 hover:shadow-md hover:border-indigo-200 transition-all group flex items-center justify-between gap-4 cursor-pointer"
+                      className="bg-white rounded-xl border border-gray-150 p-4 hover:shadow-md hover:border-violet-200 transition-all group flex items-center justify-between gap-4 cursor-pointer"
                     >
                       <div className="flex items-center gap-3.5 min-w-0">
-                        <div className="w-11 h-11 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center transition-colors shrink-0">
+                        <div className="w-11 h-11 bg-violet-50 group-hover:bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center transition-colors shrink-0">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                           </svg>
                         </div>
                         <div className="min-w-0 text-left">
-                          <h3 className="text-base font-bold text-gray-900 truncate group-hover:text-indigo-900 transition-colors">
+                          <h3 className="text-base font-bold text-gray-900 truncate group-hover:text-violet-900 transition-colors">
                             Class {cls.name}
                           </h3>
                           <p className="text-xs text-gray-500 font-semibold mt-0.5">
@@ -1305,7 +1355,7 @@ export default function SchoolPage() {
                           </p>
                         </div>
                       </div>
-                      <svg className="w-4 h-4 text-gray-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <svg className="w-4 h-4 text-gray-300 group-hover:text-violet-600 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
                     </Link>
@@ -1316,7 +1366,7 @@ export default function SchoolPage() {
                   <div className="text-5xl mb-4">📚</div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No classes yet</h3>
                   <p className="text-gray-500 text-sm mb-5">Create your first class to get started.</p>
-                  <Button onClick={() => setShowClass(true)} className="bg-green-600 hover:bg-green-700 text-white">
+                  <Button onClick={() => setShowClass(true)} className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white">
                     Create First Class
                   </Button>
                 </div>
@@ -1326,10 +1376,10 @@ export default function SchoolPage() {
           )}
 
           {/* ── TAB 2: Form Fields Configuration ───────────────── */}
-          {activeTab === "forms" && isAdmin && (
+          {activeTab === "forms" && canEditSchool && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6 space-y-6 text-left animate-in fade-in duration-200">
               <div>
-                <h2 className="text-lg sm:text-xl font-bold text-indigo-900">Form Fields Setup</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-violet-900">Form Fields Setup</h2>
                 <p className="text-xs text-gray-400 mt-1">
                   Decide which fields are enabled on forms and add custom fields. Required default fields cannot be disabled.
                 </p>
@@ -1337,7 +1387,12 @@ export default function SchoolPage() {
 
               {/* School Form Configuration */}
               <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
-                <h3 className="text-sm font-bold text-gray-800 border-b pb-2 flex items-center gap-1.5">🏫 School Form Fields</h3>
+                <h3 className="text-sm font-bold text-gray-800 border-b pb-2 flex items-center gap-1.5"><HugeiconsIcon
+                  icon={SchoolIcon}
+                  size={20}
+                  color="#7f22fe"
+                  strokeWidth={1.5}
+                /> School Form Fields</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {customFieldsConfig.school?.map((f: any) => (
                     <label key={f.key} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
@@ -1346,7 +1401,7 @@ export default function SchoolPage() {
                         checked={f.enabled}
                         disabled={f.required}
                         onChange={() => handleToggleDefaultField("school", f.key)}
-                        className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                        className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-4 h-4"
                       />
                       <span>{f.label} {f.required && <span className="text-rose-500">*</span>}</span>
                     </label>
@@ -1362,7 +1417,7 @@ export default function SchoolPage() {
                         const isEditing = editingField && editingField.category === "school" && editingField.key === f.key;
                         if (isEditing) {
                           return (
-                            <span key={f.key} className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg text-xs">
+                            <span key={f.key} className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-50 border border-violet-200 rounded-lg text-xs">
                               <input
                                 type="text"
                                 value={editingField.label}
@@ -1374,14 +1429,14 @@ export default function SchoolPage() {
                                   type="checkbox"
                                   checked={editingField.required}
                                   onChange={(e) => setEditingField({ ...editingField, required: e.target.checked })}
-                                  className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                                  className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-3.5 h-3.5"
                                 />
                                 Req
                               </label>
                               <button
                                 type="button"
                                 onClick={handleSaveEditedField}
-                                className="text-emerald-650 hover:text-emerald-700 font-bold text-xs cursor-pointer bg-transparent border-0 p-0"
+                                className="text-fuchsia-650 hover:text-fuchsia-700 font-bold text-xs cursor-pointer bg-transparent border-0 p-0"
                               >
                                 ✓
                               </button>
@@ -1401,7 +1456,7 @@ export default function SchoolPage() {
                             <button
                               type="button"
                               onClick={() => setEditingField({ category: "school", key: f.key, label: f.label, required: f.required })}
-                              className="text-gray-400 hover:text-indigo-600 font-semibold cursor-pointer ml-1 bg-transparent border-0 p-0"
+                              className="text-gray-400 hover:text-violet-600 font-semibold cursor-pointer ml-1 bg-transparent border-0 p-0"
                             >
                               ✎
                             </button>
@@ -1428,7 +1483,7 @@ export default function SchoolPage() {
                       placeholder="e.g. Medium, Board Name"
                       value={newFieldNameSchool}
                       onChange={(e) => setNewFieldNameSchool(e.target.value)}
-                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all"
                     />
                   </div>
                   <div className="shrink-0 flex items-center gap-2 h-10 pb-2">
@@ -1437,14 +1492,14 @@ export default function SchoolPage() {
                       id="schoolFieldRequired"
                       checked={newFieldRequiredSchool}
                       onChange={(e) => setNewFieldRequiredSchool(e.target.checked)}
-                      className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                      className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-4 h-4"
                     />
                     <label htmlFor="schoolFieldRequired" className="text-xs font-bold text-gray-500 cursor-pointer select-none">Required</label>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleAddCustomField("school", newFieldNameSchool, newFieldRequiredSchool)}
-                    className="h-10 px-5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md active:scale-98"
+                    className="h-10 px-5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md active:scale-98"
                   >
                     Add Field
                   </button>
@@ -1453,7 +1508,12 @@ export default function SchoolPage() {
 
               {/* Class Form Configuration */}
               <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
-                <h3 className="text-sm font-bold text-gray-800 border-b pb-2 flex items-center gap-1.5">📚 Class Form Fields</h3>
+                <h3 className="text-sm font-bold text-gray-800 border-b pb-2 flex items-center gap-1.5"><HugeiconsIcon
+                  icon={Folder01Icon}
+                  size={20}
+                  color="#7f22fe"
+                  strokeWidth={1.5}
+                /> Class Form Fields</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {customFieldsConfig.class?.map((f: any) => (
                     <label key={f.key} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
@@ -1462,7 +1522,7 @@ export default function SchoolPage() {
                         checked={f.enabled}
                         disabled={f.required}
                         onChange={() => handleToggleDefaultField("class", f.key)}
-                        className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                        className="rounded text-violet-600 focus:ring-violet-500 cursor-pointer w-4 h-4"
                       />
                       <span>{f.label} {f.required && <span className="text-rose-500">*</span>}</span>
                     </label>
@@ -1478,7 +1538,7 @@ export default function SchoolPage() {
                         const isEditing = editingField && editingField.category === "class" && editingField.key === f.key;
                         if (isEditing) {
                           return (
-                            <span key={f.key} className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg text-xs">
+                            <span key={f.key} className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-50 border border-violet-200 rounded-lg text-xs">
                               <input
                                 type="text"
                                 value={editingField.label}
@@ -1490,14 +1550,14 @@ export default function SchoolPage() {
                                   type="checkbox"
                                   checked={editingField.required}
                                   onChange={(e) => setEditingField({ ...editingField, required: e.target.checked })}
-                                  className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                                  className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-3.5 h-3.5"
                                 />
                                 Req
                               </label>
                               <button
                                 type="button"
                                 onClick={handleSaveEditedField}
-                                className="text-emerald-650 hover:text-emerald-700 font-bold text-xs cursor-pointer bg-transparent border-0 p-0"
+                                className="text-fuchsia-650 hover:text-fuchsia-700 font-bold text-xs cursor-pointer bg-transparent border-0 p-0"
                               >
                                 ✓
                               </button>
@@ -1517,7 +1577,7 @@ export default function SchoolPage() {
                             <button
                               type="button"
                               onClick={() => setEditingField({ category: "class", key: f.key, label: f.label, required: f.required })}
-                              className="text-gray-400 hover:text-indigo-600 font-semibold cursor-pointer ml-1 bg-transparent border-0 p-0"
+                              className="text-gray-400 hover:text-violet-600 font-semibold cursor-pointer ml-1 bg-transparent border-0 p-0"
                             >
                               ✎
                             </button>
@@ -1544,7 +1604,7 @@ export default function SchoolPage() {
                       placeholder="e.g. Class Teacher, Incharge"
                       value={newFieldNameClass}
                       onChange={(e) => setNewFieldNameClass(e.target.value)}
-                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all"
                     />
                   </div>
                   <div className="shrink-0 flex items-center gap-2 h-10 pb-2">
@@ -1553,14 +1613,14 @@ export default function SchoolPage() {
                       id="classFieldRequired"
                       checked={newFieldRequiredClass}
                       onChange={(e) => setNewFieldRequiredClass(e.target.checked)}
-                      className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                      className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-4 h-4"
                     />
                     <label htmlFor="classFieldRequired" className="text-xs font-bold text-gray-500 cursor-pointer select-none">Required</label>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleAddCustomField("class", newFieldNameClass, newFieldRequiredClass)}
-                    className="h-10 px-5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md active:scale-98"
+                    className="h-10 px-5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md active:scale-98"
                   >
                     Add Field
                   </button>
@@ -1569,7 +1629,12 @@ export default function SchoolPage() {
 
               {/* Student Form Configuration */}
               <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
-                <h3 className="text-sm font-bold text-gray-800 border-b pb-2 flex items-center gap-1.5">🎓 Student Form Fields</h3>
+                <h3 className="text-sm font-bold text-gray-800 border-b pb-2 flex items-center gap-1.5"><HugeiconsIcon
+      icon={StudentIcon}
+      size={20}
+      color="#7f22fe"
+      strokeWidth={1.5}
+    /> Student Form Fields</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
                   {customFieldsConfig.student?.map((f: any) => (
                     <label key={f.key} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none truncate" title={f.key}>
@@ -1578,7 +1643,7 @@ export default function SchoolPage() {
                         checked={f.enabled}
                         disabled={f.required}
                         onChange={() => handleToggleDefaultField("student", f.key)}
-                        className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                        className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-4 h-4"
                       />
                       <span className="truncate">{f.label} {f.required && <span className="text-rose-500">*</span>}</span>
                     </label>
@@ -1594,7 +1659,7 @@ export default function SchoolPage() {
                         const isEditing = editingField && editingField.category === "student" && editingField.key === f.key;
                         if (isEditing) {
                           return (
-                            <span key={f.key} className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg text-xs">
+                            <span key={f.key} className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-50 border border-violet-200 rounded-lg text-xs">
                               <input
                                 type="text"
                                 value={editingField.label}
@@ -1606,14 +1671,14 @@ export default function SchoolPage() {
                                   type="checkbox"
                                   checked={editingField.required}
                                   onChange={(e) => setEditingField({ ...editingField, required: e.target.checked })}
-                                  className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                                  className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-3.5 h-3.5"
                                 />
                                 Req
                               </label>
                               <button
                                 type="button"
                                 onClick={handleSaveEditedField}
-                                className="text-emerald-650 hover:text-emerald-700 font-bold text-xs cursor-pointer bg-transparent border-0 p-0"
+                                className="text-fuchsia-650 hover:text-fuchsia-700 font-bold text-xs cursor-pointer bg-transparent border-0 p-0"
                               >
                                 ✓
                               </button>
@@ -1633,7 +1698,7 @@ export default function SchoolPage() {
                             <button
                               type="button"
                               onClick={() => setEditingField({ category: "student", key: f.key, label: f.label, required: f.required })}
-                              className="text-gray-400 hover:text-indigo-600 font-semibold cursor-pointer ml-1 bg-transparent border-0 p-0"
+                              className="text-gray-400 hover:text-violet-600 font-semibold cursor-pointer ml-1 bg-transparent border-0 p-0"
                             >
                               ✎
                             </button>
@@ -1660,7 +1725,7 @@ export default function SchoolPage() {
                       placeholder="e.g. Blood Group, Bus Route, Roll Number"
                       value={newFieldNameStudent}
                       onChange={(e) => setNewFieldNameStudent(e.target.value)}
-                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+                      className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all"
                     />
                   </div>
                   <div className="shrink-0 flex items-center gap-2 h-10 pb-2">
@@ -1669,14 +1734,14 @@ export default function SchoolPage() {
                       id="studentFieldRequired"
                       checked={newFieldRequiredStudent}
                       onChange={(e) => setNewFieldRequiredStudent(e.target.checked)}
-                      className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                      className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-4 h-4"
                     />
                     <label htmlFor="studentFieldRequired" className="text-xs font-bold text-gray-500 cursor-pointer select-none">Required</label>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleAddCustomField("student", newFieldNameStudent, newFieldRequiredStudent)}
-                    className="h-10 px-5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md active:scale-98"
+                    className="h-10 px-5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md active:scale-98"
                   >
                     Add Field
                   </button>
@@ -1687,7 +1752,7 @@ export default function SchoolPage() {
               <div className="pt-4 border-t border-gray-150 flex justify-end">
                 <button
                   onClick={handleSaveFieldsConfig}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer shadow-md shadow-emerald-600/10 active:scale-98"
+                  className="px-5 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer shadow-md shadow-fuchsia-600/10 active:scale-98"
                 >
                   Save Forms Setup
                 </button>
@@ -1700,7 +1765,7 @@ export default function SchoolPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-4 sm:p-5 lg:p-6 mb-6">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
                 <div className="min-w-0 text-left">
-                  <h2 className="text-lg sm:text-xl font-bold text-indigo-900">
+                  <h2 className="text-lg sm:text-xl font-bold text-violet-900">
                     ID Card Design Studio
                   </h2>
                   <p className="text-xs text-gray-400 mt-0.5">
@@ -1711,7 +1776,7 @@ export default function SchoolPage() {
                   <button
                     onClick={handleFixFinalLayout}
                     disabled={savingLayout}
-                    className="flex items-center gap-1.5 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap disabled:opacity-50 cursor-pointer shadow-xs"
+                    className="flex items-center gap-1.5 text-xs sm:text-sm bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-bold py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap disabled:opacity-50 cursor-pointer shadow-xs"
                   >
                     {savingLayout ? "Saving..." : "Save Layout"}
                   </button>
@@ -1755,7 +1820,7 @@ export default function SchoolPage() {
                   </div>
 
                   {/* Typography Settings */}
-                  <div className="p-4 sm:p-5 bg-gray-50 rounded-xl mb-6 border border-indigo-50/50 text-left">
+                  <div className="p-4 sm:p-5 bg-gray-50 rounded-xl mb-6 border border-violet-50/50 text-left">
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
                       Typography Settings
                     </p>
@@ -1779,7 +1844,7 @@ export default function SchoolPage() {
                         <div className="flex flex-col gap-1.5">
                           <div className="flex justify-between items-center">
                             <label className="text-xs font-bold text-gray-500">Font Size</label>
-                            <span className="text-xs font-bold text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded">
+                            <span className="text-xs font-bold text-violet-650 bg-violet-50 px-2 py-0.5 rounded">
                               {theme.schoolNameSize || "Default"}{theme.schoolNameSize ? "px" : ""}
                             </span>
                           </div>
@@ -1790,7 +1855,7 @@ export default function SchoolPage() {
                               max="70"
                               value={theme.schoolNameSize || "36"}
                               onChange={(e) => handleColorChange("schoolNameSize", e.target.value)}
-                              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
                             />
                             <button
                               type="button"
@@ -1836,7 +1901,7 @@ export default function SchoolPage() {
                         <div className="flex flex-col gap-1.5">
                           <div className="flex justify-between items-center">
                             <label className="text-xs font-bold text-gray-500">Font Size</label>
-                            <span className="text-xs font-bold text-emerald-650 bg-emerald-50 px-2 py-0.5 rounded">
+                            <span className="text-xs font-bold text-fuchsia-650 bg-fuchsia-50 px-2 py-0.5 rounded">
                               {theme.schoolCaptionSize || "Default"}{theme.schoolCaptionSize ? "px" : ""}
                             </span>
                           </div>
@@ -1847,7 +1912,7 @@ export default function SchoolPage() {
                               max="40"
                               value={theme.schoolCaptionSize || "18"}
                               onChange={(e) => handleColorChange("schoolCaptionSize", e.target.value)}
-                              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-fuchsia-600"
                             />
                             <button
                               type="button"
@@ -1894,7 +1959,7 @@ export default function SchoolPage() {
                         <p className="text-xs font-bold text-gray-600">No Background Image</p>
                         <p className="text-[10px] text-gray-400 mb-4 font-medium">Upload a custom ID Card layout image to start positioning.</p>
 
-                        <label className="px-4 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md select-none">
+                        <label className="px-4 py-2 bg-violet-650 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md select-none">
                           {bgUploading ? "Uploading..." : "Upload Background"}
                           <input type="file" accept="image/*" onChange={handleBgUpload} disabled={bgUploading} className="hidden" />
                         </label>
@@ -1947,12 +2012,12 @@ export default function SchoolPage() {
                             <>
                               {/* Horizontal Center Line */}
                               <div
-                                className="absolute top-[543.5px] left-0 right-0 border-t border-indigo-400/20 z-30 pointer-events-none"
+                                className="absolute top-[543.5px] left-0 right-0 border-t border-violet-400/20 z-30 pointer-events-none"
                                 style={{ height: "0px", width: "100%" }}
                               />
                               {/* Vertical Center Line */}
                               <div
-                                className="absolute left-[336.5px] top-0 bottom-0 border-l border-indigo-400/20 z-30 pointer-events-none"
+                                className="absolute left-[336.5px] top-0 bottom-0 border-l border-violet-400/20 z-30 pointer-events-none"
                                 style={{ width: "0px", height: "100%" }}
                               />
                             </>
@@ -2093,7 +2158,7 @@ export default function SchoolPage() {
                                 type="checkbox"
                                 checked={isVisible}
                                 onChange={() => handleToggleFieldVisibility(item.key)}
-                                className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                                className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-4 h-4"
                               />
                               <span className="truncate">{item.label}</span>
                             </label>
@@ -2111,9 +2176,9 @@ export default function SchoolPage() {
                         const displayName = nameSafe.charAt(0).toUpperCase() + nameSafe.slice(1);
 
                         return (
-                          <div className="p-4 bg-white border-2 border-indigo-150 rounded-xl space-y-4 animate-in fade-in duration-200">
+                          <div className="p-4 bg-white border-2 border-violet-150 rounded-xl space-y-4 animate-in fade-in duration-200">
                             <div className="flex justify-between items-center border-b pb-2">
-                              <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-widest">
+                              <h4 className="text-xs font-bold text-violet-900 uppercase tracking-widest">
                                 Style: {displayName}
                               </h4>
                               <button
@@ -2157,7 +2222,7 @@ export default function SchoolPage() {
                                 <div className="flex flex-col gap-1.5">
                                   <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase">
                                     <span>Font Size</span>
-                                    <span className="text-indigo-650 bg-indigo-50 px-2 rounded font-bold">{f.fontSize || "20"}px</span>
+                                    <span className="text-violet-650 bg-violet-50 px-2 rounded font-bold">{f.fontSize || "20"}px</span>
                                   </div>
                                   <input
                                     type="range"
@@ -2165,7 +2230,7 @@ export default function SchoolPage() {
                                     max="70"
                                     value={f.fontSize || "20"}
                                     onChange={(e) => handleFieldStyleChange("fontSize", parseInt(e.target.value, 10))}
-                                    className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                    className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
                                   />
                                 </div>
 
@@ -2192,7 +2257,7 @@ export default function SchoolPage() {
                                     type="checkbox"
                                     checked={f.labelVisible !== false}
                                     onChange={(e) => handleFieldStyleChange("labelVisible", e.target.checked)}
-                                    className="rounded text-indigo-650 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                                    className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-4 h-4"
                                   />
                                   <span>Show Field Label Prefix</span>
                                 </label>
@@ -2242,10 +2307,10 @@ export default function SchoolPage() {
                       Choose from our designed standard templates or click Layout 0 to construct a fully customized layout from scratch.
                     </p>
                   </div>
-                  <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full whitespace-nowrap">
-                    {selectedLayout === 0 
-                      ? "Custom Designer Layout" 
-                      : selectedLayout >= 13 
+                  <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2.5 py-1 rounded-full whitespace-nowrap">
+                    {selectedLayout === 0
+                      ? "Custom Designer Layout"
+                      : selectedLayout >= 13
                         ? `Shared Layout ${selectedLayout - 12} (${sharedLayouts[selectedLayout - 13]?.schoolName})`
                         : `Layout ${selectedLayout}`} selected
                   </span>
@@ -2272,14 +2337,14 @@ export default function SchoolPage() {
                             handleLayoutChange(num);
                           }
                         }}
-                        className={`group flex flex-col items-center gap-1.5 sm:gap-3 p-1 sm:p-2 rounded-2xl sm:rounded-3xl transition-all duration-200 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-400 ${selectedLayout === num
+                        className={`group flex flex-col items-center gap-1.5 sm:gap-3 p-1 sm:p-2 rounded-2xl sm:rounded-3xl transition-all duration-200 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-violet-400 ${selectedLayout === num
                           ? "scale-[1.01]"
                           : "hover:opacity-95"
                           }`}
                       >
                         {/* Scaled-down card preview */}
                         <div
-                          className={`relative overflow-hidden rounded-lg sm:rounded-[1rem] w-32 sm:w-52 md:w-56 h-48 sm:h-80 bg-white ${selectedLayout === num ? "ring-2 ring-indigo-300" : ""
+                          className={`relative overflow-hidden rounded-lg sm:rounded-[1rem] w-32 sm:w-52 md:w-56 h-48 sm:h-80 bg-white ${selectedLayout === num ? "ring-2 ring-violet-300" : ""
                             }`}
                         >
                           <div className="absolute inset-0 flex items-center justify-center">
@@ -2322,14 +2387,14 @@ export default function SchoolPage() {
                         </div>
                         <span
                           className={`text-xs font-bold transition-colors line-clamp-1 ${selectedLayout === num
-                            ? "text-indigo-600"
+                            ? "text-violet-600"
                             : "text-gray-500"
                             }`}
                         >
-                          {num === 0 
-                            ? "Custom Designer" 
-                            : isShared 
-                              ? `Shared Layout ${num - 12} (${sharedLayout?.schoolName})` 
+                          {num === 0
+                            ? "Custom Designer"
+                            : isShared
+                              ? `Shared Layout ${num - 12} (${sharedLayout?.schoolName})`
                               : `Layout ${num}`}
                         </span>
                       </div>
@@ -2364,7 +2429,7 @@ export default function SchoolPage() {
         />
       )}
 
-      {showEditSchool && school && isAdmin && (
+      {showEditSchool && school && canEditSchool && (
         <SchoolForm
           school={{
             id: school.id,
@@ -2385,7 +2450,7 @@ export default function SchoolPage() {
         />
       )}
 
-      {showCreds && isAdmin && (
+      {showCreds && canEditSchool && (
         <CredentialsModal
           schoolId={schoolId}
           schoolName={school.name}
@@ -2422,6 +2487,6 @@ export default function SchoolPage() {
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 }

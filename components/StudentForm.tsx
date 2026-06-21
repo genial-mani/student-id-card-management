@@ -6,16 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 // NEW: Premium cropping library
 import Cropper from "react-easy-crop";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Loading03Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { CustomDropdown } from "@/components/CustomDropdown";
 
 interface StudentFormProps {
   schoolId: string;
-  classId: string;
+  classId?: string;
   schoolName: string;
   onClose: () => void;
   onSuccess: () => void;
+  classes?: { id: string; name: string }[];
 }
 
 // Helper to load the image for canvas extraction
@@ -33,7 +38,9 @@ export default function StudentForm({
   schoolName,
   onClose,
   onSuccess,
+  classes,
 }: StudentFormProps) {
+  const [selectedClassId, setSelectedClassId] = useState(classId || "");
   const [formData, setFormData] = useState({
     name: "",
     idNo: "",
@@ -69,7 +76,7 @@ export default function StudentForm({
               ? JSON.parse(data.customFieldsConfig)
               : data.customFieldsConfig;
             if (parsed && parsed.student) {
-              parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone");
+              parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone" && f.key !== "idNo" && f.key !== "camSno");
             }
             setCustomFieldsConfig(parsed);
           }
@@ -147,7 +154,7 @@ export default function StudentForm({
     setLoading(true);
 
     if (!profilePictureFile) {
-      alert("Please take a photo or select one from the gallery.");
+      toast.error("Please take a photo or select one from the gallery.");
       setLoading(false);
       return;
     }
@@ -175,22 +182,23 @@ export default function StudentForm({
           ...formData,
           camSno: generatedCamId, 
           schoolId,
-          classId,
+          classId: selectedClassId,
           profilePictureUrl,
           customValues,
         }),
       });
 
       if (response.ok) {
+        toast.success("Student created successfully!");
         onSuccess();
         onClose();
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to create student");
+        toast.error(error.error || "Failed to create student");
       }
     } catch (error) {
       console.error("Error creating student:", error);
-      alert("Failed to create student");
+      toast.error("Failed to create student");
     } finally {
       setLoading(false);
     }
@@ -198,7 +206,14 @@ export default function StudentForm({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3">
-      <div className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
+      <div className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 relative">
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors rounded-full bg-gray-100 hover:bg-gray-200 flex items-center p-1.5 justify-center cursor-pointer z-10"
+          aria-label="Close modal"
+        >
+          <HugeiconsIcon icon={Cancel01Icon} size={20} color="currentColor" strokeWidth={2} />
+        </button>
         
         {/* ─── PREMIUM CROPPING UI ─────────────────────────────────────── */}
         {isCropping ? (
@@ -230,12 +245,12 @@ export default function StudentForm({
                 step={0.1}
                 aria-labelledby="Zoom"
                 onChange={(e) => setZoom(Number(e.target.value))}
-                className="w-full accent-indigo-600"
+                className="w-full accent-violet-600"
               />
             </div>
 
             <div className="flex w-full gap-3">
-              <Button onClick={generateCroppedImage} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+              <Button onClick={generateCroppedImage} className="flex-1 bg-fuchsia-600 hover:bg-fuchsia-700 text-white">
                 Apply Crop
               </Button>
               <Button onClick={() => setIsCropping(false)} variant="outline" className="flex-1">
@@ -247,9 +262,24 @@ export default function StudentForm({
           
         /* ─── STANDARD FORM UI ─────────────────────────────────────────── */
           <>
-            <h2 className="text-lg sm:text-xl font-bold mb-4">Create Student</h2>
+            <h2 className="text-lg sm:text-xl font-bold mb-4 pr-8">Create Student</h2>
             <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
               
+              {!classId && classes && classes.length > 0 && (
+                <div className="mb-2">
+                  <Label htmlFor="classSelect" className="text-xs sm:text-sm text-slate-600 mb-1 block">
+                    Select Class <span className="text-rose-500">*</span>
+                  </Label>
+                  <CustomDropdown
+                    value={selectedClassId}
+                    onChange={setSelectedClassId}
+                    placeholder="Select a class"
+                    searchable={true}
+                    options={classes.map((c) => ({ value: c.id, label: `Class ${c.name}` }))}
+                  />
+                </div>
+              )}
+
               <div className="flex flex-col items-center bg-gray-50 p-3 sm:p-4 border border-gray-200 rounded-2xl">
                 {previewUrl ? (
                   <img
@@ -267,7 +297,7 @@ export default function StudentForm({
                   <div className="flex-1">
                     <Label
                       htmlFor="cameraInput"
-                      className="cursor-pointer flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border border-indigo-200 transition-colors shadow-sm"
+                      className="cursor-pointer flex items-center justify-center gap-2 bg-violet-50 hover:bg-violet-100 text-violet-700 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border border-violet-200 transition-colors shadow-sm"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                       Take Photo
@@ -304,8 +334,6 @@ export default function StudentForm({
               {(() => {
                 const fields = customFieldsConfig?.student || [
                   { key: "name", label: "Student Name", type: "text", required: true, default: true, enabled: true },
-                  { key: "idNo", label: "ID Number", type: "text", required: false, default: true, enabled: true },
-                  { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
                   { key: "fatherName", label: "Father's Name", type: "text", required: false, default: true, enabled: true },
                   { key: "fatherPhone", label: "Father's Phone", type: "text", required: false, default: true, enabled: true },
                   { key: "address", label: "Address", type: "text", required: false, default: true, enabled: true }
@@ -316,7 +344,7 @@ export default function StudentForm({
                     if (f.default) {
                       return (
                         <div key={f.key}>
-                          <Label htmlFor={f.key} className="text-xs sm:text-sm">
+                          <Label htmlFor={f.key} className="text-xs sm:text-sm text-slate-600">
                             {f.label} {f.required && <span className="text-rose-500">*</span>}
                           </Label>
                           {f.key === "address" ? (
@@ -365,10 +393,19 @@ export default function StudentForm({
               })()}
 
               <div className="flex flex-col gap-2 sm:gap-3 pt-3 sm:pt-4">
-                <Button type="submit" className="flex-1 text-xs sm:text-sm" disabled={loading}>
-                  {loading ? "Creating..." : "Create Student"}
-                </Button>
-                <Button type="button" variant="outline" className="flex-1 text-xs sm:text-sm" onClick={onClose}>
+                
+                  <Button type="button" className="flex-1 text-xs sm:text-sm py-2" disabled={loading}>
+                   {loading ? (
+                  <>
+                    <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
+                    "adding..."
+                  </>
+                ) : (
+                  "Add Student"
+                )}
+                  </Button>
+                
+                <Button type="button" variant="outline" className="flex-1 text-xs sm:text-sm py-2" onClick={onClose}>
                   Cancel
                 </Button>
               </div>

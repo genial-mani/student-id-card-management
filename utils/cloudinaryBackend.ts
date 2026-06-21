@@ -83,3 +83,43 @@ export async function deleteImageFromCloudinary(url: string): Promise<void> {
     console.error(`Failed to delete Cloudinary asset: ${publicId}`, errorData || error.message);
   }
 }
+
+/**
+ * Deletes multiple images from Cloudinary using the Admin API.
+ */
+export async function bulkDeleteImagesFromCloudinary(urls: string[]): Promise<void> {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (!cloudName || !apiKey || !apiSecret || apiKey === "your_cloudinary_api_key_here" || apiSecret === "your_cloudinary_api_secret_here") {
+    console.warn("Cloudinary backend credentials are not configured in .env. Skipping bulk asset deletion.");
+    return;
+  }
+
+  const publicIds = urls.map(url => getPublicIdFromUrl(url)).filter(Boolean) as string[];
+
+  if (publicIds.length === 0) {
+    return;
+  }
+
+  const destUrl = `https://api.cloudinary.com/v1_1/${cloudName}/resources/image/upload`;
+  const auth = {
+    username: apiKey,
+    password: apiSecret
+  };
+
+  try {
+    for (let i = 0; i < publicIds.length; i += 100) {
+      const batch = publicIds.slice(i, i + 100);
+      const queryString = batch.map(id => `public_ids[]=${encodeURIComponent(id)}`).join('&');
+      
+      const response = await axios.delete(`${destUrl}?${queryString}`, { auth });
+      console.log(`Successfully bulk deleted Cloudinary assets batch.`);
+    }
+  } catch (error: any) {
+    const errorData = error?.response?.data;
+    console.error(`Failed to bulk delete Cloudinary assets`, errorData || error.message);
+    // Suppress error so that failure to delete photos doesn't crash the student deletion process
+  }
+}

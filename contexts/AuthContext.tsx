@@ -5,7 +5,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 interface AuthUser {
   userId: string;
   username: string;
-  role: "admin" | "user";
+  role: "admin" | "school_admin" | "user";
   schoolId?: string;
 }
 
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
-    window.location.href = "/login";
+    window.location.href = "/login?loggedOut=true";
   };
 
   return (

@@ -11,7 +11,7 @@ function getAuth(req: NextRequest) {
 
 /**
  * GET /api/schools/[id]/credentials
- * Returns the username for a school's user account.
+ * Returns the username for a school's user accounts.
  * Admin only — used so admin can view / share credentials with school staff.
  */
 export async function GET(
@@ -25,27 +25,25 @@ export async function GET(
 
   const { id: schoolId } = await params;
 
-  const user = await prisma.user.findFirst({
-    where: { schoolId, role: 'user' },
-    select: { id: true, username: true, createdAt: true },
+  const users = await prisma.user.findMany({
+    where: { schoolId, role: { in: ['school_admin', 'user'] } },
+    select: { id: true, username: true, role: true, createdAt: true },
   });
 
-  if (!user) {
-    return NextResponse.json({ error: 'No user found for this school' }, { status: 404 });
+  if (users.length === 0) {
+    return NextResponse.json({ error: 'No users found for this school' }, { status: 404 });
   }
 
   return NextResponse.json({
-    userId:    user.id,
-    username:  user.username,
-    createdAt: user.createdAt,
-    note:      'Password is hashed and cannot be recovered. Use POST to reset it.',
+    users,
+    note: 'Password is hashed and cannot be recovered. Use POST to reset it.',
   });
 }
 
 /**
  * POST /api/schools/[id]/credentials/reset  — but we mount on the same route
  * POST /api/schools/[id]/credentials
- * Generates a new random password for the school's user, returns plaintext once.
+ * Generates new random passwords for the school's users, returns plaintext once.
  * Admin only.
  */
 export async function POST(
@@ -59,49 +57,61 @@ export async function POST(
 
   const { id: schoolId } = await params;
 
-  // Find the school to get its name for a fresh slug if needed
+  let body = {};
+  try {
+    body = await request.json();
+  } catch {}
+  const targetRole = (body as any).role; // optional: 'school_admin' or 'user'
+
   const school = await prisma.school.findUnique({ where: { id: schoolId } });
   if (!school) {
     return NextResponse.json({ error: 'School not found' }, { status: 404 });
   }
 
-  const existingUser = await prisma.user.findFirst({
-    where: { schoolId, role: 'user' },
+  const existingUsers = await prisma.user.findMany({
+    where: { schoolId, role: { in: ['school_admin', 'user'] } },
   });
 
-  // Generate a new password (keep same username)
-  const { password: newPassword } = generateCredentials(school.name);
-  const hashed = await hashPassword(newPassword);
+  const adminUser = existingUsers.find(u => u.role === 'school_admin');
+  const staffUser = existingUsers.find(u => u.role === 'user');
 
-  if (existingUser) {
-    // Reset password on existing user AND increment tokenVersion
-    await prisma.user.update({
-      where: { id: existingUser.id },
-      data:  {
-        password: hashed,
-        tokenVersion: {
-          increment: 1
-        }
-      },
-    });
+  const result: any[] = [];
 
+  if (!targetRole || targetRole === 'school_admin') {
+    const adminCreds = generateCredentials(school.name + ' Admin');
+    const hashedAdminPassword = await hashPassword(adminCreds.password);
 
-    return NextResponse.json({
-      username: existingUser.username,
-      password: newPassword, // returned plaintext ONCE
-      reset:    true,
-    });
-  } else {
-    // No user yet (edge case) — create one
-    const { username } = generateCredentials(school.name);
-    await prisma.user.create({
-      data: { username, password: hashed, role: 'user', schoolId },
-    });
-
-    return NextResponse.json({
-      username,
-      password: newPassword,
-      reset: false,
-    });
+    if (adminUser) {
+      await prisma.user.update({
+        where: { id: adminUser.id },
+        data: { password: hashedAdminPassword, tokenVersion: { increment: 1 } },
+      });
+      result.push({ role: 'school_admin', username: adminUser.username, password: adminCreds.password });
+    } else {
+      await prisma.user.create({
+        data: { username: adminCreds.username, password: hashedAdminPassword, role: 'school_admin', schoolId },
+      });
+      result.push({ role: 'school_admin', username: adminCreds.username, password: adminCreds.password });
+    }
   }
+
+  if (!targetRole || targetRole === 'user') {
+    const staffCreds = generateCredentials(school.name + ' Staff');
+    const hashedStaffPassword = await hashPassword(staffCreds.password);
+
+    if (staffUser) {
+      await prisma.user.update({
+        where: { id: staffUser.id },
+        data: { password: hashedStaffPassword, tokenVersion: { increment: 1 } },
+      });
+      result.push({ role: 'user', username: staffUser.username, password: staffCreds.password });
+    } else {
+      await prisma.user.create({
+        data: { username: staffCreds.username, password: hashedStaffPassword, role: 'user', schoolId },
+      });
+      result.push({ role: 'user', username: staffCreds.username, password: staffCreds.password });
+    }
+  }
+
+  return NextResponse.json({ credentials: result });
 }

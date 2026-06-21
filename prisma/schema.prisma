@@ -32,7 +32,6 @@ model Student {
   schoolId          String   @db.ObjectId
   school            School   @relation(fields: [schoolId], references: [id])
   name              String
-  idNo              String
   camSno            String
   fatherName        String
   fatherPhone       String
@@ -60,7 +59,7 @@ model User {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   username     String   @unique
   password     String
-  role         String // "admin" | "user"
+  role         String // "admin" | "school_admin" | "user"
   schoolId     String?  @db.ObjectId
   school       School?  @relation(fields: [schoolId], references: [id])
   tokenVersion Int      @default(0)

@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { HugeiconsIcon } from '@hugeicons/react'
+import { Loading03Icon } from '@hugeicons/core-free-icons';
 
 interface SchoolFormProps {
   onClose: () => void;
@@ -22,9 +25,14 @@ interface SchoolFormProps {
   };
 }
 
-interface Credentials {
+interface CredentialItem {
+  role: string;
   username: string;
   password: string;
+}
+
+interface Credentials {
+  items: CredentialItem[];
   schoolName: string;
 }
 
@@ -80,28 +88,28 @@ export default function SchoolForm({ onClose, onSuccess, school }: SchoolFormPro
 
       if (response.ok) {
         window.dispatchEvent(new Event("schools-updated"));
+        toast.success(school ? "School updated successfully!" : "School created successfully!");
         if (!school) {
           const data = await response.json();
           setCredentials({
-            username: data.credentials.username,
-            password: data.credentials.password,
+            items: data.credentials,
             schoolName: formData.name,
           });
         }
         onSuccess();
       } else {
         const err = await response.json();
-        alert(err.error || `Failed to ${school ? "update" : "create"} school`);
+        toast.error(err.error || `Failed to ${school ? "update" : "create"} school`);
       }
     } catch {
-      alert(`Failed to ${school ? "update" : "create"} school`);
+      toast.error(`Failed to ${school ? "update" : "create"} school`);
     } finally {
       setLoading(false);
     }
   };
 
   const credText = credentials
-    ? `School: ${credentials.schoolName}\nUsername: ${credentials.username}\nPassword: ${credentials.password}`
+    ? `School: ${credentials.schoolName}\n` + credentials.items.map(item => `Role: ${item.role === 'school_admin' ? 'School Admin' : 'Staff'}\nUsername: ${item.username}\nPassword: ${item.password}`).join('\n\n')
     : "";
 
   const handleCopy = async () => {
@@ -134,9 +142,9 @@ export default function SchoolForm({ onClose, onSuccess, school }: SchoolFormPro
         <div className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-sm shadow-2xl">
           {/* Success header */}
           <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
-            <div className="w-9 sm:w-10 h-9 sm:h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+            <div className="w-9 sm:w-10 h-9 sm:h-10 bg-fuchsia-100 rounded-full flex items-center justify-center shrink-0">
               <svg
-                className="w-4 sm:w-5 h-4 sm:h-5 text-green-600"
+                className="w-4 sm:w-5 h-4 sm:h-5 text-fuchsia-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -189,17 +197,24 @@ export default function SchoolForm({ onClose, onSuccess, school }: SchoolFormPro
                 {credentials.schoolName}
               </p>
             </div>
-            {[
-              { label: "Username", value: credentials.username },
-              { label: "Password", value: credentials.password },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                  {label}
+            {credentials.items.map((item, idx) => (
+              <div key={idx} className="mb-3">
+                <p className="text-xs font-semibold text-violet-600 uppercase tracking-wide mb-1">
+                  {item.role === 'school_admin' ? 'School Admin' : 'Staff User'}
                 </p>
-                <code className="block bg-gray-50 border border-gray-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 font-mono text-xs sm:text-sm text-gray-800 select-all break-all">
-                  {value}
-                </code>
+                {[
+                  { label: "Username", value: item.username },
+                  { label: "Password", value: item.password },
+                ].map(({ label, value }) => (
+                  <div key={label} className="mb-2">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+                      {label}
+                    </p>
+                    <code className="block bg-gray-50 border border-gray-200 rounded-lg px-2 sm:px-3 py-1.5 font-mono text-xs text-gray-800 select-all break-all">
+                      {value}
+                    </code>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -215,7 +230,7 @@ export default function SchoolForm({ onClose, onSuccess, school }: SchoolFormPro
               {copied ? (
                 <>
                   <svg
-                    className="w-4 h-4 text-green-600"
+                    className="w-4 h-4 text-fuchsia-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -301,7 +316,7 @@ export default function SchoolForm({ onClose, onSuccess, school }: SchoolFormPro
               }[]
             ).map(({ label, name, type }) => (
               <div key={name}>
-                <Label htmlFor={name} className="text-xs sm:text-sm">
+                <Label htmlFor={name} className="text-xs sm:text-sm text-slate-600">
                   {label} *
                 </Label>
                 <Input
@@ -317,7 +332,7 @@ export default function SchoolForm({ onClose, onSuccess, school }: SchoolFormPro
             ))}
 
             <div>
-              <Label htmlFor="address" className="text-xs sm:text-sm">
+              <Label htmlFor="address" className="text-xs sm:text-sm text-slate-600">
                 Address *
               </Label>
               <Textarea
@@ -332,7 +347,7 @@ export default function SchoolForm({ onClose, onSuccess, school }: SchoolFormPro
             </div>
 
             <div>
-              <Label htmlFor="idCardLayout" className="text-xs sm:text-sm font-semibold text-gray-700">
+              <Label htmlFor="idCardLayout" className="text-xs sm:text-sm font-semibold text-slate-600">
                 Default ID Card Layout *
               </Label>
               <select
@@ -341,7 +356,7 @@ export default function SchoolForm({ onClose, onSuccess, school }: SchoolFormPro
                 value={formData.idCardLayout}
                 onChange={(e) => setFormData((prev) => ({ ...prev, idCardLayout: parseInt(e.target.value, 10) }))}
                 required
-                className="w-full h-9 px-3 bg-gray-55 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all cursor-pointer mt-1"
+                className="w-full h-9 px-3 bg-gray-55 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all cursor-pointer mt-1"
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
                   <option key={num} value={num}>
@@ -356,7 +371,7 @@ export default function SchoolForm({ onClose, onSuccess, school }: SchoolFormPro
               { label: "Signature Photo", key: "signature" as const, currentUrl: school?.signatureUrl },
             ].map(({ label, key, currentUrl }) => (
               <div key={key}>
-                <Label htmlFor={key} className="text-xs sm:text-sm">
+                <Label htmlFor={key} className="text-xs sm:text-sm text-slate-600">
                   {label}
                 </Label>
                 {currentUrl && (
@@ -370,7 +385,7 @@ export default function SchoolForm({ onClose, onSuccess, school }: SchoolFormPro
                   type="file"
                   accept="image/*"
                   onChange={(e) => handleFileChange(e, key)}
-                  className="text-xs sm:text-sm file:mr-2 sm:file:mr-3 file:py-1 sm:file:py-1.5 file:px-2 sm:file:px-3 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mt-1"
+                  className="text-xs sm:text-sm file:mr-2 sm:file:mr-3 file:py-1 sm:file:py-1 file:px-2 sm:file:px-3 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 />
               </div>
             ))}
@@ -378,15 +393,22 @@ export default function SchoolForm({ onClose, onSuccess, school }: SchoolFormPro
             <div className="flex flex-col gap-2 sm:gap-3 pt-2">
               <Button
                 type="submit"
-                className="flex-1 text-xs sm:text-sm"
+                className="flex-1 text-xs sm:text-sm py-2"
                 disabled={loading}
               >
-                {loading ? (school ? "Updating..." : "Creating...") : (school ? "Update Details" : "Create School")}
+                {loading ? (
+                  <>
+                    <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
+                    {school ? "Updating..." : "Creating..."}
+                  </>
+                ) : (
+                  school ? "Update Details" : "Create School"
+                )}
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1 text-xs sm:text-sm"
+                className="flex-1 text-xs sm:text-sm py-2"
                 onClick={onClose}
               >
                 Cancel

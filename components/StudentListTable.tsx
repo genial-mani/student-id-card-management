@@ -67,7 +67,7 @@ export default function StudentListTable({
           <span>{label}</span>
           <span
             className={`text-[9px] sm:text-[10px] text-gray-400 group-hover:text-gray-600 transition-opacity ${
-              isCurrent ? "opacity-100 text-indigo-600" : "opacity-30 group-hover:opacity-80"
+              isCurrent ? "opacity-100 text-violet-600" : "opacity-30 group-hover:opacity-80"
             }`}
           >
             {isCurrent ? (isAsc ? "▲" : "▼") : "▲"}
@@ -141,7 +141,7 @@ export default function StudentListTable({
                         className="w-9 h-9 rounded-full object-cover bg-gray-100 border border-gray-200"
                       />
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-300 flex items-center justify-center border border-indigo-100">
+                      <div className="w-9 h-9 rounded-full bg-violet-50 text-violet-300 flex items-center justify-center border border-violet-100">
                         <HugeiconsIcon icon={UserIcon} size={18} color="currentColor" strokeWidth={2} />
                       </div>
                     )}
@@ -168,7 +168,7 @@ export default function StudentListTable({
 
                   {/* Class Badge */}
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className="inline-block text-[10px] sm:text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                    <span className="inline-block text-[10px] sm:text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-full">
                       Class {student.className}
                     </span>
                   </td>
@@ -223,7 +223,7 @@ export default function StudentListTable({
                         {onPreview && (
                           <button
                             onClick={() => onPreview(student)}
-                            className="w-7 h-7 rounded-lg bg-gray-50 hover:bg-indigo-50 border border-gray-100 hover:border-indigo-150 text-gray-500 hover:text-indigo-650 flex items-center justify-center transition-colors cursor-pointer"
+                            className="w-7 h-7 rounded-lg bg-gray-50 hover:bg-violet-50 border border-gray-100 hover:border-violet-150 text-gray-500 hover:text-violet-650 flex items-center justify-center transition-colors cursor-pointer"
                             title="Preview ID Card"
                             aria-label="Preview student ID card"
                           >
@@ -237,7 +237,7 @@ export default function StudentListTable({
                           <>
                             <button
                               onClick={() => onEdit(student)}
-                              className="w-7 h-7 rounded-lg bg-gray-50 hover:bg-indigo-50 border border-gray-100 hover:border-indigo-150 text-gray-500 hover:text-indigo-605 flex items-center justify-center transition-colors cursor-pointer"
+                              className="w-7 h-7 rounded-lg bg-gray-50 hover:bg-violet-50 border border-gray-100 hover:border-violet-150 text-gray-500 hover:text-violet-605 flex items-center justify-center transition-colors cursor-pointer"
                               title="Edit student details"
                               aria-label="Edit student"
                             >

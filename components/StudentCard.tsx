@@ -20,7 +20,7 @@ export default function StudentCard({
   onPreview,
 }: StudentCardProps) {
   return (
-    <div className="group relative bg-white rounded-xl border border-gray-150 p-4 hover:shadow-md hover:border-indigo-200 transition-all duration-200 flex flex-col justify-between min-w-0">
+    <div className="group relative bg-white rounded-xl border border-gray-150 p-4 hover:shadow-md hover:border-violet-200 transition-all duration-200 flex flex-col justify-between min-w-0">
       {/* Main Info Row */}
       <div className="flex gap-4 items-start min-w-0">
         {/* Left Column: Photo and Class Badge */}
@@ -33,7 +33,7 @@ export default function StudentCard({
               className="w-16 h-16 sm:w-18 sm:h-18 rounded-lg object-cover bg-gray-55 border border-gray-200"
             />
           ) : (
-            <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-lg bg-indigo-50 text-indigo-300 flex items-center justify-center border border-indigo-100">
+            <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-lg bg-violet-50 text-violet-300 flex items-center justify-center border border-violet-100">
               <svg className="w-8 h-8 sm:w-10 sm:h-10" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
@@ -41,7 +41,7 @@ export default function StudentCard({
           )}
           
           {/* Class Badge under photo */}
-          <span className="text-[9px] sm:text-[10px] font-bold text-indigo-750 bg-indigo-50 border border-indigo-100 px-1 py-0.5 rounded-md w-full text-center truncate" title={`Class ${student.className}`}>
+          <span className="text-[9px] sm:text-[10px] font-bold text-violet-750 bg-violet-50 border border-violet-100 px-1 py-0.5 rounded-md w-full text-center truncate" title={`Class ${student.className}`}>
             Class {student.className}
           </span>
         </div>
@@ -49,7 +49,7 @@ export default function StudentCard({
         {/* Student Details */}
         <div className="flex-1 min-w-0">
           {/* Name - Now has full horizontal space */}
-          <h3 className="text-sm sm:text-base font-bold text-gray-900 truncate group-hover:text-indigo-900 transition-colors" title={student.name}>
+          <h3 className="text-sm sm:text-base font-bold text-gray-900 truncate group-hover:text-violet-900 transition-colors" title={student.name}>
             {student.name}
           </h3>
 
@@ -73,7 +73,7 @@ export default function StudentCard({
               {student.fatherPhone ? (
                 <a
                   href={`tel:${student.fatherPhone}`}
-                  className="font-bold text-gray-800 hover:text-indigo-650 hover:underline transition-colors truncate"
+                  className="font-bold text-gray-800 hover:text-violet-650 hover:underline transition-colors truncate"
                 >
                   {student.fatherPhone}
                 </a>
@@ -101,7 +101,7 @@ export default function StudentCard({
           {onPreview && (
             <button
               onClick={() => onPreview(student)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-indigo-200 hover:bg-indigo-50/40 text-indigo-600 hover:text-indigo-700 transition-all text-xs font-semibold cursor-pointer mr-auto"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-violet-200 hover:bg-violet-50/40 text-violet-600 hover:text-violet-700 transition-all text-xs font-semibold cursor-pointer mr-auto"
               title="Preview ID Card"
               aria-label="Preview student ID card"
             >
@@ -116,7 +116,7 @@ export default function StudentCard({
             <>
               <button
                 onClick={() => onEdit(student)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-indigo-200 hover:bg-indigo-50/40 text-gray-650 hover:text-indigo-605 transition-all text-xs font-semibold cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-violet-200 hover:bg-violet-50/40 text-gray-650 hover:text-violet-605 transition-all text-xs font-semibold cursor-pointer"
                 title="Edit student details"
                 aria-label="Edit student"
               >

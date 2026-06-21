@@ -2,20 +2,20 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
-import SchoolForm from "@/components/SchoolForm";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import Header from "@/components/Header";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { 
-  UserGroupIcon, 
-  Search01Icon, 
-  Add01Icon, 
-  IdentityCardIcon, 
-  UserIcon, 
-  ArrowRight01Icon 
+import {
+  UserGroupIcon,
+  Search01Icon,
+  Add01Icon,
+  IdentityCardIcon,
+  UserIcon,
+  ArrowRight01Icon,
+  Folder01Icon,
+  StudentsIcon
 } from "@hugeicons/core-free-icons";
 
 // ─── Interfaces ─────────────────────────────────────────────────────────────
@@ -54,8 +54,6 @@ export default function Home() {
 
   const [schools, setSchools] = useState<School[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const [showSchoolForm, setShowSchoolForm] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [schoolSearchQuery, setSchoolSearchQuery] = useState("");
   const [avgPrice, setAvgPrice] = useState<number>(0);
 
@@ -81,10 +79,13 @@ export default function Home() {
     }
   };
 
-  const handleSchoolCreated = () => {
-    fetchDashboardData();
-    setShowSchoolForm(false);
-  };
+  useEffect(() => {
+    const handleSchoolsUpdated = () => {
+      fetchDashboardData();
+    };
+    window.addEventListener("schools-updated", handleSchoolsUpdated);
+    return () => window.removeEventListener("schools-updated", handleSchoolsUpdated);
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -108,7 +109,7 @@ export default function Home() {
       router.push("/login");
       return;
     }
-    
+
     // REDIRECT non-admins to their school dashboard immediately
     if (user.role !== "admin") {
       if (user.schoolId) {
@@ -165,7 +166,7 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-slate-50/50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
           <p className="text-slate-550 text-sm">Redirecting to your school portal…</p>
         </div>
       </div>
@@ -206,19 +207,9 @@ export default function Home() {
   );
 
   return (
-    <div className="flex min-h-screen bg-slate-50/50">
-      <Header onMenuClick={() => setIsSidebarOpen(true)} />
-      
-      <Sidebar 
-        onCreateSchool={() => setShowSchoolForm(true)} 
-        isOpen={isSidebarOpen} 
-        onClose={() => setIsSidebarOpen(false)}
-      />
-
-      {/* Main Content Container */}
-      <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8 min-w-0">
+    <DashboardLayout>
         <div className="max-w-6xl mx-auto space-y-6 mt-2">
-          
+
           {/* Welcome Dashboard Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
             <div>
@@ -229,10 +220,10 @@ export default function Home() {
                 Metrics, school analytics list, and configuration tools.
               </p>
             </div>
-            
+
             <button
-              onClick={() => setShowSchoolForm(true)}
-              className="inline-flex items-center justify-center gap-1.5 px-4.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold rounded-xl transition-all shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer border-0 shrink-0"
+              onClick={() => window.dispatchEvent(new Event("open-create-school"))}
+              className="inline-flex items-center justify-center gap-1.5 px-4.5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-xs sm:text-sm font-bold rounded-xl transition-all shadow-md shadow-violet-600/10 hover:shadow-violet-600/20 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer border-0 shrink-0"
             >
               <HugeiconsIcon icon={Add01Icon} size={15} color="currentColor" strokeWidth={2.5} className="shrink-0" />
               <span>Create New School</span>
@@ -243,7 +234,7 @@ export default function Home() {
             <SkeletonDashboard />
           ) : (
             <div className="space-y-6">
-              
+
               {/* ─── KPI Metrics Cards Row ─── */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 {/* KPI Card: Total Schools */}
@@ -253,8 +244,8 @@ export default function Home() {
                     <h3 className="text-3xl font-black text-slate-800 tracking-tight">{stats.totalSchools}</h3>
                     <p className="text-[10px] text-slate-500 font-medium">Educational institutions</p>
                   </div>
-                  <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center transition-all group-hover:scale-105 shadow-xs shrink-0">
-                    <HugeiconsIcon icon={UserGroupIcon} size={22} className="text-indigo-650 shrink-0" strokeWidth={2} />
+                  <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center transition-all group-hover:scale-105 shadow-xs shrink-0">
+                    <HugeiconsIcon icon={UserGroupIcon} size={22} className="text-violet-650 shrink-0" strokeWidth={2} />
                   </div>
                 </div>
 
@@ -279,18 +270,18 @@ export default function Home() {
                     </h3>
                     <p className="text-[10px] text-slate-500 font-medium">Based on ₹{avgPrice}/card</p>
                   </div>
-                  <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center transition-all group-hover:scale-105 shadow-xs shrink-0">
-                    <HugeiconsIcon icon={IdentityCardIcon} size={22} className="text-emerald-650 shrink-0" strokeWidth={2} />
+                  <div className="w-12 h-12 rounded-xl bg-fuchsia-50 border border-fuchsia-100 flex items-center justify-center transition-all group-hover:scale-105 shadow-xs shrink-0">
+                    <HugeiconsIcon icon={IdentityCardIcon} size={22} className="text-fuchsia-650 shrink-0" strokeWidth={2} />
                   </div>
                 </div>
               </div>
 
               {/* ─── Main Details Section ─── */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* ─── Column 1 & 2: Primary Analytics Table/Grid ─── */}
                 <div className="lg:col-span-2 space-y-6">
-                  
+
                   {/* Schools Analytics & Management Directory */}
                   <div className="bg-white rounded-2xl border border-slate-150 shadow-xs p-6 flex flex-col gap-5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -298,7 +289,7 @@ export default function Home() {
                         <h2 className="text-lg font-bold text-slate-800 tracking-tight">Schools Analytics & Management</h2>
                         <p className="text-slate-550 text-xs mt-0.5">Quick search and metrics overview for educational institutes.</p>
                       </div>
-                      
+
                       {/* Search School input */}
                       <div className="relative flex items-center min-w-0 w-full sm:w-64">
                         <span className="absolute left-3 text-slate-400 flex items-center">
@@ -309,7 +300,7 @@ export default function Home() {
                           placeholder="Search name, phone, address..."
                           value={schoolSearchQuery}
                           onChange={(e) => setSchoolSearchQuery(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all h-9"
+                          className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all h-9"
                         />
                       </div>
                     </div>
@@ -325,15 +316,15 @@ export default function Home() {
                           const stdCount = school.students?.length || 0;
 
                           return (
-                            <div 
-                              key={school.id} 
-                              className="bg-slate-50/50 border border-slate-150 hover:border-indigo-150 hover:bg-indigo-50/5 rounded-2xl p-4.5 flex flex-col justify-between transition-all group hover:shadow-sm"
+                            <div
+                              key={school.id}
+                              className="bg-slate-50/50 border border-slate-150 hover:border-violet-150 hover:bg-violet-50/5 rounded-2xl p-4.5 flex flex-col justify-between transition-all group hover:shadow-sm"
                             >
                               <div>
                                 {/* School header info */}
                                 <div className="flex items-start justify-between gap-3 mb-2.5">
                                   <div className="min-w-0">
-                                    <h4 className="text-sm font-bold text-slate-800 truncate group-hover:text-indigo-650 transition-colors" title={school.name}>
+                                    <h4 className="text-sm font-bold text-slate-800 truncate group-hover:text-violet-650 transition-colors" title={school.name}>
                                       {school.name}
                                     </h4>
                                     <p className="text-[10px] text-slate-500 truncate" title={school.caption}>{school.caption || "Educational Institute"}</p>
@@ -349,11 +340,21 @@ export default function Home() {
 
                                 {/* Stats pills */}
                                 <div className="flex flex-wrap items-center gap-2 mb-3.5">
-                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-[10px] font-bold">
-                                    📚 {clsCount} class{clsCount !== 1 ? "es" : ""}
+                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100 rounded-lg text-[10px] font-bold">
+                                    <HugeiconsIcon
+                                      icon={Folder01Icon}
+                                      size={16}
+                                      color="currentColor"
+                                      strokeWidth={1.5}
+                                    /> {clsCount} class{clsCount !== 1 ? "es" : ""}
                                   </span>
-                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-[10px] font-bold">
-                                    🪪 {stdCount} student{stdCount !== 1 ? "s" : ""}
+                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-violet-50 text-violet-700 border border-violet-100 rounded-lg text-[10px] font-bold">
+                                    <HugeiconsIcon
+                                      icon={StudentsIcon}
+                                      size={16}
+                                      color="currentColor"
+                                      strokeWidth={1.5}
+                                    /> {stdCount} student{stdCount !== 1 ? "s" : ""}
                                   </span>
                                 </div>
 
@@ -371,7 +372,7 @@ export default function Home() {
                               {/* Navigate to school detail page */}
                               <Link
                                 href={`/school/${school.id}`}
-                                className="w-full h-9 inline-flex items-center justify-center gap-1.5 bg-white hover:bg-indigo-600 text-slate-650 hover:text-white border border-slate-200 hover:border-indigo-600 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-98"
+                                className="w-full h-9 inline-flex items-center justify-center gap-1.5 bg-white hover:bg-violet-600 text-slate-650 hover:text-white border border-slate-200 hover:border-violet-600 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-98"
                               >
                                 <span>Manage Directory</span>
                                 <HugeiconsIcon icon={ArrowRight01Icon} size={13} className="transition-transform group-hover:translate-x-0.5" strokeWidth={2.5} />
@@ -387,7 +388,7 @@ export default function Home() {
 
                 {/* ─── Column 3: Secondary Widgets (Revenue settings, Leaderboard, Shortcuts) ─── */}
                 <div className="space-y-6">
-                  
+
                   {/* Revenue Calculator Settings Panel */}
                   <div className="bg-white rounded-2xl border border-slate-150 p-6 shadow-xs space-y-4">
                     <div>
@@ -406,7 +407,7 @@ export default function Home() {
                         placeholder="e.g. 150"
                         value={avgPrice || ""}
                         onChange={(e) => handlePriceChange(e.target.value)}
-                        className="w-full px-4.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-semibold text-slate-800"
+                        className="w-full px-4.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all font-semibold text-slate-800"
                       />
                     </div>
                   </div>
@@ -431,16 +432,16 @@ export default function Home() {
                               <div className="flex items-center justify-between text-xs font-semibold">
                                 <div className="flex items-center gap-2 min-w-0">
                                   <span className="text-[10px] font-bold text-slate-400">#{idx + 1}</span>
-                                  <Link href={`/school/${school.id}`} className="text-slate-700 hover:text-indigo-600 font-bold hover:underline truncate" title={school.name}>
+                                  <Link href={`/school/${school.id}`} className="text-slate-700 hover:text-violet-600 font-bold hover:underline truncate" title={school.name}>
                                     {school.name}
                                   </Link>
                                 </div>
                                 <span className="text-slate-550 text-[11px] shrink-0 font-bold">{count} Cards</span>
                               </div>
                               <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden flex">
-                                <div 
+                                <div
                                   style={{ width: `${Math.max(4, percent)}%` }}
-                                  className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-300"
+                                  className="h-full bg-gradient-to-r from-violet-500 to-violet-600 rounded-full transition-all duration-300"
                                 />
                               </div>
                             </div>
@@ -453,19 +454,19 @@ export default function Home() {
                   {/* System Shortcuts */}
                   <div className="bg-white rounded-2xl border border-slate-150 p-6 shadow-xs space-y-4">
                     <h3 className="text-sm font-bold text-slate-800 tracking-tight">System Action Shortcuts</h3>
-                    
+
                     <div className="grid grid-cols-1 gap-2.5">
                       <button
-                        onClick={() => setShowSchoolForm(true)}
-                        className="w-full h-10 px-4 inline-flex items-center gap-2.5 bg-slate-50 hover:bg-indigo-50/50 text-slate-705 hover:text-indigo-600 border border-slate-200 hover:border-indigo-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                        onClick={() => window.dispatchEvent(new Event("open-create-school"))}
+                        className="w-full h-10 px-4 inline-flex items-center gap-2.5 bg-slate-50 hover:bg-violet-50/50 text-slate-705 hover:text-violet-600 border border-slate-200 hover:border-violet-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
                       >
                         <span className="text-base leading-none">🏫</span>
                         <span>Create School Profile</span>
                       </button>
-                      
+
                       <Link
                         href="/admin/credentials"
-                        className="w-full h-10 px-4 inline-flex items-center gap-2.5 bg-slate-50 hover:bg-indigo-50/50 text-slate-705 hover:text-indigo-600 border border-slate-200 hover:border-indigo-200 rounded-xl text-xs font-bold transition-all shadow-xs"
+                        className="w-full h-10 px-4 inline-flex items-center gap-2.5 bg-slate-50 hover:bg-violet-50/50 text-slate-705 hover:text-violet-600 border border-slate-200 hover:border-violet-200 rounded-xl text-xs font-bold transition-all shadow-xs"
                       >
                         <span className="text-base leading-none">🔑</span>
                         <span>Manage Credentials</span>
@@ -479,17 +480,7 @@ export default function Home() {
 
             </div>
           )}
-
         </div>
-      </div>
-
-      {/* Create School Modal Form */}
-      {showSchoolForm && (
-        <SchoolForm
-          onClose={() => setShowSchoolForm(false)}
-          onSuccess={handleSchoolCreated}
-        />
-      )}
-    </div>
+    </DashboardLayout>
   );
 }

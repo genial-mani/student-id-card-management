@@ -25,7 +25,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
         <span className="font-extrabold text-gray-900 tracking-tight leading-tight">
           ARUN
         </span>
-        <span className="text-indigo-600">
+        <span className="text-violet-600">
           ID CARDS & DIGITAL
         </span>
       </h2>

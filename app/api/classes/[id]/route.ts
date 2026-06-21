@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/utils/prismaClient';
+import { bulkDeleteImagesFromCloudinary } from '@/utils/cloudinaryBackend';
 
 function getAuth(request: NextRequest) {
   return {
@@ -97,6 +98,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Class not found' }, { status: 404 });
     }
 
+    // Fetch all students in the class to delete their photos in bulk
+    const students = await prisma.student.findMany({ where: { classId: id }, select: { profilePictureUrl: true } });
+    const photoUrls = students.map(s => s.profilePictureUrl).filter(Boolean);
+    if (photoUrls.length > 0) {
+      await bulkDeleteImagesFromCloudinary(photoUrls);
+    }
+
+    await prisma.student.deleteMany({ where: { classId: id } });
     await prisma.class.delete({ where: { id } });
     return NextResponse.json({ message: 'Class deleted successfully' });
   } catch {

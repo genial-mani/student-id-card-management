@@ -9,6 +9,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons";
 import uploadImageToCloudinary from "@/utils/cloudService";
 import Cropper from "react-easy-crop";
+import { toast } from "sonner";
 
 interface StudentData {
   id: string;
@@ -89,7 +90,7 @@ export default function EditStudentModal({
               ? JSON.parse(data.customFieldsConfig)
               : data.customFieldsConfig;
             if (parsed && parsed.student) {
-              parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone");
+              parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone" && f.key !== "idNo" && f.key !== "camSno");
             }
             setCustomFieldsConfig(parsed);
           }
@@ -233,24 +234,27 @@ export default function EditStudentModal({
       });
 
       if (response.ok) {
+        toast.success("Student details updated successfully!");
         onSuccess();
         onClose();
       } else {
         const errorData = await response.json();
         setError(errorData.error || "Failed to update student records");
+        toast.error(errorData.error || "Failed to update student records");
       }
     } catch (err) {
       console.error("Error updating student:", err);
       setError("An unexpected error occurred. Please try again.");
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-55 p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-55 p-1 sm:p-4">
       <div 
-        className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 relative animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white rounded-2xl p-3 w-full max-w-md max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl border border-gray-100 relative animate-in fade-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-student-title"
@@ -284,12 +288,12 @@ export default function EditStudentModal({
                 step={0.1}
                 aria-labelledby="Zoom"
                 onChange={(e) => setZoom(Number(e.target.value))}
-                className="w-full accent-indigo-600"
+                className="w-full accent-violet-600"
               />
             </div>
 
             <div className="flex w-full gap-3">
-              <Button onClick={generateCroppedImage} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+              <Button onClick={generateCroppedImage} className="flex-1 bg-fuchsia-600 hover:bg-fuchsia-700 text-white">
                 Apply Crop
               </Button>
               <Button onClick={() => setIsCropping(false)} variant="outline" className="flex-1">
@@ -301,16 +305,14 @@ export default function EditStudentModal({
           <>
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-50 flex items-center justify-center cursor-pointer"
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors  rounded-full bg-gray-100 hover:bg-gray-200 flex items-center p-1.5 justify-center cursor-pointer"
               aria-label="Close modal"
             >
-              <HugeiconsIcon icon={Cancel01Icon} size={18} color="currentColor" strokeWidth={2} />
+              <HugeiconsIcon icon={Cancel01Icon} size={20} color="currentColor" strokeWidth={2} />
             </button>
 
-            <h2 id="edit-student-title" className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
-              <span className="text-indigo-600 flex items-center">
-                <HugeiconsIcon icon={PencilEdit01Icon} size={20} color="currentColor" strokeWidth={2} />
-              </span> 
+            <h2 id="edit-student-title" className="text-xl font-bold text-gray-900 mb-5 flex items-center pl-5 gap-2">
+               
               Edit Student Details
             </h2>
 
@@ -339,7 +341,7 @@ export default function EditStudentModal({
                   <div className="flex-1">
                     <Label
                       htmlFor="editCameraInput"
-                      className="cursor-pointer flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-2 rounded-xl text-xs font-semibold border border-indigo-200 transition-colors shadow-sm"
+                      className="cursor-pointer flex items-center justify-center gap-2 bg-violet-50 hover:bg-violet-100 text-violet-700 py-2 rounded-xl text-xs font-semibold border border-violet-200 transition-colors shadow-sm"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                       Take Photo
@@ -384,7 +386,7 @@ export default function EditStudentModal({
               onChange={handleInputChange}
               required
               placeholder="e.g. John Doe"
-              className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-violet-500"
             />
           </div>
 
@@ -398,7 +400,7 @@ export default function EditStudentModal({
               value={formData.classId}
               onChange={handleInputChange}
               required
-              className="w-full h-10 px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+              className="w-full h-10 px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 transition-colors"
             >
               <option value="" disabled>Select Class</option>
               {classes.map((cls) => (
@@ -412,8 +414,6 @@ export default function EditStudentModal({
           {(() => {
             const fields = customFieldsConfig?.student || [
               { key: "name", label: "Student Name", type: "text", required: true, default: true, enabled: true },
-              { key: "idNo", label: "ID Number", type: "text", required: false, default: true, enabled: true },
-              { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
               { key: "fatherName", label: "Father Name", type: "text", required: false, default: true, enabled: true },
               { key: "fatherPhone", label: "Father Phone", type: "text", required: false, default: true, enabled: true },
               { key: "address", label: "Address", type: "text", required: false, default: true, enabled: true }
@@ -437,7 +437,7 @@ export default function EditStudentModal({
                           required={f.required}
                           rows={3}
                           placeholder={`Enter ${f.label.toLowerCase()}...`}
-                          className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 resize-none"
+                          className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-violet-500 resize-none"
                         />
                       ) : (
                         <Input
@@ -448,7 +448,7 @@ export default function EditStudentModal({
                           onChange={handleInputChange}
                           required={f.required}
                           placeholder={`e.g. ${f.label}`}
-                          className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
+                          className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-violet-500"
                         />
                       )}
                     </div>
@@ -468,7 +468,7 @@ export default function EditStudentModal({
                         }
                         required={f.required}
                         placeholder={`Enter ${f.label.toLowerCase()}...`}
-                        className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
+                        className="w-full rounded-xl border border-gray-200 text-xs sm:text-sm focus:ring-2 focus:ring-violet-500"
                       />
                     </div>
                   );
@@ -489,7 +489,7 @@ export default function EditStudentModal({
             <Button
               type="submit"
               disabled={loading}
-              className="flex-1 rounded-xl py-2.5 text-xs sm:text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+              className="flex-1 rounded-xl py-2.5 text-xs sm:text-sm font-medium bg-violet-600 hover:bg-violet-700 text-white transition-colors"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">

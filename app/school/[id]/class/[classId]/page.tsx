@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Sidebar from "@/components/Sidebar";
+import DashboardLayout from "@/components/DashboardLayout";
 import StudentForm from "@/components/StudentForm";
+import IdCardPreviewModal from "@/components/IdCardPreviewModal";
 import IdCard, { CardTheme } from "@/components/IdCard";
 import { useAuth } from "@/contexts/AuthContext";
-import Header from "@/components/Header";
 
 // Custom UI imports
 import StudentCard from "@/components/StudentCard";
@@ -17,6 +17,7 @@ import { Student } from "@/types/student";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { IdentityCardIcon, Search01Icon, ListViewIcon, Search02Icon, ArrowLeft01Icon, ArrowRight01Icon, UserAdd02Icon, PrinterIcon, ArrowLeft02Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -116,6 +117,76 @@ function saveDesign(classId: string, layout: number, theme: CardTheme) {
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
+const CustomDropdown = ({ value, onChange, options, placeholder, searchable = false }: { value: string, onChange: (val: string) => void, options: { label: string, value: string }[], placeholder: string, searchable?: boolean }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find((opt: any) => opt.value === value);
+  const filteredOptions = searchable 
+    ? options.filter(opt => opt.label.toLowerCase().includes(search.toLowerCase()))
+    : options;
+
+  return (
+    <div className="relative w-full" ref={dropdownRef}>
+      <div
+        className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm flex items-center justify-between cursor-pointer focus:ring-2 focus:ring-violet-500 transition-colors"
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) setSearch("");
+        }}
+      >
+        <span className={selectedOption ? "text-gray-900 truncate pr-2" : "text-gray-500 truncate pr-2"}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <svg className={`w-4 h-4 text-gray-500 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-150 rounded-xl shadow-lg max-h-60 overflow-y-auto no-scrollbar">
+          {searchable && (
+            <div className="p-2 border-b border-gray-100 sticky top-0 bg-white">
+              <input
+                type="text"
+                autoFocus
+                className="w-full px-2 py-1.5 text-xs sm:text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          )}
+          {filteredOptions.length > 0 ? filteredOptions.map((opt: any) => (
+            <div
+              key={opt.value}
+              className={`px-3 py-2 text-xs sm:text-sm cursor-pointer hover:bg-violet-50 hover:text-violet-700 transition-colors ${value === opt.value ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-700'}`}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+            >
+              {opt.label}
+            </div>
+          )) : (
+            <div className="px-3 py-2 text-xs sm:text-sm text-gray-500 text-center">No results</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function ClassPage() {
   const params = useParams();
   const router = useRouter();
@@ -137,6 +208,7 @@ export default function ClassPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [selectedPreviewStudent, setSelectedPreviewStudent] = useState<Student | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
   const [classesList, setClassesList] = useState<{ id: string; name: string }[]>([]);
 
   // Design — read directly from school database or fall back to localStorage
@@ -222,28 +294,33 @@ export default function ClassPage() {
   }, [filteredStudents, currentPage, totalPages]);
 
   const handleDeleteClick = async (studentId: string, studentName: string) => {
-    const confirmed = window.confirm(`Are you sure you want to delete the student record for "${studentName}"?`);
-    if (!confirmed) return;
+    setStudentToDelete({ id: studentId, name: studentName });
+  };
 
+  const confirmDelete = async () => {
+    if (!studentToDelete) return;
     try {
-      const res = await fetch(`/api/students/${studentId}`, {
+      const res = await fetch(`/api/students/${studentToDelete.id}`, {
         method: "DELETE",
       });
       if (res.ok) {
+        toast.success("Student deleted successfully!");
         fetchClass();
       } else {
         const err = await res.json();
-        alert(err.error || "Failed to delete student");
+        toast.error(err.error || "Failed to delete student");
       }
     } catch (error) {
       console.error("Error deleting student:", error);
-      alert("Failed to delete student");
+      toast.error("Failed to delete student");
+    } finally {
+      setStudentToDelete(null);
     }
   };
 
   const handleExportToExcel = () => {
     if (!allStudents || allStudents.length === 0) {
-      alert("No student data available to export.");
+      toast.error("No student data available to export.");
       return;
     }
 
@@ -331,7 +408,7 @@ export default function ClassPage() {
     URL.revokeObjectURL(url);
   };
 
-  const canEditOrDelete = isAdmin || (user?.role === "user" && user?.schoolId === classData?.school?.id);
+  const canEditOrDelete = isAdmin || ((user?.role === "user" || user?.role === "school_admin") && user?.schoolId === classData?.school?.id);
 
   useEffect(() => {
     if (classData) {
@@ -385,17 +462,11 @@ export default function ClassPage() {
   // ── Shell wrapper ─────────────────────────────────────────────────────────
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div className="flex min-h-screen bg-gray-50">
-      <Header onMenuClick={() => setIsSidebarOpen(true)} />
-      <Sidebar
-        onCreateSchool={() => { }}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-      <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 flex items-center justify-center p-4">
+    <DashboardLayout>
+      <div className="flex items-center justify-center p-4">
         {children}
       </div>
-    </div>
+    </DashboardLayout>
   );
 
   if (loading || !designReady)
@@ -439,15 +510,7 @@ export default function ClassPage() {
   // ── Main render ───────────────────────────────────────────────────────────
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Header onMenuClick={() => setIsSidebarOpen(true)} />
-      <Sidebar
-        onCreateSchool={() => { }}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-
-      <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8">
+    <DashboardLayout>
         <div className="max-w-7xl mx-auto mt-3">
           {/* ── Page Header & Search ────────────────────────────────────── */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6 mb-6 flex flex-col gap-5">
@@ -457,7 +520,7 @@ export default function ClassPage() {
                 {/* Back to School link above breadcrumb */}
                 <button
                   onClick={() => router.push(`/school/${classData.school.id}`)}
-                  className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-indigo-600 transition-colors cursor-pointer border-0 bg-transparent p-0"
+                  className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-violet-600 transition-colors cursor-pointer border-0 bg-transparent p-0"
                 >
                   <HugeiconsIcon
                     icon={ArrowLeft02Icon}
@@ -477,7 +540,7 @@ export default function ClassPage() {
                   {" / "}Class {classData.name}
                 </p>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 flex-wrap">
-                  <span className="text-indigo-600 flex items-center">
+                  <span className="text-violet-600 flex items-center">
                     <HugeiconsIcon icon={UserGroupIcon} size={28} color="currentColor" strokeWidth={2} />
                   </span>
                   Class {classData.name}
@@ -493,7 +556,7 @@ export default function ClassPage() {
                 {isAdmin && (
                   <button
                     onClick={handleExportToExcel}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 justify-center h-10"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 justify-center h-10"
                     title="Export all class student data to Excel (CSV)"
                   >
                     <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
@@ -516,8 +579,7 @@ export default function ClassPage() {
                     color="currentColor"
                     strokeWidth={2}
                   />
-                  <span className="hidden sm:inline">Add Student</span>
-                  <span className="sm:hidden">Add</span>
+                  <span>Add Student</span>
                 </button>
               </div>
             </div>
@@ -534,7 +596,7 @@ export default function ClassPage() {
                   placeholder="Search name, father, cell..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all h-10"
+                  className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all h-10"
                 />
               </div>
 
@@ -543,46 +605,47 @@ export default function ClassPage() {
                 {/* Sort Dropdown */}
                 {viewMode === "card" && (
                   <div className="w-full sm:w-44 shrink-0">
-                    <select
+                    <CustomDropdown
                       value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="w-full h-10 px-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-colors cursor-pointer"
-                    >
-                      <option value="name-asc">Sort: Name (A-Z)</option>
-                      <option value="name-desc">Sort: Name (Z-A)</option>
-                      <option value="idNo-asc">Sort: ID No (Asc)</option>
-                      <option value="idNo-desc">Sort: ID No (Desc)</option>
-                      <option value="camSno-asc">Sort: CAM S.No (Asc)</option>
-                      <option value="camSno-desc">Sort: CAM S.No (Desc)</option>
-                      <option value="fatherName-asc">Sort: Father Name (A-Z)</option>
-                      <option value="fatherName-desc">Sort: Father Name (Z-A)</option>
-                    </select>
+                      onChange={setSortBy}
+                      placeholder="Sort By"
+                      options={[
+                        { value: "name-asc", label: "Sort: Name (A-Z)" },
+                        { value: "name-desc", label: "Sort: Name (Z-A)" },
+                        { value: "idNo-asc", label: "Sort: ID No (Asc)" },
+                        { value: "idNo-desc", label: "Sort: ID No (Desc)" },
+                        { value: "camSno-asc", label: "Sort: CAM S.No (Asc)" },
+                        { value: "camSno-desc", label: "Sort: CAM S.No (Desc)" },
+                        { value: "fatherName-asc", label: "Sort: Father Name (A-Z)" },
+                        { value: "fatherName-desc", label: "Sort: Father Name (Z-A)" },
+                      ]}
+                    />
                   </div>
                 )}
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200 shrink-0 h-10 w-full sm:w-auto">
+                <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200 shrink-0 h-10 overflow-hidden w-auto max-w-full">
                   <button
                     onClick={() => setViewMode("card")}
                     type="button"
-                    className={`flex-1 sm:flex-none px-3 h-full rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${viewMode === "card"
-                      ? "bg-white text-gray-900 shadow-xs"
-                      : "text-gray-500 hover:text-gray-900"
+                    className={`px-3 h-full rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 truncate ${viewMode === "card"
+                      ? "bg-violet-600 text-white shadow-sm"
+                      : "text-gray-500 hover:text-gray-900 hover:bg-gray-200/50"
                       }`}
                   >
                     <HugeiconsIcon icon={IdentityCardIcon} size={14} color="currentColor" strokeWidth={2} />
-                    Cards
+                    <span className="hidden sm:inline">Cards</span>
                   </button>
                   <button
                     onClick={() => setViewMode("list")}
                     type="button"
-                    className={`flex-1 sm:flex-none px-3 h-full rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${viewMode === "list"
-                      ? "bg-white text-gray-900 shadow-xs"
-                      : "text-gray-500 hover:text-gray-900"
+                    className={`px-3 h-full rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 truncate ${viewMode === "list"
+                      ? "bg-violet-600 text-white shadow-sm"
+                      : "text-gray-500 hover:text-gray-900 hover:bg-gray-200/50"
                       }`}
                   >
                     <HugeiconsIcon icon={ListViewIcon} size={14} color="currentColor" strokeWidth={2} />
-                    List
+                    <span className="hidden sm:inline">List</span>
                   </button>
                 </div>
               </div>
@@ -682,7 +745,7 @@ export default function ClassPage() {
                       key={page}
                       onClick={() => setCurrentPage(page)}
                       className={`w-8 h-8 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${currentPage === page
-                        ? "bg-indigo-600 text-white shadow-xs"
+                        ? "bg-violet-600 text-white shadow-xs"
                         : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                         }`}
                     >
@@ -728,67 +791,46 @@ export default function ClassPage() {
 
           {/* ID Card Preview Modal */}
           {selectedPreviewStudent && (
-            <div className="fixed inset-0 z-55 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-              <div className="relative bg-white border border-gray-150 rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col items-center animate-in zoom-in-95 duration-200">
-                {/* Close Button */}
-                <button
-                  onClick={() => setSelectedPreviewStudent(null)}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 p-1.5 rounded-full transition-all cursor-pointer"
-                  title="Close preview"
-                  aria-label="Close preview modal"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+            <IdCardPreviewModal
+              school={classData.school}
+              student={selectedPreviewStudent}
+              onClose={() => setSelectedPreviewStudent(null)}
+            />
+          )}
 
-                {/* Modal Title */}
-                <h3 className="font-bold text-gray-900 text-lg mb-1">
-                  ID Card Preview
-                </h3>
-
-                {/* ID Card Wrapper scaled to fit */}
-                <div className="w-[283px] h-[457px] relative overflow-hidden rounded-xl shadow-lg border border-gray-200 bg-white">
-                  <div
-                    style={{
-                      transform: "scale(0.42)",
-                      transformOrigin: "top left",
-                      width: "673px",
-                      height: "1087px",
-                    }}
-                  >
-                    <IdCard
-                      layout={selectedLayout}
-                      theme={theme}
-                      school={classData.school}
-                      student={selectedPreviewStudent}
-                      classNameStr={classData.name}
-                    />
+          {/* Delete Confirmation Modal */}
+          {studentToDelete && (
+            <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mb-4">
+                    <svg className="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
                   </div>
-                </div>
-
-                {/* Layout and Theme Details Footer Info */}
-                <div className="mt-6 pt-4 border-t border-gray-100 w-full flex items-center justify-between text-xs text-gray-500">
-                  <span>Layout: <strong>{selectedLayout}</strong></span>
-                  <div className="flex items-center gap-1">
-                    <span>Theme:</span>
-                    <span
-                      className="w-3 h-3 rounded-full border border-gray-300"
-                      style={{ backgroundColor: theme.primary }}
-                      title={`Primary: ${theme.primary}`}
-                    />
-                    <span
-                      className="w-3 h-3 rounded-full border border-gray-300"
-                      style={{ backgroundColor: theme.secondary }}
-                      title={`Secondary: ${theme.secondary}`}
-                    />
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Student</h3>
+                  <p className="text-sm text-gray-500 mb-6">
+                    Are you sure you want to delete <span className="font-semibold text-gray-900">"{studentToDelete.name}"</span>? This action cannot be undone.
+                  </p>
+                  <div className="flex gap-3 w-full">
+                    <button
+                      onClick={() => setStudentToDelete(null)}
+                      className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmDelete}
+                      className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           )}
         </div>
-      </div>
 
       {showStudentForm && (
         <StudentForm
@@ -799,6 +841,6 @@ export default function ClassPage() {
           onSuccess={() => fetchClass()}
         />
       )}
-    </div>
+    </DashboardLayout>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface ClassFormProps {
   schoolId: string;
@@ -60,15 +61,16 @@ export default function ClassForm({
       });
 
       if (response.ok) {
+        toast.success("Class created successfully!");
         onSuccess();
         onClose();
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to create class");
+        toast.error(error.error || "Failed to create class");
       }
     } catch (error) {
       console.error("Error creating class:", error);
-      alert("Failed to create class");
+      toast.error("Failed to create class");
     } finally {
       setLoading(false);
     }

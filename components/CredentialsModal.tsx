@@ -10,8 +10,16 @@ interface CredentialsModalProps {
 }
 
 interface CredentialInfo {
+  id: string;
   username: string;
+  role: string;
   createdAt: string;
+}
+
+interface NewCredential {
+  role: string;
+  username: string;
+  password: string;
 }
 
 export default function CredentialsModal({
@@ -19,22 +27,22 @@ export default function CredentialsModal({
   schoolName,
   onClose,
 }: CredentialsModalProps) {
-  const [info, setInfo] = useState<CredentialInfo | null>(null);
+  const [usersInfo, setUsersInfo] = useState<CredentialInfo[] | null>(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
-  const [newPassword, setNewPassword] = useState<string | null>(null);
+  const [newCredentials, setNewCredentials] = useState<NewCredential[] | null>(null);
   const [resetting, setResetting] = useState(false);
-  const [copied, setCopied] = useState<"user" | "pass" | "all" | null>(null);
-  const [confirmReset, setConfirmReset] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [confirmReset, setConfirmReset] = useState<string | boolean>(false);
   const [error, setError] = useState("");
 
-  // Load existing username
+  // Load existing usernames
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch(`/api/schools/${schoolId}/credentials`);
         if (res.ok) {
           const d = await res.json();
-          setInfo({ username: d.username, createdAt: d.createdAt });
+          setUsersInfo(d.users);
         } else {
           setError("Could not load credentials.");
         }
@@ -48,16 +56,30 @@ export default function CredentialsModal({
 
   const handleReset = async () => {
     setResetting(true);
-    setNewPassword(null);
     setError("");
     try {
+      const body = typeof confirmReset === "string" ? { role: confirmReset } : undefined;
       const res = await fetch(`/api/schools/${schoolId}/credentials`, {
         method: "POST",
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
       });
       if (res.ok) {
         const d = await res.json();
-        setInfo((prev) => (prev ? { ...prev, username: d.username } : prev));
-        setNewPassword(d.password);
+        setNewCredentials(prev => {
+          if (!prev) return d.credentials;
+          const map = new Map(prev.map(c => [c.role, c]));
+          d.credentials.forEach((c: any) => map.set(c.role, c));
+          return Array.from(map.values());
+        });
+        // Also update usersInfo to reflect the new usernames
+        setUsersInfo((prev) => {
+          if (!prev) return prev;
+          return prev.map(p => {
+            const newCred = d.credentials.find((c: any) => c.role === p.role);
+            return newCred ? { ...p, username: newCred.username } : p;
+          });
+        });
         setConfirmReset(false);
       } else {
         setError("Failed to reset credentials.");
@@ -69,14 +91,19 @@ export default function CredentialsModal({
     }
   };
 
-  const copy = async (text: string, key: "user" | "pass" | "all") => {
+  const copy = async (text: string, key: string) => {
     await navigator.clipboard.writeText(text);
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const password = newPassword ?? "••••••••••";
-  const hasNewPw = newPassword !== null;
+  const getPassword = (role: string) => {
+    if (!newCredentials) return "••••••••••";
+    const cred = newCredentials.find(c => c.role === role);
+    return cred ? cred.password : "••••••••••";
+  };
+
+  const hasNewPw = newCredentials !== null;
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -113,7 +140,7 @@ export default function CredentialsModal({
           </Button>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 max-h-[80vh] overflow-y-auto">
           {/* Loading */}
           {loadingInfo && (
             <div className="flex items-center justify-center py-8">
@@ -129,7 +156,7 @@ export default function CredentialsModal({
           )}
 
           {/* Credentials display */}
-          {!loadingInfo && info && (
+          {!loadingInfo && usersInfo && (
             <>
               {/* Info banner */}
               <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-5">
@@ -147,7 +174,7 @@ export default function CredentialsModal({
                   />
                 </svg>
                 <p className="text-xs text-blue-700">
-                  Share these credentials with school staff. The password is
+                  Share these credentials with school staff. The passwords are
                   only shown after a reset.
                 </p>
               </div>
@@ -169,124 +196,94 @@ export default function CredentialsModal({
                     />
                   </svg>
                   <p className="text-xs text-amber-700 font-medium">
-                    New password generated. Save it now — it won't be shown
+                    New passwords generated. Save them now — they won't be shown
                     again.
                   </p>
                 </div>
               )}
 
               {/* Credential fields */}
-              <div className="space-y-3 mb-6">
-                {/* Username */}
-                <div>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">
-                    Username
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 font-mono text-sm text-gray-800 select-all">
-                      {info.username}
-                    </code>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="shrink-0 p-2.5 rounded-xl text-gray-600"
-                      onClick={() => copy(info.username, "user")}
-                      title="Copy username"
-                    >
-                      {copied === "user" ? (
-                        <svg
-                          className="w-4 h-4 text-green-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      ) : (
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                          />
-                        </svg>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Password */}
-                <div>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">
-                    Password{" "}
-                    {!hasNewPw && (
-                      <span className="font-normal normal-case text-gray-400">
-                        (hidden — reset to reveal)
-                      </span>
-                    )}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <code
-                      className={`flex-1 border rounded-xl px-4 py-2.5 font-mono text-sm select-all ${
-                        hasNewPw
-                          ? "bg-amber-50 border-amber-200 text-gray-800"
-                          : "bg-gray-50 border-gray-200 text-gray-400 tracking-widest"
-                      }`}
-                    >
-                      {password}
-                    </code>
-                    {hasNewPw && (
+              <div className="space-y-6 mb-6">
+                {usersInfo.map((info) => (
+                  <div key={info.role} className="border border-gray-100 rounded-xl p-4 bg-gray-50/50">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-sm font-bold text-violet-700">
+                        {info.role === 'school_admin' ? 'School Admin' : 'Staff User'}
+                      </p>
                       <Button
                         type="button"
-                        variant="outline"
-                        className="shrink-0 p-2.5 rounded-xl text-gray-600"
-                        title="Copy password"
-                        onClick={() => copy(newPassword!, "pass")}
+                        variant="ghost"
+                        className="text-xs h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => setConfirmReset(info.role)}
                       >
-                        {copied === "pass" ? (
-                          <svg
-                            className="w-4 h-4 text-green-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        ) : (
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                            />
-                          </svg>
-                        )}
+                        Regenerate
                       </Button>
-                    )}
+                    </div>
+                    
+                    {/* Username */}
+                    <div className="mb-3">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">
+                        Username
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2 font-mono text-sm text-gray-800 select-all break-all">
+                          {info.username}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="shrink-0 p-2 rounded-xl text-gray-600"
+                          onClick={() => copy(info.username, "user_" + info.role)}
+                          title="Copy username"
+                        >
+                          {copied === "user_" + info.role ? (
+                            <svg className="w-4 h-4 text-fuchsia-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Password */}
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">
+                        Password{" "}
+                        {!hasNewPw && (
+                          <span className="font-normal normal-case text-gray-400">
+                            (hidden)
+                          </span>
+                        )}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <code
+                          className={`flex-1 border rounded-xl px-3 py-2 font-mono text-sm select-all break-all ${
+                            hasNewPw
+                              ? "bg-amber-50 border-amber-200 text-gray-800"
+                              : "bg-white border-gray-200 text-gray-400 tracking-widest"
+                          }`}
+                        >
+                          {getPassword(info.role)}
+                        </code>
+                        {hasNewPw && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="shrink-0 p-2 rounded-xl text-gray-600"
+                            title="Copy password"
+                            onClick={() => copy(getPassword(info.role), "pass_" + info.role)}
+                          >
+                            {copied === "pass_" + info.role ? (
+                              <svg className="w-4 h-4 text-fuchsia-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
 
               {/* Copy all + download (only when password is visible) */}
@@ -296,46 +293,20 @@ export default function CredentialsModal({
                     type="button"
                     variant="outline"
                     className="flex-1"
-                    onClick={() =>
-                      copy(
-                        `Username: ${info.username}\nPassword: ${newPassword}`,
-                        "all",
-                      )
-                    }
+                    onClick={() => {
+                      const text = usersInfo.map(u => `Role: ${u.role === 'school_admin' ? 'School Admin' : 'Staff User'}\nUsername: ${u.username}\nPassword: ${getPassword(u.role)}`).join('\n\n');
+                      copy(text, "all");
+                    }}
                   >
                     {copied === "all" ? (
                       <>
-                        <svg
-                          className="w-4 h-4 text-green-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>{" "}
+                        <svg className="w-4 h-4 text-fuchsia-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>{" "}
                         Copied!
                       </>
                     ) : (
                       <>
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                          />
-                        </svg>{" "}
-                        Copy Both
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>{" "}
+                        Copy All
                       </>
                     )}
                   </Button>
@@ -343,7 +314,7 @@ export default function CredentialsModal({
                     type="button"
                     className="flex-1"
                     onClick={() => {
-                      const txt = `School: ${schoolName}\nUsername: ${info.username}\nPassword: ${newPassword}\n\nKeep this secure.`;
+                      const txt = `School: ${schoolName}\n\n` + usersInfo.map(u => `Role: ${u.role === 'school_admin' ? 'School Admin' : 'Staff User'}\nUsername: ${u.username}\nPassword: ${getPassword(u.role)}`).join('\n\n') + `\n\nKeep this secure.`;
                       const a = document.createElement("a");
                       a.href = URL.createObjectURL(
                         new Blob([txt], { type: "text/plain" }),
@@ -353,7 +324,7 @@ export default function CredentialsModal({
                     }}
                   >
                     <svg
-                      className="w-4 h-4"
+                      className="w-4 h-4 mr-1"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -365,7 +336,7 @@ export default function CredentialsModal({
                         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                       />
                     </svg>
-                    Download .txt
+                    Download
                   </Button>
                 </div>
               )}
@@ -392,13 +363,15 @@ export default function CredentialsModal({
                         d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                       />
                     </svg>
-                    Reset Password (Generate New)
+                    Regenerate All Passwords
                   </Button>
                 ) : (
                   <div className="space-y-2">
                     <p className="text-xs text-gray-600 text-center mb-3">
-                      This will invalidate the current password. The school user
-                      will need the new password to log in.
+                      {typeof confirmReset === "string" 
+                        ? `This will invalidate the current password for the ${confirmReset === "school_admin" ? "School Admin" : "Staff User"}.`
+                        : "This will invalidate the current passwords. All school users will need the new passwords to log in."
+                      }
                     </p>
                     <div className="flex gap-2">
                       <Button

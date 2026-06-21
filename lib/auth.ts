@@ -9,7 +9,7 @@ const JWT_SECRET = new TextEncoder().encode(
 export interface JWTPayload {
   userId: string;
   username: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'school_admin' | 'user';
   schoolId?: string;
   tokenVersion: number;
 }

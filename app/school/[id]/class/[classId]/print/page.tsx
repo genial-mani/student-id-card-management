@@ -356,7 +356,7 @@ export default function PrintPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-fuchsia-600 border-t-transparent rounded-full animate-spin" />
           <p className="text-gray-500 text-sm">Loading class…</p>
         </div>
       </div>
@@ -483,7 +483,7 @@ export default function PrintPage() {
 
             <div className="flex flex-wrap items-center gap-2">
               {dlProgress && (
-                <span className="text-xs text-emerald-700 font-medium flex items-center gap-1.5 mr-1">
+                <span className="text-xs text-fuchsia-700 font-medium flex items-center gap-1.5 mr-1">
                   <svg
                     className="animate-spin w-3.5 h-3.5 shrink-0"
                     fill="none"
@@ -515,7 +515,7 @@ export default function PrintPage() {
                   disabled={isBusy}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border shadow-sm transition-colors disabled:opacity-40 ${
                     downloading === i
-                      ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                      ? "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-700"
                       : "border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
                   }`}
                 >
@@ -527,7 +527,7 @@ export default function PrintPage() {
                 type="button"
                 onClick={() => downloadSheets(sheets.map((_, i) => i))}
                 disabled={isBusy}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors disabled:opacity-40"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-fuchsia-600 hover:bg-fuchsia-700 text-white shadow-sm transition-colors disabled:opacity-40"
               >
                 {!settled
                   ? "Loading images…"

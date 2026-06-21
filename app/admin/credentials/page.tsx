@@ -81,7 +81,7 @@ export default function CredentialsAdminPage() {
                 const creds = await res.json();
                 setCredsData((prev) => ({
                   ...prev,
-                  [school.id]: { username: creds.username, loading: false },
+                  [school.id]: { username: creds.users ? `${creds.users.length} Accounts` : "No account", loading: false },
                 }));
               } else {
                 setCredsData((prev) => ({
@@ -142,7 +142,7 @@ export default function CredentialsAdminPage() {
     return (
       <div className="min-h-screen bg-slate-50/50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
           <p className="text-slate-550 text-sm">Verifying access credentials…</p>
         </div>
       </div>
@@ -173,7 +173,7 @@ export default function CredentialsAdminPage() {
                 </Link>
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
-                <HugeiconsIcon icon={LockIcon} size={26} className="text-indigo-600 shrink-0" strokeWidth={2} />
+                <HugeiconsIcon icon={LockIcon} size={26} className="text-violet-600 shrink-0" strokeWidth={2} />
                 <span>Manage School Credentials</span>
               </h1>
               <p className="text-slate-550 text-xs sm:text-sm">
@@ -197,7 +197,7 @@ export default function CredentialsAdminPage() {
                   placeholder="Search schools..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all h-9"
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all h-9"
                 />
               </div>
             </div>
@@ -205,7 +205,7 @@ export default function CredentialsAdminPage() {
             {/* List */}
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <div className="w-7 h-7 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-7 h-7 border-3 border-violet-600 border-t-transparent rounded-full animate-spin" />
                 <p className="text-slate-400 text-xs">Loading accounts information…</p>
               </div>
             ) : filteredSchools.length === 0 ? (
@@ -245,7 +245,7 @@ export default function CredentialsAdminPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider hidden md:inline">Username:</span>
                         {loadingCreds ? (
-                          <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                          <div className="w-4 h-4 border-2 border-violet-600 border-t-transparent rounded-full animate-spin shrink-0" />
                         ) : (
                           <code className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-700 font-semibold select-all">
                             {username}
@@ -256,7 +256,7 @@ export default function CredentialsAdminPage() {
                       {/* Right: Actions */}
                       <button
                         onClick={() => setSelectedSchool({ id: school.id, name: school.name })}
-                        className="inline-flex items-center justify-center gap-1.5 h-9 px-4.5 bg-slate-50 hover:bg-indigo-600 text-slate-650 hover:text-white border border-slate-200 hover:border-indigo-600 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-98"
+                        className="inline-flex items-center justify-center gap-1.5 h-9 px-4.5 bg-slate-50 hover:bg-violet-600 text-slate-650 hover:text-white border border-slate-200 hover:border-violet-600 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-98"
                       >
                         <HugeiconsIcon icon={LockIcon} size={13} className="shrink-0" strokeWidth={2} />
                         <span>Manage Account</span>

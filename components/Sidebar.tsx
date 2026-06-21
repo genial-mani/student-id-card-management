@@ -28,12 +28,12 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
   const pathname = usePathname();
 
   useEffect(() => {
-    fetchSchools(false);
+    fetchSchools();
   }, [user]);
 
   useEffect(() => {
     const handleCacheReset = () => {
-      fetchSchools(true);
+      fetchSchools();
     };
     window.addEventListener("schools-updated", handleCacheReset);
     return () => {
@@ -41,25 +41,12 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
     };
   }, []);
 
-  const fetchSchools = async (forceRefetch = false) => {
-    if (!forceRefetch) {
-      const cached = localStorage.getItem("sidebar_schools");
-      if (cached) {
-        try {
-          setSchools(JSON.parse(cached));
-          return;
-        } catch (e) {
-          // fallback to api
-        }
-      }
-    }
-
+  const fetchSchools = async () => {
     try {
       const response = await fetch("/api/schools");
       if (response.ok) {
         const data = await response.json();
         setSchools(data);
-        localStorage.setItem("sidebar_schools", JSON.stringify(data));
       }
     } catch (error) {
       console.error("Failed to fetch schools:", error);
@@ -87,7 +74,7 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
               <span className="text-sm font-extrabold text-slate-800 tracking-tight leading-none">
                 ARUN
               </span>
-              <span className="text-[9px] font-bold text-indigo-600 tracking-widest leading-none mt-1 whitespace-nowrap">
+              <span className="text-[9px] font-bold text-violet-600 tracking-widest leading-none mt-1 whitespace-nowrap">
                 ID CARDS & DIGITAL
               </span>
             </div>
@@ -111,7 +98,7 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
               className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 shadow-sm ${
                 user?.role === "admin"
                   ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white border border-amber-300/20"
-                  : "bg-gradient-to-br from-indigo-400 to-blue-600 text-white border border-indigo-400/20"
+                  : "bg-gradient-to-br from-violet-400 to-blue-600 text-white border border-violet-400/20"
               }`}
             >
               {user?.username?.charAt(0).toUpperCase()}
@@ -123,7 +110,7 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
               <span className={`inline-flex items-center px-2 py-0.5 mt-0.5 rounded-full text-[9px] font-bold capitalize leading-none tracking-wider ${
                 user?.role === "admin"
                   ? "bg-amber-50 text-amber-800 border border-amber-100"
-                  : "bg-indigo-50 text-indigo-800 border border-indigo-100"
+                  : "bg-violet-50 text-violet-800 border border-violet-100"
               }`}>
                 {user?.role}
               </span>
@@ -141,16 +128,16 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
           onClick={onClose}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 border relative ${
             pathname === "/"
-              ? "bg-indigo-50/50 border-indigo-100/50 text-indigo-600 font-semibold shadow-xs"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent hover:translate-x-1"
+              ? "bg-violet-50/50 border-violet-100/50 text-violet-600 font-semibold shadow-xs"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent"
           }`}
         >
           {pathname === "/" && (
-            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-600 rounded-r-md" />
+            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-violet-600 rounded-r-md" />
           )}
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all ${
             pathname === "/"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10"
+              ? "bg-violet-600 text-white shadow-md shadow-violet-600/10"
               : "bg-slate-100 text-slate-500 border border-slate-200/40"
           }`}>
             <HugeiconsIcon icon={DashboardSquare02Icon} size={16} strokeWidth={2.5} />
@@ -166,16 +153,16 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
             onClick={onClose}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 border relative ${
               pathname === "/admin/logs"
-                ? "bg-indigo-50/50 border-indigo-100/50 text-indigo-600 font-semibold shadow-xs"
-                : "text-slate-605 hover:text-slate-900 hover:bg-slate-50 border-transparent hover:translate-x-1"
+                ? "bg-violet-50/50 border-violet-100/50 text-violet-600 font-semibold shadow-xs"
+                : "text-slate-605 hover:text-slate-900 hover:bg-slate-50 border-transparent"
             }`}
           >
             {pathname === "/admin/logs" && (
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-600 rounded-r-md" />
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-violet-600 rounded-r-md" />
             )}
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all ${
               pathname === "/admin/logs"
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10"
+                ? "bg-violet-600 text-white shadow-md shadow-violet-600/10"
                 : "bg-slate-100 text-slate-500 border border-slate-200/40"
             }`}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
@@ -196,7 +183,7 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
         {user?.role === "admin" && (
           <button
             type="button"
-            className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer border-0 mb-3 shadow-md"
+            className="w-full bg-gradient-to-r from-violet-600 to-violet-600 hover:from-violet-500 hover:to-violet-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/20 active:translate-y-0 cursor-pointer border-0 mb-3 shadow-md"
             onClick={() => {
               onCreateSchool();
               onClose();
@@ -221,9 +208,9 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
               
               // Seeded colorful gradient for initials avatar
               const colors = [
-                "from-indigo-500 to-purple-600 shadow-indigo-500/10",
+                "from-violet-500 to-purple-600 shadow-violet-500/10",
                 "from-cyan-500 to-blue-600 shadow-cyan-500/10",
-                "from-emerald-500 to-teal-600 shadow-emerald-500/10",
+                "from-fuchsia-500 to-teal-600 shadow-fuchsia-500/10",
                 "from-pink-500 to-rose-600 shadow-pink-500/10",
                 "from-amber-500 to-orange-600 shadow-amber-500/10"
               ];
@@ -237,17 +224,17 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
                   onClick={onClose}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 border relative ${
                     isActive
-                      ? "bg-indigo-50/50 border-indigo-100/50 text-indigo-655 font-semibold shadow-xs"
-                      : "text-slate-605 hover:text-slate-900 hover:bg-slate-50 border-transparent hover:translate-x-1"
+                      ? "bg-violet-50/50 border-violet-100/50 text-violet-655 font-semibold shadow-xs"
+                      : "text-slate-605 hover:text-slate-900 hover:bg-slate-50 border-transparent"
                   }`}
                 >
                   {isActive && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-600 rounded-r-md" />
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-violet-600 rounded-r-md" />
                   )}
                   
                   {school.logoUrl ? (
                     <div className={`w-8 h-8 rounded-lg overflow-hidden shrink-0 border bg-white flex items-center justify-center transition-all ${
-                      isActive ? "border-indigo-400 ring-2 ring-indigo-500/10" : "border-slate-200"
+                      isActive ? "border-violet-400 ring-2 ring-violet-500/10" : "border-slate-200"
                     }`}>
                       <Image
                         src={school.logoUrl}
@@ -259,7 +246,7 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
                     </div>
                   ) : (
                     <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 shadow-sm transition-all ${
-                      isActive ? "ring-2 ring-indigo-500/20" : ""
+                      isActive ? "ring-2 ring-violet-500/20" : ""
                     }`}>
                       <span className="text-xs font-bold text-white leading-none">
                         {initials}

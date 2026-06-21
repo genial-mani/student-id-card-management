@@ -1,20 +1,22 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import EditStudentModal from "@/components/EditStudentModal";
 import StudentCard from "@/components/StudentCard";
 import StudentListTable from "@/components/StudentListTable";
 import { Student } from "@/types/student";
+import StudentForm from "@/components/StudentForm";
+import IdCardPreviewModal from "@/components/IdCardPreviewModal";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { UserGroupIcon, IdentityCardIcon, Search01Icon, GridIcon, ListViewIcon, Search02Icon, LockIcon, ArrowLeft01Icon, ArrowRight01Icon, PrinterIcon } from "@hugeicons/core-free-icons";
+import { UserGroupIcon, IdentityCardIcon, Search01Icon, GridIcon, ListViewIcon, Search02Icon, LockIcon, ArrowLeft01Icon, ArrowRight01Icon, PrinterIcon, Cancel01Icon, UserAdd02Icon } from "@hugeicons/core-free-icons";
 import IdCard, { CardTheme } from "@/components/IdCard";
+import { toast } from "sonner";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -56,13 +58,83 @@ const DEFAULT_THEME: CardTheme = {
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
+const CustomDropdown = ({ value, onChange, options, placeholder, searchable = false }: { value: string, onChange: (val: string) => void, options: { label: string, value: string }[], placeholder: string, searchable?: boolean }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find((opt: any) => opt.value === value);
+  const filteredOptions = searchable 
+    ? options.filter(opt => opt.label.toLowerCase().includes(search.toLowerCase()))
+    : options;
+
+  return (
+    <div className="relative w-full" ref={dropdownRef}>
+      <div
+        className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm flex items-center justify-between cursor-pointer focus:ring-2 focus:ring-violet-500 transition-colors"
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) setSearch("");
+        }}
+      >
+        <span className={selectedOption ? "text-gray-900 truncate pr-2" : "text-gray-500 truncate pr-2"}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <svg className={`w-4 h-4 text-gray-500 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-150 rounded-xl shadow-lg max-h-60 overflow-y-auto no-scrollbar">
+          {searchable && (
+            <div className="p-2 border-b border-gray-100 sticky top-0 bg-white">
+              <input
+                type="text"
+                autoFocus
+                className="w-full px-2 py-1.5 text-xs sm:text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                placeholder="Search class..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          )}
+          {filteredOptions.length > 0 ? filteredOptions.map((opt: any) => (
+            <div
+              key={opt.value}
+              className={`px-3 py-2 text-xs sm:text-sm cursor-pointer hover:bg-violet-50 hover:text-violet-700 transition-colors ${value === opt.value ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-700'}`}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+            >
+              {opt.label}
+            </div>
+          )) : (
+            <div className="px-3 py-2 text-xs sm:text-sm text-gray-500 text-center">No results</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function AllStudentsPage() {
   const params = useParams();
   const router = useRouter();
   const schoolId = params.id as string;
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const canEditOrDelete = isAdmin || (user?.role === "user" && user?.schoolId === schoolId);
+  const canEditOrDelete = isAdmin || ((user?.role === "user" || user?.role === "school_admin") && user?.schoolId === schoolId);
 
   const [school, setSchool] = useState<School | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,6 +148,8 @@ export default function AllStudentsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [selectedPreviewStudent, setSelectedPreviewStudent] = useState<Student | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [showStudentForm, setShowStudentForm] = useState(false);
 
   const fetchSchool = useCallback(async () => {
     try {
@@ -92,23 +166,29 @@ export default function AllStudentsPage() {
     }
   }, [schoolId]);
 
-  const handleDeleteClick = async (studentId: string, studentName: string) => {
-    const confirmed = window.confirm(`Are you sure you want to delete the student record for "${studentName}"?`);
-    if (!confirmed) return;
+  const handleDeleteClick = (studentId: string, studentName: string) => {
+    setStudentToDelete({ id: studentId, name: studentName });
+  };
+
+  const confirmDeleteStudent = async () => {
+    if (!studentToDelete) return;
 
     try {
-      const res = await fetch(`/api/students/${studentId}`, {
+      const res = await fetch(`/api/students/${studentToDelete.id}`, {
         method: "DELETE",
       });
       if (res.ok) {
+        toast.success("Student deleted successfully!");
         fetchSchool();
       } else {
         const err = await res.json();
-        alert(err.error || "Failed to delete student");
+        toast.error(err.error || "Failed to delete student");
       }
     } catch (error) {
       console.error("Error deleting student:", error);
-      alert("Failed to delete student");
+      toast.error("Failed to delete student");
+    } finally {
+      setStudentToDelete(null);
     }
   };
 
@@ -217,7 +297,7 @@ export default function AllStudentsPage() {
 
   const handleExportToExcel = () => {
     if (!allStudents || allStudents.length === 0) {
-      alert("No student data available to export.");
+      toast.error("No student data available to export.");
       return;
     }
 
@@ -241,16 +321,16 @@ export default function AllStudentsPage() {
       ];
     }
 
-    const activeStudentFields = studentFields.filter((f: any) => 
-      f.key !== "profilePictureUrl" && 
-      f.key !== "motherName" && 
-      f.key !== "motherPhone" && 
+    const activeStudentFields = studentFields.filter((f: any) =>
+      f.key !== "profilePictureUrl" &&
+      f.key !== "motherName" &&
+      f.key !== "motherPhone" &&
       f.enabled
     );
 
     // Build headers dynamically
     const headers = activeStudentFields.map((f: any) => f.label);
-    
+
     // Find ideal position for Class column (e.g. after Student Name, which is index 1 or so)
     const nameIdx = activeStudentFields.findIndex((f: any) => f.key === "name");
     const classInsertIdx = nameIdx !== -1 ? nameIdx + 1 : 1;
@@ -307,17 +387,11 @@ export default function AllStudentsPage() {
   // ── Shell wrapper ─────────────────────────────────────────────────────────
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div className="flex min-h-screen bg-gray-50">
-      <Header onMenuClick={() => setIsSidebarOpen(true)} />
-      <Sidebar
-        onCreateSchool={() => { }}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-      <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 flex items-center justify-center p-4">
+    <DashboardLayout>
+      <div className="flex items-center justify-center p-4">
         {children}
       </div>
-    </div>
+    </DashboardLayout>
   );
 
   if (loading)
@@ -358,16 +432,8 @@ export default function AllStudentsPage() {
   // ── Main render ───────────────────────────────────────────────────────────
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Header onMenuClick={() => setIsSidebarOpen(true)} />
-      <Sidebar
-        onCreateSchool={() => { }}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-
-      <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8 min-w-0">
-        <div className="max-w-6xl mx-auto">
+    <DashboardLayout>
+      <div className="max-w-6xl mx-auto">
 
           {/* ── Page Header & Search ────────────────────────────────────── */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6 mb-6 flex flex-col gap-5">
@@ -376,7 +442,7 @@ export default function AllStudentsPage() {
               <div className="min-w-0">
                 <button
                   onClick={() => router.push(`/school/${schoolId}`)}
-                  className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-550 hover:text-indigo-600 transition-colors cursor-pointer"
+                  className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-550 hover:text-violet-600 transition-colors cursor-pointer"
                 >
                   <svg
                     className="w-3.5 h-3.5"
@@ -400,7 +466,7 @@ export default function AllStudentsPage() {
                   {" / "}All Students
                 </p>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 flex-wrap">
-                  <span className="text-indigo-600 flex items-center">
+                  <span className="text-violet-600 flex items-center">
                     <HugeiconsIcon icon={UserGroupIcon} size={28} color="currentColor" strokeWidth={2} />
                   </span>
                   Student Directory
@@ -415,7 +481,7 @@ export default function AllStudentsPage() {
                     filteredStudents.length > 0 ? (
                       <Link
                         href={`/school/${schoolId}/class/${selectedClassId}/print`}
-                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-750 border border-indigo-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm"
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-750 border border-violet-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm"
                         title="Print ID Cards for the selected class"
                       >
                         <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
@@ -435,7 +501,7 @@ export default function AllStudentsPage() {
                     allStudents.length > 0 ? (
                       <Link
                         href={`/school/${schoolId}/class/all/print`}
-                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-750 border border-indigo-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm animate-pulse"
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-750 border border-violet-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm"
                         title="Print ID Cards for all students in the school"
                       >
                         <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
@@ -455,13 +521,20 @@ export default function AllStudentsPage() {
                 )}
 
                 {isAdmin && (
-                  <div className="shrink-0">
+                  <div className="shrink-0 flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                    <button
+                      onClick={() => setShowStudentForm(true)}
+                      className="flex-1 sm:flex-none inline-flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 justify-center h-10"
+                    >
+                      <HugeiconsIcon icon={UserAdd02Icon} size={16} strokeWidth={2.5} />
+                      <span>Add Student</span>
+                    </button>
                     <button
                       onClick={handleExportToExcel}
-                      className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 w-full sm:w-auto justify-center h-10"
+                      className="flex-1 sm:flex-none inline-flex items-center gap-1.5 px-4 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 justify-center h-10"
                       title="Export all student data to Excel (CSV)"
                     >
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
                       <span>Export Excel</span>
@@ -483,7 +556,7 @@ export default function AllStudentsPage() {
                   placeholder="Search name, father, cell..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all h-10"
+                  className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all h-10"
                 />
               </div>
 
@@ -491,33 +564,35 @@ export default function AllStudentsPage() {
               <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0 w-full lg:w-auto">
                 {/* Class Filter Dropdown */}
                 <div className="w-full sm:w-36 shrink-0">
-                  <select
+                  <CustomDropdown
                     value={selectedClassId}
-                    onChange={(e) => setSelectedClassId(e.target.value)}
-                    className="w-full h-10 px-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-colors cursor-pointer"
-                  >
-                    <option value="">All Classes</option>
-                    {school?.classes?.map((cls) => (
-                      <option key={cls.id} value={cls.id}>
-                        Class {cls.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedClassId}
+                    placeholder="All Classes"
+                    searchable={true}
+                    options={[
+                      { label: "All Classes", value: "" },
+                      ...(school?.classes?.map((cls) => ({
+                        label: `Class ${cls.name}`,
+                        value: cls.id,
+                      })) || []),
+                    ]}
+                  />
                 </div>
 
                 {/* Sort Dropdown */}
                 {viewMode === "card" && (
                   <div className="w-full sm:w-36 shrink-0">
-                    <select
+                    <CustomDropdown
                       value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="w-full h-10 px-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-colors cursor-pointer"
-                    >
-                      <option value="name-asc">Sort: Name (A-Z)</option>
-                      <option value="name-desc">Sort: Name (Z-A)</option>
-                      <option value="class-asc">Sort: Class (Asc)</option>
-                      <option value="class-desc">Sort: Class (Desc)</option>
-                    </select>
+                      onChange={setSortBy}
+                      placeholder="Sort By"
+                      options={[
+                        { label: "Sort: Name (A-Z)", value: "name-asc" },
+                        { label: "Sort: Name (Z-A)", value: "name-desc" },
+                        { label: "Sort: Class (Asc)", value: "class-asc" },
+                        { label: "Sort: Class (Desc)", value: "class-desc" },
+                      ]}
+                    />
                   </div>
                 )}
 
@@ -529,7 +604,7 @@ export default function AllStudentsPage() {
                       id="groupByClass"
                       checked={groupByClass}
                       onChange={(e) => setGroupByClass(e.target.checked)}
-                      className="w-3.5 h-3.5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                      className="w-3.5 h-3.5 text-violet-600 border-gray-300 rounded focus:ring-violet-500 cursor-pointer"
                     />
                     <label
                       htmlFor="groupByClass"
@@ -541,28 +616,28 @@ export default function AllStudentsPage() {
                 )}
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200 shrink-0 h-10 w-full sm:w-auto">
+                <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200 shrink-0 h-10 overflow-hidden w-auto max-w-full">
                   <button
                     onClick={() => setViewMode("card")}
                     type="button"
-                    className={`flex-1 sm:flex-none px-3 h-full rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${viewMode === "card"
-                        ? "bg-white text-gray-900 shadow-xs"
-                        : "text-gray-500 hover:text-gray-900"
+                    className={`px-3 h-full rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 truncate ${viewMode === "card"
+                      ? "bg-violet-600 text-white shadow-sm"
+                      : "text-gray-500 hover:text-gray-900 hover:bg-gray-200/50"
                       }`}
                   >
                     <HugeiconsIcon icon={IdentityCardIcon} size={14} color="currentColor" strokeWidth={2} />
-                    Cards
+                    <span className="hidden sm:inline">Cards</span>
                   </button>
                   <button
                     onClick={() => setViewMode("list")}
                     type="button"
-                    className={`flex-1 sm:flex-none px-3 h-full rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${viewMode === "list"
-                        ? "bg-white text-gray-900 shadow-xs"
-                        : "text-gray-500 hover:text-gray-900"
+                    className={`px-3 h-full rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 truncate ${viewMode === "list"
+                      ? "bg-violet-600 text-white shadow-sm"
+                      : "text-gray-500 hover:text-gray-900 hover:bg-gray-200/50"
                       }`}
                   >
                     <HugeiconsIcon icon={ListViewIcon} size={14} color="currentColor" strokeWidth={2} />
-                    List
+                    <span className="hidden sm:inline">List</span>
                   </button>
                 </div>
               </div>
@@ -593,7 +668,7 @@ export default function AllStudentsPage() {
                         <h2 className="text-base sm:text-lg font-bold text-gray-900">
                           Class {group.name}
                         </h2>
-                        <span className="text-[10px] sm:text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] sm:text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-full">
                           {group.students.length} student{group.students.length !== 1 ? "s" : ""}
                         </span>
                       </div>
@@ -694,8 +769,8 @@ export default function AllStudentsPage() {
                       key={page}
                       onClick={() => setCurrentPage(page)}
                       className={`w-8 h-8 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${currentPage === page
-                          ? "bg-indigo-600 text-white shadow-xs"
-                          : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                        ? "bg-violet-600 text-white shadow-xs"
+                        : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                         }`}
                     >
                       {page}
@@ -740,99 +815,62 @@ export default function AllStudentsPage() {
 
           {/* ID Card Preview Modal */}
           {selectedPreviewStudent && (
-            (() => {
-              const idCardLayout = (school.idCardLayout !== null && school.idCardLayout !== undefined) ? school.idCardLayout : 1;
-              let idCardTheme = DEFAULT_THEME;
-              if (school.idCardTheme) {
-                try {
-                  idCardTheme = JSON.parse(school.idCardTheme);
-                } catch (e) {
-                  console.error("Error parsing school idCardTheme:", e);
-                }
-              }
+            <IdCardPreviewModal
+              school={school}
+              student={selectedPreviewStudent}
+              onClose={() => setSelectedPreviewStudent(null)}
+            />
+          )}
 
-              const schoolForCard = {
-                name: school.name,
-                caption: school.caption || "",
-                address: school.address || "",
-                logoUrl: school.logoUrl || "",
-                signatureUrl: school.signatureUrl || "",
-                phone: school.phone || "",
-              };
+          {/* Add Student Form Modal */}
+          {showStudentForm && (
+            <StudentForm
+              schoolId={schoolId}
+              classId={selectedClassId || ""}
+              schoolName={school.name}
+              classes={school.classes}
+              onClose={() => setShowStudentForm(false)}
+              onSuccess={() => {
+                fetchSchool();
+                setShowStudentForm(false);
+              }}
+            />
+          )}
 
-              const studentForCard = {
-                name: selectedPreviewStudent.name,
-                fatherName: selectedPreviewStudent.fatherName || "",
-                fatherPhone: selectedPreviewStudent.fatherPhone || "",
-                address: selectedPreviewStudent.address || "",
-                profilePictureUrl: selectedPreviewStudent.profilePictureUrl || "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
-              };
-
-              return (
-                <div className="fixed inset-0 z-55 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-                  <div className="relative bg-white border border-gray-150 rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col items-center animate-in zoom-in-95 duration-200">
-                    {/* Close Button */}
+          {/* Delete Confirmation Modal */}
+          {studentToDelete && (
+            <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-150 animate-in zoom-in-95 duration-200">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mb-4">
+                    <svg className="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Student</h3>
+                  <p className="text-sm text-gray-500 mb-6">
+                    Are you sure you want to delete the student record for <span className="font-semibold text-gray-900">{studentToDelete.name}</span>? This action cannot be undone.
+                  </p>
+                  <div className="flex w-full gap-3">
                     <button
-                      onClick={() => setSelectedPreviewStudent(null)}
-                      className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 p-1.5 rounded-full transition-all cursor-pointer"
-                      title="Close preview"
-                      aria-label="Close preview modal"
+                      onClick={() => setStudentToDelete(null)}
+                      className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors cursor-pointer border border-gray-200"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      Cancel
                     </button>
-
-                    {/* Modal Title */}
-                    <h3 className="font-bold text-gray-900 text-lg mb-1">
-                      ID Card Preview
-                    </h3>
-
-                    {/* ID Card Wrapper scaled to fit */}
-                    <div className="w-[283px] h-[457px] relative overflow-hidden rounded-xl shadow-lg border border-gray-200 bg-white">
-                      <div
-                        style={{
-                          transform: "scale(0.42)",
-                          transformOrigin: "top left",
-                          width: "673px",
-                          height: "1087px",
-                        }}
-                      >
-                        <IdCard
-                          layout={idCardLayout}
-                          theme={idCardTheme}
-                          school={school}
-                          student={selectedPreviewStudent}
-                          classNameStr={selectedPreviewStudent.className || ""}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Layout and Theme Details Footer Info */}
-                    <div className="mt-6 pt-4 border-t border-gray-100 w-full flex items-center justify-between text-xs text-gray-500">
-                      <span>Layout: <strong>{idCardLayout}</strong></span>
-                      <div className="flex items-center gap-1">
-                        <span>Theme:</span>
-                        <span
-                          className="w-3 h-3 rounded-full border border-gray-300"
-                          style={{ backgroundColor: idCardTheme.primary }}
-                          title={`Primary: ${idCardTheme.primary}`}
-                        />
-                        <span
-                          className="w-3 h-3 rounded-full border border-gray-300"
-                          style={{ backgroundColor: idCardTheme.secondary }}
-                          title={`Secondary: ${idCardTheme.secondary}`}
-                        />
-                      </div>
-                    </div>
+                    <button
+                      onClick={confirmDeleteStudent}
+                      className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-colors cursor-pointer shadow-md shadow-rose-600/20"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
-              );
-            })()
+              </div>
+            </div>
           )}
 
         </div>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }

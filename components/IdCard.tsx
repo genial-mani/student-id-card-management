@@ -1299,12 +1299,12 @@ export default function IdCard({
                   </p>
                 )}
                 {school.address && (
-                  <p className="text-[18px] font-black text-indigo-900 leading-snug mt-1">
+                  <p className="text-[18px] font-black text-violet-900 leading-snug mt-1">
                     {school.address}
                   </p>
                 )}
                 {school.phone && (
-                  <p className="text-[18px] font-black text-indigo-900 leading-snug mt-0.5">
+                  <p className="text-[18px] font-black text-violet-900 leading-snug mt-0.5">
                     Ph.No. {school.phone}
                   </p>
                 )}
@@ -1312,7 +1312,7 @@ export default function IdCard({
             </div>
 
             {/* Underlined Document Title */}
-            <h2 className="text-2xl font-black text-indigo-900 uppercase tracking-widest underline decoration-2 mt-4 select-none">
+            <h2 className="text-2xl font-black text-violet-900 uppercase tracking-widest underline decoration-2 mt-4 select-none">
               STUDENT ID CARD
             </h2>
           </div>
