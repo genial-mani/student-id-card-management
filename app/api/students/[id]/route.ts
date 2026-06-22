@@ -88,7 +88,6 @@ export async function PUT(
       data: {
         schoolId: schoolId || student.schoolId,
         name: name || student.name,
-        idNo: idNo !== undefined ? idNo : student.idNo,
         camSno: camSno !== undefined ? camSno : student.camSno,
         fatherName: fatherName !== undefined ? fatherName : student.fatherName,
         fatherPhone: fatherPhone !== undefined ? fatherPhone : student.fatherPhone,

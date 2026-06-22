@@ -55,7 +55,6 @@ export async function POST(request: NextRequest) {
       data: {
         schoolId,
         name,
-        idNo: idNo || '',
         camSno: camSno || '',
         fatherName: fatherName || '',
         fatherPhone: fatherPhone || '',
