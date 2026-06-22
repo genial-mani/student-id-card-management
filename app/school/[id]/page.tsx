@@ -1084,7 +1084,7 @@ export default function SchoolPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex items-center justify-center w-full lg:max-w-[calc(100%-256px)] mx-auto">
+      <div className="flex items-center justify-center w-full mx-auto">
         <div className="w-full max-w-full flex flex-col mx-auto mt-3">
           {/* ── School header card ───────────────────────────────────────── */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6 mb-6">
