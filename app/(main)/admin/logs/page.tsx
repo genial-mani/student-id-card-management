@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { 
   Search01Icon, 
@@ -105,17 +106,14 @@ export default function SessionLogsPage() {
 
   if (authLoading || (!isAdmin && user)) {
     return (
-      <div className="min-h-screen bg-slate-50/50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-550 text-sm">Verifying access authorization…</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[calc(100vh-100px)]">
+        <LoadingSpinner message="Verifying access authorization..." />
       </div>
     );
   }
 
   return (
-    <DashboardLayout>
+    <>
       <div className="max-w-5xl mx-auto space-y-6 mt-3">
           
           {/* Breadcrumb & Title */}
@@ -166,9 +164,8 @@ export default function SessionLogsPage() {
 
             {/* Table */}
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <div className="w-7 h-7 border-3 border-violet-600 border-t-transparent rounded-full animate-spin" />
-                <p className="text-slate-400 text-xs font-semibold">Loading session log entries…</p>
+              <div className="py-10">
+                <LoadingSpinner message="Loading session log entries..." />
               </div>
             ) : logs.length === 0 ? (
               <div className="text-center py-16 bg-slate-50/50 rounded-2xl border border-slate-150 border-dashed">
@@ -290,6 +287,6 @@ export default function SessionLogsPage() {
           </div>
 
         </div>
-    </DashboardLayout>
+    </>
   );
 }

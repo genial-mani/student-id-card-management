@@ -10,12 +10,6 @@ const DEFAULT_THEME: CardTheme = {
   background: "#f6fff8",
   textMain: "#ffffff",
   textSub: "#4b5563",
-  schoolNameFont: "",
-  schoolNameSize: "",
-  schoolNameWeight: "",
-  schoolCaptionFont: "",
-  schoolCaptionSize: "",
-  schoolCaptionWeight: "",
 };
 
 interface IdCardPreviewModalProps {

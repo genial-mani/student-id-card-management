@@ -3,9 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
+
 import CredentialsModal from "@/components/CredentialsModal";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { 
@@ -50,7 +50,7 @@ export default function CredentialsAdminPage() {
 
   const [schools, setSchools] = useState<School[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [credsData, setCredsData] = useState<CredsState>({});
 
@@ -140,27 +140,14 @@ export default function CredentialsAdminPage() {
   // If loading or not an admin, show a loading placeholder (prevents flashing credentials info)
   if (authLoading || (!isAdmin && user)) {
     return (
-      <div className="min-h-screen bg-slate-50/50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-550 text-sm">Verifying access credentials…</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[calc(100vh-100px)]">
+        <LoadingSpinner message="Verifying access credentials..." />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50/50">
-      <Header onMenuClick={() => setIsSidebarOpen(true)} />
-      
-      <Sidebar 
-        onCreateSchool={() => {}} 
-        isOpen={isSidebarOpen} 
-        onClose={() => setIsSidebarOpen(false)}
-      />
-
-      {/* Main Content Container */}
-      <div className="flex-1 lg:ml-64 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8 min-w-0">
+    <>
         <div className="max-w-4xl mx-auto space-y-6">
           
           {/* Header row */}
@@ -204,9 +191,8 @@ export default function CredentialsAdminPage() {
 
             {/* List */}
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <div className="w-7 h-7 border-3 border-violet-600 border-t-transparent rounded-full animate-spin" />
-                <p className="text-slate-400 text-xs">Loading accounts information…</p>
+              <div className="py-8">
+                <LoadingSpinner message="Loading accounts information..." />
               </div>
             ) : filteredSchools.length === 0 ? (
               <div className="text-center py-12 bg-slate-50/50 rounded-2xl border border-slate-150 border-dashed">
@@ -269,7 +255,6 @@ export default function CredentialsAdminPage() {
           </div>
 
         </div>
-      </div>
 
       {/* Credentials Modal */}
       {selectedSchool && (
@@ -282,6 +267,6 @@ export default function CredentialsAdminPage() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }

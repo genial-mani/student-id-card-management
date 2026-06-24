@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { DragDropContext, Droppable, Draggable as DndDraggable, DropResult } from "@hello-pangea/dnd";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
 import ClassForm from "@/components/ClassForm";
 import CredentialsModal from "@/components/CredentialsModal";
+import { PRESET_LAYOUT_CONFIGS } from "@/utils/presetLayouts";
 import SchoolForm from "@/components/SchoolForm";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -347,12 +350,6 @@ const DEFAULT_THEME: CardTheme = {
   background: "#f6fff8",
   textMain: "#ffffff",
   textSub: "#4b5563",
-  schoolNameFont: "",
-  schoolNameSize: "",
-  schoolNameWeight: "",
-  schoolCaptionFont: "",
-  schoolCaptionSize: "",
-  schoolCaptionWeight: "",
 };
 
 const COLOR_FIELDS: [keyof CardTheme, string][] = [
@@ -390,7 +387,6 @@ const DraggableField = ({
   return (
     <Draggable
       nodeRef={nodeRef}
-      bounds="parent"
       position={{ x: f.x || 0, y: f.y || 0 }}
       scale={0.5}
       onStart={(e, data) => {
@@ -602,6 +598,15 @@ export default function SchoolPage() {
               : school.idCardLayoutConfig
           );
         } catch { }
+      }
+    } else if (num >= 1 && num <= 12) {
+      // If switching to a preset layout, load its default fields
+      if (PRESET_LAYOUT_CONFIGS[num]) {
+        // preserve backgroundUrl if it was set (though preset layouts usually don't need one, it doesn't hurt)
+        setIdCardLayoutConfig((prev: any) => ({
+          ...prev,
+          fields: PRESET_LAYOUT_CONFIGS[num].fields,
+        }));
       }
     }
   };
@@ -1025,20 +1030,17 @@ export default function SchoolPage() {
   // ── Shell wrapper ──────────────────────────────────────────────────────────
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
-    <DashboardLayout>
-      <div className="flex items-center justify-center p-4">
+    <>
+      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-100px)]">
         {children}
       </div>
-    </DashboardLayout>
+    </>
   );
 
   if (loading)
     return (
       <Shell>
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-500 text-sm">Loading school…</p>
-        </div>
+        <LoadingSpinner message="Loading school..." />
       </Shell>
     );
 
@@ -1083,7 +1085,7 @@ export default function SchoolPage() {
   );
 
   return (
-    <DashboardLayout>
+    <>
       <div className="flex items-center justify-center w-full mx-auto">
         <div className="w-full max-w-full flex flex-col mx-auto mt-3">
           {/* ── School header card ───────────────────────────────────────── */}
@@ -1789,163 +1791,35 @@ export default function SchoolPage() {
                 </div>
               </div>
 
-              {/* Render controls only for presets (1-12) */}
-              {selectedLayout !== 0 && (
-                <>
-                  {/* Color pickers */}
-                  <div className="p-3 sm:p-4 bg-gray-50 rounded-xl mb-6">
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 text-left">
-                      Colour Theme
-                    </p>
-                    <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
-                      {COLOR_FIELDS.map(([key, label]) => (
-                        <div key={key} className="flex flex-col items-center gap-2">
-                          <div className="relative">
-                            <input
-                              type="color"
-                              value={theme[key] || DEFAULT_THEME[key]}
-                              onChange={(e) =>
-                                handleColorChange(key, e.target.value)
-                              }
-                              className="w-10 sm:w-12 h-10 sm:h-12 rounded-xl cursor-pointer border-2 border-white shadow-md appearance-none p-0.5"
-                              style={{ backgroundColor: theme[key] || DEFAULT_THEME[key] }}
-                            />
-                          </div>
-                          <span className="text-xs font-medium text-gray-600 text-center leading-tight line-clamp-2">
-                            {label}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Typography Settings */}
-                  <div className="p-4 sm:p-5 bg-gray-50 rounded-xl mb-6 border border-violet-50/50 text-left">
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
-                      Typography Settings
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* School Name Typography Column */}
-                      <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-xs flex flex-col gap-4">
-                        <h3 className="text-sm font-bold text-gray-800 border-b pb-2">School Name Styling</h3>
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-bold text-gray-500">Font Family</label>
-                          <select
-                            value={theme.schoolNameFont || ""}
-                            onChange={(e) => handleColorChange("schoolNameFont", e.target.value)}
-                            className="w-full text-sm bg-white border border-gray-300 rounded-lg p-2 font-medium"
-                          >
-                            <option value="">Default Theme Font</option>
-                            {GOOGLE_FONTS.map((font) => (
-                              <option key={font} value={font} style={{ fontFamily: font }}>{font}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <div className="flex justify-between items-center">
-                            <label className="text-xs font-bold text-gray-500">Font Size</label>
-                            <span className="text-xs font-bold text-violet-650 bg-violet-50 px-2 py-0.5 rounded">
-                              {theme.schoolNameSize || "Default"}{theme.schoolNameSize ? "px" : ""}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="range"
-                              min="20"
-                              max="70"
-                              value={theme.schoolNameSize || "36"}
-                              onChange={(e) => handleColorChange("schoolNameSize", e.target.value)}
-                              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleColorChange("schoolNameSize", "")}
-                              disabled={!theme.schoolNameSize}
-                              className="text-[10px] font-bold text-gray-400 hover:text-red-500 cursor-pointer border-0 bg-transparent"
-                            >
-                              Reset
-                            </button>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-bold text-gray-500">Font Weight</label>
-                          <select
-                            value={theme.schoolNameWeight || ""}
-                            onChange={(e) => handleColorChange("schoolNameWeight", e.target.value)}
-                            className="w-full text-sm bg-white border border-gray-300 rounded-lg p-2 font-medium"
-                          >
-                            <option value="">Default Weight</option>
-                            {FONT_WEIGHTS.map((fw) => (
-                              <option key={fw.value} value={fw.value}>{fw.label} ({fw.value})</option>
-                            ))}
-                          </select>
-                        </div>
+              {/* Render color pickers for all layouts (Custom, Preset, Shared) */}
+              <div className="p-3 sm:p-4 bg-gray-50 rounded-xl mb-6">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 text-left">
+                  Colour Theme
+                </p>
+                <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
+                  {COLOR_FIELDS.map(([key, label]) => (
+                    <div key={key} className="flex flex-col items-center gap-2">
+                      <div className="relative">
+                        <input
+                          type="color"
+                          value={theme[key] || DEFAULT_THEME[key]}
+                          onChange={(e) =>
+                            handleColorChange(key, e.target.value)
+                          }
+                          className="w-10 sm:w-12 h-10 sm:h-12 rounded-xl cursor-pointer border-2 border-white shadow-md appearance-none p-0.5"
+                          style={{ backgroundColor: theme[key] || DEFAULT_THEME[key] }}
+                        />
                       </div>
-
-                      {/* School Caption Typography Column */}
-                      <div className="bg-white p-4 rounded-xl border border-gray-150 shadow-xs flex flex-col gap-4">
-                        <h3 className="text-sm font-bold text-gray-800 border-b pb-2">School Caption Styling</h3>
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-bold text-gray-500">Font Family</label>
-                          <select
-                            value={theme.schoolCaptionFont || ""}
-                            onChange={(e) => handleColorChange("schoolCaptionFont", e.target.value)}
-                            className="w-full text-sm bg-white border border-gray-300 rounded-lg p-2 font-medium"
-                          >
-                            <option value="">Default Theme Font</option>
-                            {GOOGLE_FONTS.map((font) => (
-                              <option key={font} value={font} style={{ fontFamily: font }}>{font}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <div className="flex justify-between items-center">
-                            <label className="text-xs font-bold text-gray-500">Font Size</label>
-                            <span className="text-xs font-bold text-fuchsia-650 bg-fuchsia-50 px-2 py-0.5 rounded">
-                              {theme.schoolCaptionSize || "Default"}{theme.schoolCaptionSize ? "px" : ""}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="range"
-                              min="12"
-                              max="40"
-                              value={theme.schoolCaptionSize || "18"}
-                              onChange={(e) => handleColorChange("schoolCaptionSize", e.target.value)}
-                              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-fuchsia-600"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleColorChange("schoolCaptionSize", "")}
-                              disabled={!theme.schoolCaptionSize}
-                              className="text-[10px] font-bold text-gray-400 hover:text-red-500 cursor-pointer border-0 bg-transparent"
-                            >
-                              Reset
-                            </button>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-bold text-gray-500">Font Weight</label>
-                          <select
-                            value={theme.schoolCaptionWeight || ""}
-                            onChange={(e) => handleColorChange("schoolCaptionWeight", e.target.value)}
-                            className="w-full text-sm bg-white border border-gray-300 rounded-lg p-2 font-medium"
-                          >
-                            <option value="">Default Weight</option>
-                            {FONT_WEIGHTS.map((fw) => (
-                              <option key={fw.value} value={fw.value}>{fw.label} ({fw.value})</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
+                      <span className="text-xs font-medium text-gray-600 text-center leading-tight line-clamp-2">
+                        {label}
+                      </span>
                     </div>
-                  </div>
-                </>
-              )}
+                  ))}
+                </div>
+              </div>
 
-              {/* ── Custom Layout Drag & Drop Editor (Shown when selectedLayout === 0) ── */}
-              {selectedLayout === 0 && (
-                <div className="mt-4 p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col lg:flex-row gap-6 sm:gap-8 text-left animate-in fade-in duration-200">
+              {/* ── Drag & Drop Editor (Shown for all preset & custom layouts) ── */}
+              <div className="mt-4 p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col lg:flex-row gap-6 sm:gap-8 text-left animate-in fade-in duration-200">
                   {/* Canvas block (Left) */}
                   <div className="flex flex-col items-center gap-4 shrink-0 mx-auto lg:mx-0">
                     <div className="text-center">
@@ -1953,7 +1827,7 @@ export default function SchoolPage() {
                       <p className="text-[10px] text-gray-400">Scale: 50% (Drag elements and click to style)</p>
                     </div>
 
-                    {!idCardLayoutConfig.backgroundUrl ? (
+                    {selectedLayout === 0 && !idCardLayoutConfig.backgroundUrl ? (
                       <div className="w-[336.5px] h-[543.5px] border-2 border-dashed border-gray-300 rounded-xl bg-white flex flex-col items-center justify-center p-6 text-center select-none shadow-xs">
                         <span className="text-3xl mb-2">🖼️</span>
                         <p className="text-xs font-bold text-gray-600">No Background Image</p>
@@ -1971,13 +1845,26 @@ export default function SchoolPage() {
                         onClick={() => setSelectedFieldKey(null)}
                       >
                         {/* Background loaded */}
-                        <div
-                          className="absolute inset-0 bg-cover bg-center pointer-events-none"
-                          style={{
-                            backgroundImage: `url(${idCardLayoutConfig.backgroundUrl})`,
-                            backgroundColor: theme.background,
-                          }}
-                        />
+                        {selectedLayout === 0 ? (
+                          <div
+                            className="absolute inset-0 bg-cover bg-center pointer-events-none"
+                            style={{
+                              backgroundImage: `url(${idCardLayoutConfig.backgroundUrl})`,
+                              backgroundColor: theme.background,
+                            }}
+                          />
+                        ) : (
+                          <div className="absolute inset-0 pointer-events-none scale-[0.5] origin-top-left" style={{ width: "673px", height: "1087px" }}>
+                            <IdCard
+                              layout={selectedLayout}
+                              theme={theme}
+                              school={{ ...school, idCardLayoutConfig: idCardLayoutConfig }}
+                              student={DUMMY_STUDENT}
+                              classNameStr="Demo Class"
+                              hideFields={true}
+                            />
+                          </div>
+                        )}
 
                         {/* Placed Elements Container */}
                         <div className="absolute top-0 left-0 w-[673px] h-[1087px] origin-top-left scale-[0.5]">
@@ -2296,8 +2183,6 @@ export default function SchoolPage() {
                     )}
                   </div>
                 </div>
-              )}
-
               {/* Preset Layout Selection */}
               <div className="mt-8 pt-8 border-t border-gray-200 text-left">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -2487,6 +2372,6 @@ export default function SchoolPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </>
   );
 }

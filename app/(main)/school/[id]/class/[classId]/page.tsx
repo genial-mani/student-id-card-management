@@ -3,44 +3,64 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
-import EditStudentModal from "@/components/EditStudentModal";
-import StudentCard from "@/components/StudentCard";
-import StudentListTable from "@/components/StudentListTable";
-import { Student } from "@/types/student";
 import StudentForm from "@/components/StudentForm";
 import IdCardPreviewModal from "@/components/IdCardPreviewModal";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { UserGroupIcon, IdentityCardIcon, Search01Icon, GridIcon, ListViewIcon, Search02Icon, LockIcon, ArrowLeft01Icon, ArrowRight01Icon, PrinterIcon, Cancel01Icon, UserAdd02Icon } from "@hugeicons/core-free-icons";
 import IdCard, { CardTheme } from "@/components/IdCard";
+import { useAuth } from "@/contexts/AuthContext";
+
+// Custom UI imports
+import StudentCard from "@/components/StudentCard";
+import StudentListTable from "@/components/StudentListTable";
+import EditStudentModal from "@/components/EditStudentModal";
+import { Student } from "@/types/student";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft02Icon, Search01Icon, Search02Icon, ListViewIcon, IdentityCardIcon, UserGroupIcon, ArrowLeft01Icon, ArrowRight01Icon, UserAdd02Icon, PrinterIcon } from "@hugeicons/core-free-icons";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-interface Class {
+interface ClassData {
   id: string;
   name: string;
+  school: {
+    id: string;
+    name: string;
+    caption: string;
+    address: string;
+    phone: string;
+    logoUrl: string;
+    signatureUrl: string;
+    idCardLayout?: number | null;
+    idCardTheme?: string | null;
+    customFieldsConfig?: any;
+    customValues?: any;
+    idCardLayoutConfig?: any;
+  };
   students: Student[];
 }
 
-interface School {
-  id: string;
-  name: string;
-  logoUrl: string;
-  caption?: string;
-  address?: string;
-  signatureUrl?: string;
-  phone?: string;
-  idCardLayout?: number | null;
-  idCardTheme?: string | null;
-  classes: Class[];
-  customFieldsConfig?: any;
-  customValues?: any;
-  idCardLayoutConfig?: any;
-}
+// Student interface is now imported from @/types/student
+
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const DUMMY_STUDENT: Student = {
+  id: "dummy1",
+  name: "A. Punarvi",
+  idNo: "STU-001",
+  camSno: "CAM-990",
+  fatherName: "Anil Kumar",
+  fatherPhone: "9876543210",
+  address: "Kosgi",
+  profilePictureUrl:
+    "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
+  customValues: {
+    motherName: "Lakshmi",
+    motherPhone: "9876512340",
+  }
+};
 
 const DEFAULT_THEME: CardTheme = {
   primary: "#e85d04",
@@ -48,13 +68,47 @@ const DEFAULT_THEME: CardTheme = {
   background: "#f6fff8",
   textMain: "#ffffff",
   textSub: "#4b5563",
-  schoolNameFont: "",
-  schoolNameSize: "",
-  schoolNameWeight: "",
-  schoolCaptionFont: "",
-  schoolCaptionSize: "",
-  schoolCaptionWeight: "",
 };
+
+const DEFAULT_LAYOUT = 1;
+
+const COLOR_FIELDS: [keyof CardTheme, string][] = [
+  ["primary", "Primary"],
+  ["secondary", "Secondary"],
+  ["background", "Background"],
+  ["textMain", "Header Text"],
+  ["textSub", "Body Text"],
+];
+
+// localStorage helpers
+function lsLayoutKey(id: string) {
+  return `idcard_layout_${id}`;
+}
+function lsThemeKey(id: string) {
+  return `idcard_theme_${id}`;
+}
+
+function loadDesign(classId: string): { layout: number; theme: CardTheme } {
+  try {
+    const layout =
+      parseInt(localStorage.getItem(lsLayoutKey(classId)) ?? "", 10) ||
+      DEFAULT_LAYOUT;
+    const raw = localStorage.getItem(lsThemeKey(classId));
+    const theme = raw ? (JSON.parse(raw) as CardTheme) : DEFAULT_THEME;
+    return { layout, theme };
+  } catch {
+    return { layout: DEFAULT_LAYOUT, theme: DEFAULT_THEME };
+  }
+}
+
+function saveDesign(classId: string, layout: number, theme: CardTheme) {
+  try {
+    localStorage.setItem(lsLayoutKey(classId), String(layout));
+    localStorage.setItem(lsThemeKey(classId), JSON.stringify(theme));
+  } catch {
+    /* storage full / SSR — ignore */
+  }
+}
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -102,7 +156,7 @@ const CustomDropdown = ({ value, onChange, options, placeholder, searchable = fa
                 type="text"
                 autoFocus
                 className="w-full px-2 py-1.5 text-xs sm:text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                placeholder="Search class..."
+                placeholder="Search..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -128,96 +182,62 @@ const CustomDropdown = ({ value, onChange, options, placeholder, searchable = fa
   );
 };
 
-export default function AllStudentsPage() {
+export default function ClassPage() {
   const params = useParams();
   const router = useRouter();
   const schoolId = params.id as string;
+  const classId = params.classId as string;
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const canEditOrDelete = isAdmin || ((user?.role === "user" || user?.role === "school_admin") && user?.schoolId === schoolId);
 
-  const [school, setSchool] = useState<School | null>(null);
+  const [classData, setClassData] = useState<ClassData | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
+  const [showStudentForm, setShowStudentForm] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Search & Filter controls state
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedClassId, setSelectedClassId] = useState("");
   const [sortBy, setSortBy] = useState("name-asc");
-  const [groupByClass, setGroupByClass] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "list">("list");
   const [currentPage, setCurrentPage] = useState(1);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [selectedPreviewStudent, setSelectedPreviewStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
-  const [showStudentForm, setShowStudentForm] = useState(false);
+  const [classesList, setClassesList] = useState<{ id: string; name: string }[]>([]);
 
-  const fetchSchool = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/schools/${schoolId}`);
-      if (res.status === 403) {
-        setForbidden(true);
-        return;
-      }
-      if (res.ok) setSchool(await res.json());
-    } catch {
-      console.error("Failed to fetch school data");
-    } finally {
-      setLoading(false);
-    }
-  }, [schoolId]);
-
-  const handleDeleteClick = (studentId: string, studentName: string) => {
-    setStudentToDelete({ id: studentId, name: studentName });
-  };
-
-  const confirmDeleteStudent = async () => {
-    if (!studentToDelete) return;
-
-    try {
-      const res = await fetch(`/api/students/${studentToDelete.id}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        toast.success("Student deleted successfully!");
-        fetchSchool();
-      } else {
-        const err = await res.json();
-        toast.error(err.error || "Failed to delete student");
-      }
-    } catch (error) {
-      console.error("Error deleting student:", error);
-      toast.error("Failed to delete student");
-    } finally {
-      setStudentToDelete(null);
-    }
-  };
+  // Design — read directly from school database or fall back to localStorage
+  const [selectedLayout, setSelectedLayout] = useState(DEFAULT_LAYOUT);
+  const [theme, setTheme] = useState<CardTheme>(DEFAULT_THEME);
+  const [designReady, setDesignReady] = useState(false);
 
   useEffect(() => {
-    if (schoolId) fetchSchool();
-  }, [schoolId, fetchSchool]);
+    if (classData?.school?.id) {
+      fetch(`/api/schools/${classData.school.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.classes) {
+            setClassesList(data.classes.map((c: any) => ({ id: c.id, name: c.name })));
+          }
+        })
+        .catch(console.error);
+    }
+  }, [classData]);
 
-  // Flatten the classes array to get one massive list of students, attaching their class name
+  // Flatten students into the expected structure
   const allStudents = useMemo(() => {
-    if (!school?.classes) return [];
-    return school.classes.flatMap((cls) =>
-      (cls.students || []).map((student) => ({
-        ...student,
-        className: cls.name,
-        classId: cls.id,
-      }))
-    );
-  }, [school]);
+    if (!classData?.students) return [];
+    return classData.students.map((student) => ({
+      ...student,
+      className: classData.name,
+      classId: classData.id,
+    }));
+  }, [classData]);
 
-  // Filter and sort students based on search, class, and sorting selections
   const filteredStudents = useMemo(() => {
     let result = [...allStudents];
 
-    // 1. Class Filter
-    if (selectedClassId) {
-      result = result.filter((s) => s.classId === selectedClassId);
-    }
-
-    // 2. Search Query Filter
+    // Search query filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -225,21 +245,16 @@ export default function AllStudentsPage() {
           (s.name && s.name.toLowerCase().includes(query)) ||
           (s.fatherName && s.fatherName.toLowerCase().includes(query)) ||
           (s.fatherPhone && s.fatherPhone.toLowerCase().includes(query)) ||
-          (s.address && s.address.toLowerCase().includes(query)) ||
-          (s.className && s.className.toLowerCase().includes(query))
+          (s.address && s.address.toLowerCase().includes(query))
       );
     }
 
-    // 3. Sorting
+    // Sorting
     result.sort((a, b) => {
       if (sortBy === "name-asc") {
         return (a.name || "").localeCompare(b.name || "");
       } else if (sortBy === "name-desc") {
         return (b.name || "").localeCompare(a.name || "");
-      } else if (sortBy === "class-asc") {
-        return (a.className || "").localeCompare(b.className || "");
-      } else if (sortBy === "class-desc") {
-        return (b.className || "").localeCompare(a.className || "");
       } else if (sortBy === "idNo-asc") {
         return (a.idNo || "").localeCompare(b.idNo || "");
       } else if (sortBy === "idNo-desc") {
@@ -257,12 +272,12 @@ export default function AllStudentsPage() {
     });
 
     return result;
-  }, [allStudents, searchQuery, selectedClassId, sortBy]);
+  }, [allStudents, searchQuery, sortBy]);
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedClassId, sortBy, groupByClass]);
+  }, [searchQuery, sortBy]);
 
   const ITEMS_PER_PAGE = 12;
   const totalPages = Math.max(1, Math.ceil(filteredStudents.length / ITEMS_PER_PAGE));
@@ -273,27 +288,30 @@ export default function AllStudentsPage() {
     return filteredStudents.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredStudents, currentPage, totalPages]);
 
-  // Group filtered students by class if option is enabled
-  const groupedStudents = useMemo(() => {
-    if (!groupByClass) return null;
+  const handleDeleteClick = async (studentId: string, studentName: string) => {
+    setStudentToDelete({ id: studentId, name: studentName });
+  };
 
-    const groups: { [key: string]: { name: string; students: Student[] } } = {};
-
-    paginatedStudents.forEach((student) => {
-      const clsName = student.className || "Unassigned";
-      const clsId = student.classId || "unassigned";
-      if (!groups[clsId]) {
-        groups[clsId] = {
-          name: clsName,
-          students: [],
-        };
+  const confirmDelete = async () => {
+    if (!studentToDelete) return;
+    try {
+      const res = await fetch(`/api/students/${studentToDelete.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        toast.success("Student deleted successfully!");
+        fetchClass();
+      } else {
+        const err = await res.json();
+        toast.error(err.error || "Failed to delete student");
       }
-      groups[clsId].students.push(student);
-    });
-
-    // Sort the groups alphabetically by class name
-    return Object.entries(groups).sort((a, b) => a[1].name.localeCompare(b[1].name));
-  }, [paginatedStudents, groupByClass]);
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      toast.error("Failed to delete student");
+    } finally {
+      setStudentToDelete(null);
+    }
+  };
 
   const handleExportToExcel = () => {
     if (!allStudents || allStudents.length === 0) {
@@ -301,7 +319,7 @@ export default function AllStudentsPage() {
       return;
     }
 
-    const config = school?.customFieldsConfig;
+    const config = classData?.school?.customFieldsConfig;
     let studentFields = [];
     if (config) {
       try {
@@ -321,16 +339,16 @@ export default function AllStudentsPage() {
       ];
     }
 
-    const activeStudentFields = studentFields.filter((f: any) =>
-      f.key !== "profilePictureUrl" &&
-      f.key !== "motherName" &&
-      f.key !== "motherPhone" &&
+    const activeStudentFields = studentFields.filter((f: any) => 
+      f.key !== "profilePictureUrl" && 
+      f.key !== "motherName" && 
+      f.key !== "motherPhone" && 
       f.enabled
     );
 
     // Build headers dynamically
     const headers = activeStudentFields.map((f: any) => f.label);
-
+    
     // Find ideal position for Class column (e.g. after Student Name, which is index 1 or so)
     const nameIdx = activeStudentFields.findIndex((f: any) => f.key === "name");
     const classInsertIdx = nameIdx !== -1 ? nameIdx + 1 : 1;
@@ -371,8 +389,9 @@ export default function AllStudentsPage() {
     const link = document.createElement("a");
 
     const randomCode = Math.floor(1000 + Math.random() * 9000);
-    const schoolNameSafe = (school?.name || "School").replace(/[^a-z0-9]/gi, "_");
-    const filename = `${schoolNameSafe}_${randomCode}.csv`;
+    const schoolNameSafe = (classData?.school.name || "School").replace(/[^a-z0-9]/gi, "_");
+    const classNameSafe = (classData?.name || "Class").replace(/[^a-z0-9]/gi, "_");
+    const filename = `${schoolNameSafe}_Class_${classNameSafe}_${randomCode}.csv`;
 
     link.setAttribute("href", url);
     link.setAttribute("download", filename);
@@ -384,169 +403,182 @@ export default function AllStudentsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const canEditOrDelete = isAdmin || ((user?.role === "user" || user?.role === "school_admin") && user?.schoolId === classData?.school?.id);
+
+  useEffect(() => {
+    if (classData) {
+      const dbLayout = classData.school.idCardLayout;
+      const dbThemeRaw = classData.school.idCardTheme;
+
+      let finalLayout = (dbLayout !== null && dbLayout !== undefined) ? dbLayout : DEFAULT_LAYOUT;
+      let finalTheme = DEFAULT_THEME;
+
+      if (dbThemeRaw) {
+        try {
+          finalTheme = JSON.parse(dbThemeRaw);
+        } catch (e) {
+          console.error("Failed to parse dbThemeRaw", e);
+        }
+      } else {
+        const { layout, theme: t } = loadDesign(classData.school.id);
+        if (layout) finalLayout = layout;
+        if (t) finalTheme = t;
+      }
+
+      setSelectedLayout(finalLayout);
+      setTheme(finalTheme);
+      setDesignReady(true);
+    }
+  }, [classData]);
+
+  // ── Fetch class data ──────────────────────────────────────────────────────
+
+  const fetchClass = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/classes/${classId}`);
+      if (res.status === 403) {
+        setForbidden(true);
+        return;
+      }
+      if (res.ok) setClassData(await res.json());
+    } catch {
+      /* ignore */
+    } finally {
+      setLoading(false);
+    }
+  }, [classId]);
+
+  useEffect(() => {
+    if (classId) fetchClass();
+  }, [classId, fetchClass]);
+
+
+
   // ── Shell wrapper ─────────────────────────────────────────────────────────
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
-    <DashboardLayout>
-      <div className="flex items-center justify-center p-4">
+    <>
+      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-100px)]">
         {children}
       </div>
-    </DashboardLayout>
+    </>
   );
 
-  if (loading)
+  if (loading || !designReady)
     return (
       <Shell>
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-500 text-sm">Loading students…</p>
-        </div>
+        <LoadingSpinner message="Loading class..." />
       </Shell>
     );
 
   if (forbidden)
     return (
       <Shell>
-        <div className="text-center max-w-sm flex flex-col items-center justify-center">
-          <div className="text-gray-400 mb-4 flex items-center justify-center">
-            <HugeiconsIcon icon={LockIcon} size={64} color="currentColor" strokeWidth={1.5} />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+        <div className="text-center max-w-sm">
+          <div className="text-6xl mb-4">🔒</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Access Denied
+          </h1>
           <p className="text-gray-500 mb-5 text-sm">
-            You don't have permission to view this directory.
+            You don&apos;t have permission to view this class.
           </p>
-          <Button onClick={() => router.push("/")} className="bg-blue-600 hover:bg-blue-700 text-white">
-            Go Home
-          </Button>
+          <button
+            onClick={() => router.back()}
+            className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-5 rounded-xl text-sm"
+          >
+            Go Back
+          </button>
         </div>
       </Shell>
     );
 
-  if (!school)
+  if (!classData)
     return (
       <Shell>
-        <p className="text-gray-500">School data not found.</p>
+        <p className="text-gray-500">Class not found.</p>
       </Shell>
     );
 
   // ── Main render ───────────────────────────────────────────────────────────
 
   return (
-    <DashboardLayout>
-      <div className="max-w-6xl mx-auto">
-
+    <>
+        <div className="max-w-7xl mx-auto mt-3">
           {/* ── Page Header & Search ────────────────────────────────────── */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6 mb-6 flex flex-col gap-5">
-            {/* Top row: Title, breadcrumb, info on left; Export button on right */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
-              <div className="min-w-0">
+            {/* Top row: Title, breadcrumb, info on left; Actions on right */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-gray-100">
+              <div className="min-w-0 text-left">
+                {/* Back to School link above breadcrumb */}
                 <button
-                  onClick={() => router.push(`/school/${schoolId}`)}
-                  className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-550 hover:text-violet-600 transition-colors cursor-pointer"
+                  onClick={() => router.push(`/school/${classData.school.id}`)}
+                  className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-violet-600 transition-colors cursor-pointer border-0 bg-transparent p-0"
                 >
-                  <svg
-                    className="w-3.5 h-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth="2.5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                    />
-                  </svg>
+                  <HugeiconsIcon
+                    icon={ArrowLeft02Icon}
+                    size={16}
+                    color="currentColor"
+                    strokeWidth={2}
+                  />
                   <span>Back to School</span>
                 </button>
                 <p className="text-xs text-gray-400 mb-1 truncate">
-                  <Link href={`/school/${schoolId}`} className="hover:underline">
-                    {school.name}
+                  <Link
+                    href={`/school/${classData.school.id}`}
+                    className="hover:underline"
+                  >
+                    {classData.school.name}
                   </Link>
-                  {" / "}All Students
+                  {" / "}Class {classData.name}
                 </p>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 flex-wrap">
                   <span className="text-violet-600 flex items-center">
                     <HugeiconsIcon icon={UserGroupIcon} size={28} color="currentColor" strokeWidth={2} />
                   </span>
-                  Student Directory
+                  Class {classData.name}
                   <span className="text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-150 px-2.5 py-1 rounded-lg sm:ml-2">
                     Showing {filteredStudents.length} of {allStudents.length} total
                   </span>
                 </h1>
               </div>
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
+
+              {/* Action buttons on the right */}
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 shrink-0">
+                {/* Export Excel (Admin only) */}
                 {isAdmin && (
-                  selectedClassId ? (
-                    filteredStudents.length > 0 ? (
-                      <Link
-                        href={`/school/${schoolId}/class/${selectedClassId}/print`}
-                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-750 border border-violet-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm"
-                        title="Print ID Cards for the selected class"
-                      >
-                        <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
-                        <span>Print / Export PDF</span>
-                      </Link>
-                    ) : (
-                      <button
-                        disabled
-                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-gray-50 text-gray-400 border border-gray-200 rounded-xl text-xs sm:text-sm font-bold h-10 opacity-60 cursor-not-allowed border-0"
-                        title="No students in the selected class to print"
-                      >
-                        <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
-                        <span>Print / Export PDF</span>
-                      </button>
-                    )
-                  ) : (
-                    allStudents.length > 0 ? (
-                      <Link
-                        href={`/school/${schoolId}/class/all/print`}
-                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-750 border border-violet-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm"
-                        title="Print ID Cards for all students in the school"
-                      >
-                        <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
-                        <span>Print All Students</span>
-                      </Link>
-                    ) : (
-                      <button
-                        disabled
-                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-gray-50 text-gray-400 border border-gray-200 rounded-xl text-xs sm:text-sm font-bold h-10 opacity-60 cursor-not-allowed border-0"
-                        title="No students in the school to print"
-                      >
-                        <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
-                        <span>Print All Students</span>
-                      </button>
-                    )
-                  )
+                  <button
+                    onClick={handleExportToExcel}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 justify-center h-10"
+                    title="Export all class student data to Excel (CSV)"
+                  >
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    <span>Export Excel</span>
+                  </button>
                 )}
 
-                {isAdmin && (
-                  <div className="shrink-0 flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                    <button
-                      onClick={() => setShowStudentForm(true)}
-                      className="flex-1 sm:flex-none inline-flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 justify-center h-10"
-                    >
-                      <HugeiconsIcon icon={UserAdd02Icon} size={16} strokeWidth={2.5} />
-                      <span>Add Student</span>
-                    </button>
-                    <button
-                      onClick={handleExportToExcel}
-                      className="flex-1 sm:flex-none inline-flex items-center gap-1.5 px-4 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 justify-center h-10"
-                      title="Export all student data to Excel (CSV)"
-                    >
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      <span>Export Excel</span>
-                    </button>
-                  </div>
-                )}
+
+
+                {/* Add student */}
+                <button
+                  onClick={() => setShowStudentForm(true)}
+                  className="py-2 px-3 sm:px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white transition-colors h-10 shadow-sm"
+                >
+                  <HugeiconsIcon
+                    icon={UserAdd02Icon}
+                    size={18}
+                    color="currentColor"
+                    strokeWidth={2}
+                  />
+                  <span>Add Student</span>
+                </button>
               </div>
             </div>
 
             {/* Bottom row: Search & Filter Controls (fully responsive flex layout) */}
             <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-              {/* Search input (full width on mobile/tablet, flex-1 on desktop) */}
+              {/* Search input */}
               <div className="flex-1 relative flex items-center min-w-0">
                 <span className="absolute left-3 text-gray-400 flex items-center">
                   <HugeiconsIcon icon={Search01Icon} size={16} color="currentColor" strokeWidth={2} />
@@ -560,58 +592,26 @@ export default function AllStudentsPage() {
                 />
               </div>
 
-              {/* Filters (wraps on small/medium screens, flex-row on large) */}
+              {/* Filters */}
               <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0 w-full lg:w-auto">
-                {/* Class Filter Dropdown */}
-                <div className="w-full sm:w-36 shrink-0">
-                  <CustomDropdown
-                    value={selectedClassId}
-                    onChange={setSelectedClassId}
-                    placeholder="All Classes"
-                    searchable={true}
-                    options={[
-                      { label: "All Classes", value: "" },
-                      ...(school?.classes?.map((cls) => ({
-                        label: `Class ${cls.name}`,
-                        value: cls.id,
-                      })) || []),
-                    ]}
-                  />
-                </div>
-
                 {/* Sort Dropdown */}
                 {viewMode === "card" && (
-                  <div className="w-full sm:w-36 shrink-0">
+                  <div className="w-full sm:w-44 shrink-0">
                     <CustomDropdown
                       value={sortBy}
                       onChange={setSortBy}
                       placeholder="Sort By"
                       options={[
-                        { label: "Sort: Name (A-Z)", value: "name-asc" },
-                        { label: "Sort: Name (Z-A)", value: "name-desc" },
-                        { label: "Sort: Class (Asc)", value: "class-asc" },
-                        { label: "Sort: Class (Desc)", value: "class-desc" },
+                        { value: "name-asc", label: "Sort: Name (A-Z)" },
+                        { value: "name-desc", label: "Sort: Name (Z-A)" },
+                        { value: "idNo-asc", label: "Sort: ID No (Asc)" },
+                        { value: "idNo-desc", label: "Sort: ID No (Desc)" },
+                        { value: "camSno-asc", label: "Sort: CAM S.No (Asc)" },
+                        { value: "camSno-desc", label: "Sort: CAM S.No (Desc)" },
+                        { value: "fatherName-asc", label: "Sort: Father Name (A-Z)" },
+                        { value: "fatherName-desc", label: "Sort: Father Name (Z-A)" },
                       ]}
                     />
-                  </div>
-                )}
-
-                {/* Group By Class Toggle */}
-                {viewMode === "card" && (
-                  <div className="flex items-center gap-2 px-3 shrink-0 h-10 bg-gray-50 border border-gray-200 rounded-xl w-full sm:w-auto justify-center sm:justify-start">
-                    <input
-                      type="checkbox"
-                      id="groupByClass"
-                      checked={groupByClass}
-                      onChange={(e) => setGroupByClass(e.target.checked)}
-                      className="w-3.5 h-3.5 text-violet-600 border-gray-300 rounded focus:ring-violet-500 cursor-pointer"
-                    />
-                    <label
-                      htmlFor="groupByClass"
-                      className="text-xs font-semibold text-gray-700 cursor-pointer select-none whitespace-nowrap"
-                    >
-                      Group by Class
-                    </label>
                   </div>
                 )}
 
@@ -644,7 +644,7 @@ export default function AllStudentsPage() {
             </div>
           </div>
 
-          {/* ── Student Grid ──────────────────────────────────────────────── */}
+          {/* ── Student List/Grid ────────────────────────────────────────── */}
           {filteredStudents.length > 0 ? (
             viewMode === "list" ? (
               <div className="animate-in fade-in duration-200">
@@ -656,73 +656,41 @@ export default function AllStudentsPage() {
                   onPreview={(student) => setSelectedPreviewStudent(student)}
                   sortBy={sortBy}
                   onSortChange={setSortBy}
-                  customFieldsConfig={school?.customFieldsConfig}
+                  customFieldsConfig={classData?.school?.customFieldsConfig}
                 />
               </div>
             ) : (
-              groupByClass && groupedStudents ? (
-                <div className="space-y-8 animate-in fade-in duration-200">
-                  {groupedStudents.map(([classId, group]) => (
-                    <div key={classId} className="space-y-3">
-                      <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-                        <h2 className="text-base sm:text-lg font-bold text-gray-900">
-                          Class {group.name}
-                        </h2>
-                        <span className="text-[10px] sm:text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-full">
-                          {group.students.length} student{group.students.length !== 1 ? "s" : ""}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {group.students.map((student) => (
-                          <StudentCard
-                            key={student.id}
-                            student={student}
-                            isAdmin={canEditOrDelete}
-                            onEdit={(student) => setEditingStudent(student)}
-                            onDelete={handleDeleteClick}
-                            onPreview={(student) => setSelectedPreviewStudent(student)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {paginatedStudents.map((student) => (
-                    <StudentCard
-                      key={student.id}
-                      student={student}
-                      isAdmin={canEditOrDelete}
-                      onEdit={(student) => setEditingStudent(student)}
-                      onDelete={handleDeleteClick}
-                      onPreview={(student) => setSelectedPreviewStudent(student)}
-                    />
-                  ))}
-                </div>
-              )
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {paginatedStudents.map((student) => (
+                  <StudentCard
+                    key={student.id}
+                    student={student}
+                    isAdmin={canEditOrDelete}
+                    onEdit={(student) => setEditingStudent(student)}
+                    onDelete={handleDeleteClick}
+                    onPreview={(student) => setSelectedPreviewStudent(student)}
+                  />
+                ))}
+              </div>
             )
           ) : (
             <div className="text-center py-20 bg-white rounded-xl border border-gray-100 flex flex-col items-center justify-center">
-              <div className="text-gray-400 mb-4">
+              <div className="text-gray-450 mb-4">
                 <HugeiconsIcon icon={Search02Icon} size={48} color="currentColor" strokeWidth={1.5} />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No students found</h3>
               <p className="text-gray-500 text-sm">
-                {searchQuery || selectedClassId
-                  ? "No results matching your filters. Try adjusting them."
-                  : "There are no students in this school yet."}
+                {searchQuery
+                  ? "No results matching your filter. Try adjusting it."
+                  : "There are no students in this class yet."}
               </p>
-              {(searchQuery || selectedClassId) && (
+              {searchQuery && (
                 <Button
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSelectedClassId("");
-                  }}
+                  onClick={() => setSearchQuery("")}
                   variant="outline"
                   className="mt-4"
                 >
-                  Clear Filters
+                  Clear Filter
                 </Button>
               )}
             </div>
@@ -740,15 +708,15 @@ export default function AllStudentsPage() {
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-55 disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                  <HugeiconsIcon icon={ArrowLeft01Icon} size={14} color="currentColor" strokeWidth={2} />
+                  <HugeiconsIcon icon={ArrowLeft01Icon} size={14} color="currentColor" strokeWidth={2.5} />
                   Prev
                 </button>
 
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
                   const isVisible =
-                    totalPages <= 7 ||
+                    totalPages <= 5 ||
                     page === 1 ||
                     page === totalPages ||
                     Math.abs(page - currentPage) <= 1;
@@ -781,10 +749,10 @@ export default function AllStudentsPage() {
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-55 disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   Next
-                  <HugeiconsIcon icon={ArrowRight01Icon} size={14} color="currentColor" strokeWidth={2} />
+                  <HugeiconsIcon icon={ArrowRight01Icon} size={14} color="currentColor" strokeWidth={2.5} />
                 </button>
               </div>
             </div>
@@ -805,62 +773,47 @@ export default function AllStudentsPage() {
                 camSno: editingStudent.camSno || "",
                 customValues: editingStudent.customValues,
               }}
-              classes={school?.classes || []}
-              schoolName={school.name}
-              schoolId={schoolId}
+              classes={classesList}
+              schoolName={classData.school.name}
+              schoolId={classData.school.id}
               onClose={() => setEditingStudent(null)}
-              onSuccess={fetchSchool}
+              onSuccess={fetchClass}
             />
           )}
 
           {/* ID Card Preview Modal */}
           {selectedPreviewStudent && (
             <IdCardPreviewModal
-              school={school}
+              school={classData.school}
               student={selectedPreviewStudent}
               onClose={() => setSelectedPreviewStudent(null)}
-            />
-          )}
-
-          {/* Add Student Form Modal */}
-          {showStudentForm && (
-            <StudentForm
-              schoolId={schoolId}
-              classId={selectedClassId || ""}
-              schoolName={school.name}
-              classes={school.classes}
-              onClose={() => setShowStudentForm(false)}
-              onSuccess={() => {
-                fetchSchool();
-                setShowStudentForm(false);
-              }}
             />
           )}
 
           {/* Delete Confirmation Modal */}
           {studentToDelete && (
             <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-150 animate-in zoom-in-95 duration-200">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
                 <div className="flex flex-col items-center text-center">
                   <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mb-4">
-                    <svg className="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    <svg className="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Student</h3>
                   <p className="text-sm text-gray-500 mb-6">
-                    Are you sure you want to delete the student record for <span className="font-semibold text-gray-900">{studentToDelete.name}</span>? This action cannot be undone.
+                    Are you sure you want to delete <span className="font-semibold text-gray-900">"{studentToDelete.name}"</span>? This action cannot be undone.
                   </p>
-                  <div className="flex w-full gap-3">
+                  <div className="flex gap-3 w-full">
                     <button
                       onClick={() => setStudentToDelete(null)}
-                      className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors cursor-pointer border border-gray-200"
+                      className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
-                      onClick={confirmDeleteStudent}
-                      className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-colors cursor-pointer shadow-md shadow-rose-600/20"
+                      onClick={confirmDelete}
+                      className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer"
                     >
                       Delete
                     </button>
@@ -869,8 +822,17 @@ export default function AllStudentsPage() {
               </div>
             </div>
           )}
-
         </div>
-    </DashboardLayout>
+
+      {showStudentForm && (
+        <StudentForm
+          schoolId={classData.school.id}
+          classId={classId}
+          schoolName={classData.school.name}
+          onClose={() => setShowStudentForm(false)}
+          onSuccess={() => fetchClass()}
+        />
+      )}
+    </>
   );
 }

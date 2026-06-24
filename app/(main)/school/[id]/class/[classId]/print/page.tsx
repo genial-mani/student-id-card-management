@@ -15,6 +15,7 @@ import Link from "next/link";
 import IdCard, { CardTheme } from "@/components/IdCard";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -85,12 +86,6 @@ const DEFAULT_THEME: CardTheme = {
   background: "#f6fff8",
   textMain: "#ffffff",
   textSub: "#4b5563",
-  schoolNameFont: "",
-  schoolNameSize: "",
-  schoolNameWeight: "",
-  schoolCaptionFont: "",
-  schoolCaptionSize: "",
-  schoolCaptionWeight: "",
 };
 
 function loadDesign(id: string): { layout: number; theme: CardTheme } {
@@ -355,10 +350,7 @@ export default function PrintPage() {
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-fuchsia-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-500 text-sm">Loading class…</p>
-        </div>
+        <LoadingSpinner message="Loading class..." />
       </div>
     );
 
