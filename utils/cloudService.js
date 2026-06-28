@@ -4,7 +4,7 @@ const uploadImageToCloudinary = async (imageFile, folderName, publicId) => {
   const url = `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_NAME}/image/upload`;
   const formData = new FormData();
   formData.append('file', imageFile);
-  formData.append('upload_preset', 'images_preset');
+  formData.append('upload_preset', 'ml_default');
 
   if (folderName) {
     formData.append('folder', folderName); // Sets the URL path
