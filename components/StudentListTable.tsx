@@ -13,6 +13,9 @@ interface StudentListTableProps {
   sortBy: string;
   onSortChange: (newSortBy: string) => void;
   customFieldsConfig?: any;
+  selectedIds?: string[];
+  onSelectAll?: (selected: boolean) => void;
+  onSelectOne?: (id: string, selected: boolean) => void;
 }
 
 export default function StudentListTable({
@@ -24,11 +27,13 @@ export default function StudentListTable({
   sortBy,
   onSortChange,
   customFieldsConfig,
+  selectedIds = [],
+  onSelectAll,
+  onSelectOne,
 }: StudentListTableProps) {
   const fields = useMemo(() => {
     const defaults = [
       { key: "name", label: "Student Name", type: "text", required: true, default: true, enabled: true },
-      { key: "idNo", label: "ID Number", type: "text", required: false, default: true, enabled: true },
       { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
       { key: "fatherName", label: "Father Name", type: "text", required: false, default: true, enabled: true },
       { key: "fatherPhone", label: "Father Phone", type: "text", required: false, default: true, enabled: true },
@@ -84,12 +89,22 @@ export default function StudentListTable({
         <table className="w-full min-w-[800px] text-sm border-collapse text-left">
           <thead>
             <tr className="bg-gray-55 border-b border-gray-150">
+              {onSelectAll && (
+                <th className="px-4 py-3 text-left w-12 select-none">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500 cursor-pointer"
+                    checked={students.length > 0 && selectedIds.length === students.length}
+                    onChange={(e) => onSelectAll(e.target.checked)}
+                    aria-label="Select all students"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-16 select-none">
                 Photo
               </th>
               {renderSortableHeader("name", "Student Name")}
-              {isEnabled("idNo") && renderSortableHeader("idNo", "ID No")}
-              {isEnabled("camSno") && renderSortableHeader("camSno", "CAM S.No")}
+              {renderSortableHeader("camSno", "CAM S.No")}
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider select-none">
                 Class
               </th>
@@ -132,6 +147,19 @@ export default function StudentListTable({
                   key={student.id}
                   className="hover:bg-gray-50/50 transition-colors align-middle"
                 >
+                  {/* Selection Checkbox */}
+                  {onSelectOne && (
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500 cursor-pointer"
+                        checked={selectedIds.includes(student.id)}
+                        onChange={(e) => onSelectOne(student.id, e.target.checked)}
+                        aria-label={`Select ${student.name}`}
+                      />
+                    </td>
+                  )}
+
                   {/* Photo */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     {student.profilePictureUrl ? (
@@ -152,24 +180,16 @@ export default function StudentListTable({
                     {student.name}
                   </td>
 
-                  {/* ID No */}
-                  {isEnabled("idNo") && (
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-700 font-medium">
-                      {student.idNo || "—"}
-                    </td>
-                  )}
 
                   {/* CAM S.No */}
-                  {isEnabled("camSno") && (
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-500 font-mono font-medium">
-                      {student.camSno || "—"}
-                    </td>
-                  )}
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-500 font-mono font-medium">
+                    {student.camSno || "—"}
+                  </td>
 
                   {/* Class Badge */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="inline-block text-[10px] sm:text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-full">
-                      Class {student.className}
+                      {student.className}
                     </span>
                   </td>
 

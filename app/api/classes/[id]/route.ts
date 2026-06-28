@@ -81,21 +81,24 @@ export async function PUT(
   }
 }
 
-// DELETE a class — admin only
+// DELETE a class — admin, school admin, staff
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { role } = getAuth(request);
-    if (role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
+    const { role, schoolId } = getAuth(request);
+    
     const { id } = await params;
     const classData = await prisma.class.findUnique({ where: { id } });
     if (!classData) {
       return NextResponse.json({ error: 'Class not found' }, { status: 404 });
+    }
+
+    if (role !== 'admin') {
+      if ((role !== 'school_admin' && role !== 'user') || classData.schoolId !== schoolId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
     }
 
     // Fetch all students in the class to delete their photos in bulk

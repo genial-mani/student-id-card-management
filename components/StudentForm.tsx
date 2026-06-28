@@ -43,7 +43,6 @@ export default function StudentForm({
   const [selectedClassId, setSelectedClassId] = useState(classId || "");
   const [formData, setFormData] = useState({
     name: "",
-    idNo: "",
     camSno: "",
     fatherName: "",
     fatherPhone: "",
@@ -394,11 +393,11 @@ export default function StudentForm({
 
               <div className="flex flex-col gap-2 sm:gap-3 pt-3 sm:pt-4">
                 
-                  <Button type="button" className="flex-1 text-xs sm:text-sm py-2" disabled={loading}>
+                  <Button type="submit" className="flex-1 text-xs sm:text-sm py-2" disabled={loading}>
                    {loading ? (
                   <>
                     <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
-                    "adding..."
+                    adding...
                   </>
                 ) : (
                   "Add Student"

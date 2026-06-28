@@ -25,6 +25,7 @@ model School {
   customValues       Json?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+  documentTemplates  DocumentTemplate[]
 }
 
 model Student {
@@ -78,3 +79,16 @@ model AuditLog {
   timestamp  DateTime @default(now())
 }
 
+model DocumentTemplate {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String   @db.ObjectId
+  school        School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name          String   // e.g. "Term 1 Hall Ticket"
+  width         Float    // Width of the document canvas in mm
+  height        Float    // Height of the document canvas in mm
+  backgroundUrl String?  // The uploaded design layout
+  fieldsConfig  Json?    // Optional: Fields available specifically for this document
+  layoutConfig  Json     // The drag-and-drop position and styling of the fields
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

@@ -14,6 +14,7 @@ import SchoolForm from "@/components/SchoolForm";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import IdCard, { CardTheme } from "@/components/IdCard";
+import DocumentStudioTab from "@/components/document-studio/DocumentStudioTab";
 import Draggable from "react-draggable";
 import uploadImageToCloudinary from "@/utils/cloudService";
 import { toast } from "sonner";
@@ -286,7 +287,6 @@ const AdBanner = () => {
 const DUMMY_STUDENT = {
   id: "dummy1",
   name: "A. Punarvi",
-  idNo: "STU-001",
   camSno: "CAM-990",
   fatherName: "Anil Kumar",
   motherName: "Lakshmi",
@@ -459,7 +459,7 @@ export default function SchoolPage() {
   }, []);
 
   // Tabs & Custom Configurations State
-  const [activeTab, setActiveTab] = useState<"classes" | "forms" | "designer">("classes");
+  const [activeTab, setActiveTab] = useState<"classes" | "forms" | "designer" | "documents">("classes");
   const [isDesignMode, setIsDesignMode] = useState(false);
   const [selectedLayout, setSelectedLayout] = useState(1);
   const [theme, setTheme] = useState<CardTheme>(DEFAULT_THEME);
@@ -521,7 +521,7 @@ export default function SchoolPage() {
             ? JSON.parse(school.customFieldsConfig)
             : school.customFieldsConfig;
           if (parsed && parsed.student) {
-            parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone" && f.key !== "idNo" && f.key !== "camSno");
+            parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone" && f.key !== "camSno");
           }
           setCustomFieldsConfig(parsed);
         } catch (e) {
@@ -570,7 +570,6 @@ export default function SchoolPage() {
             student_photo: { x: 226, y: 180, width: 220, height: 220, visible: true },
             student_name: { x: 226, y: 430, fontSize: 40, color: "#1e3a8a", fontWeight: "900", fontFamily: "Inter", visible: true },
             class_name: { x: 226, y: 500, fontSize: 24, color: "#1e3a8a", fontWeight: "700", fontFamily: "Inter", visible: true, labelVisible: true },
-            student_idNo: { x: 100, y: 560, fontSize: 24, color: "#4b5563", fontWeight: "700", fontFamily: "Inter", visible: true, labelVisible: true },
             student_fatherName: { x: 100, y: 600, fontSize: 24, color: "#4b5563", fontWeight: "700", fontFamily: "Inter", visible: true, labelVisible: true },
             student_fatherPhone: { x: 100, y: 640, fontSize: 24, color: "#4b5563", fontWeight: "700", fontFamily: "Inter", visible: true, labelVisible: true },
             student_address: { x: 100, y: 680, fontSize: 24, color: "#4b5563", fontWeight: "700", fontFamily: "Inter", visible: true, labelVisible: true },
@@ -1286,6 +1285,22 @@ export default function SchoolPage() {
                 /> ID Card Studio
               </button>
             )}
+            {isAdmin && (
+              <button
+                onClick={() => { setActiveTab("documents"); setIsDesignMode(false); }}
+                className={`py-3 px-4 sm:px-6 font-bold text-xs sm:text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-2 ${activeTab === "documents"
+                  ? "border-violet-650 text-violet-650 font-extrabold"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+              >
+                <HugeiconsIcon
+                  icon={AddSquareIcon}
+                  size={20}
+                  color="#7f22fe"
+                  strokeWidth={1.5}
+                /> Document Studio
+              </button>
+            )}
           </div>
 
           {/* ── TAB 1: Directory & Classes ──────────────────────── */}
@@ -1939,10 +1954,8 @@ export default function SchoolPage() {
                               else if (fieldKey === "school_phone") val = school.phone || "Phone Text";
                               else if (fieldKey === "student_name") val = DUMMY_STUDENT.name;
                               else if (fieldKey === "class_name") { val = "Demo Class"; label = "Class: "; }
-                              else if (fieldKey === "student_idNo") { val = DUMMY_STUDENT.idNo; label = "ID No: "; }
-                              else if (fieldKey === "student_camSno") { val = DUMMY_STUDENT.camSno; label = "CAM S.No: "; }
-                              else if (fieldKey === "student_fatherName") { val = DUMMY_STUDENT.fatherName; label = "F's Name: "; }
-                              else if (fieldKey === "student_motherName") { val = DUMMY_STUDENT.motherName; label = "M's Name: "; }
+                              else if (fieldKey === "student_fatherName") { val = DUMMY_STUDENT.fatherName; label = "F/O: "; }
+                              else if (fieldKey === "student_motherName") { val = DUMMY_STUDENT.motherName; label = "M/O: "; }
                               else if (fieldKey === "student_fatherPhone") { val = DUMMY_STUDENT.fatherPhone; label = "Cell: "; }
                               else if (fieldKey === "student_motherPhone") { val = DUMMY_STUDENT.motherPhone; label = "Cell: "; }
                               else if (fieldKey === "student_address") { val = DUMMY_STUDENT.address; label = "Address: "; }
@@ -2018,8 +2031,6 @@ export default function SchoolPage() {
                           { key: "student_photo", label: "Student Photo" },
                           { key: "student_name", label: "Student Name" },
                           { key: "class_name", label: "Class Name" },
-                          { key: "student_idNo", label: "ID Number" },
-                          { key: "student_camSno", label: "CAM Serial No" },
                           { key: "student_fatherName", label: "Father Name" },
                           { key: "student_motherName", label: "Mother Name" },
                           { key: "student_fatherPhone", label: "Father Phone" },
@@ -2289,6 +2300,23 @@ export default function SchoolPage() {
               </div>
             </div>
           )}
+
+          {/* ── TAB 4: Document Studio ──────────────────────── */}
+          {activeTab === "documents" && isAdmin && (
+            <DocumentStudioTab 
+              schoolId={schoolId} 
+              schoolName={school.name} 
+              students={school.classes.flatMap(c => 
+                (c.students || []).map(s => ({
+                  ...s,
+                  class: { id: c.id, name: c.name, customValues: (c as any).customValues },
+                  school: school
+                }))
+              )}
+              customFieldsConfig={school.customFieldsConfig ? (typeof school.customFieldsConfig === 'string' ? JSON.parse(school.customFieldsConfig) : school.customFieldsConfig) : {}}
+            />
+          )}
+
           {/* ──────────────────────────────────────────────────────────────── */}
         </div>
       </div>

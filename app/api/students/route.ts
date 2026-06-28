@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
     const {
       schoolId,
       name,
-      idNo,
       camSno,
       fatherName,
       fatherPhone,

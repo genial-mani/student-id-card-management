@@ -53,7 +53,7 @@ export default function IdCardPreviewModal({ school, student, onClose }: IdCardP
         </h3>
 
         {/* ID Card Wrapper scaled to fit */}
-        <div className="w-[283px] h-[457px] relative overflow-hidden rounded-xl shadow-lg border border-gray-200 bg-white">
+        <div className="w-[283px] h-[457px] relative overflow-hidden ">
           <div
             style={{
               transform: "scale(0.42)",

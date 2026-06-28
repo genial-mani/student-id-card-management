@@ -61,7 +61,6 @@ export default function EditStudentModal({
     fatherPhone: student.fatherPhone || "",
     address: student.address || "",
     classId: student.classId || "",
-    idNo: student.idNo || "",
     camSno: student.camSno || "",
   });
 
@@ -226,7 +225,6 @@ export default function EditStudentModal({
           fatherPhone: formData.fatherPhone.trim(),
           address: formData.address.trim(),
           classId: formData.classId,
-          idNo: formData.idNo.trim(),
           camSno: formData.camSno.trim(),
           profilePictureUrl: finalPictureUrl,
           customValues,

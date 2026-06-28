@@ -10,6 +10,8 @@ interface StudentCardProps {
   onEdit: (student: Student) => void;
   onDelete: (id: string, name: string) => void;
   onPreview?: (student: Student) => void;
+  isSelected?: boolean;
+  onSelect?: (id: string, selected: boolean) => void;
 }
 
 export default function StudentCard({
@@ -18,9 +20,25 @@ export default function StudentCard({
   onEdit,
   onDelete,
   onPreview,
+  isSelected,
+  onSelect,
 }: StudentCardProps) {
   return (
-    <div className="group relative bg-white rounded-xl border border-gray-150 p-4 hover:shadow-md hover:border-violet-200 transition-all duration-200 flex flex-col justify-between min-w-0">
+    <div className={`group relative rounded-xl border p-4 hover:shadow-md transition-all duration-200 flex flex-col justify-between min-w-0 ${isSelected ? 'bg-violet-50/30 border-violet-300' : 'bg-white border-gray-150 hover:border-violet-200'}`}>
+      
+      {/* Absolute Checkbox for grid selection */}
+      {onSelect && (
+        <div className="absolute top-3 right-3 z-10">
+          <input
+            type="checkbox"
+            className="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500 cursor-pointer"
+            checked={!!isSelected}
+            onChange={(e) => onSelect(student.id, e.target.checked)}
+            aria-label={`Select ${student.name}`}
+          />
+        </div>
+      )}
+
       {/* Main Info Row */}
       <div className="flex gap-4 items-start min-w-0">
         {/* Left Column: Photo and Class Badge */}

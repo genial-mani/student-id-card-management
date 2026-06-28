@@ -9,13 +9,15 @@
  * and mathematically distribute the leftover space as margins/gaps.
  */
 
-import { useState, useEffect, useRef, useCallback, CSSProperties } from "react";
+import { useState, useEffect, useRef, useCallback, CSSProperties, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import IdCard, { CardTheme } from "@/components/IdCard";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { PrintSettingsPanel } from "@/components/PrintSettingsPanel";
+import { PrintSettings, calculatePrintGrid } from "@/utils/printLayoutEngine";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -52,32 +54,8 @@ interface ClassData {
 
 // ─── Exact Math & Dimensions (NO SCALING) ──────────────────────────────────────
 
-const A4_W = 3508;
-const A4_H = 2480;
 const CARD_W = 673;
 const CARD_H = 1087;
-
-// Changed to a 5x2 grid to fit 10 cards per sheet
-const COLS = 5;
-const ROWS = 2;
-const CPP = COLS * ROWS; // 10 cards per sheet
-
-// 2mm gap at 300 DPI is mathematically 23.6 pixels (rounded to 24)
-const GAP_PX = 24;
-
-// Calculate outer margins to perfectly center the 10-card block on the A4 paper
-const OFFSET_X = (A4_W - (COLS * CARD_W + (COLS - 1) * GAP_PX)) / 2; // ~111px side margins
-const OFFSET_Y = (A4_H - (ROWS * CARD_H + (ROWS - 1) * GAP_PX)) / 2; // ~215px top/bottom margins
-
-function slotPos(idx: number) {
-  const col = idx % COLS;
-  const row = Math.floor(idx / COLS);
-  return {
-    x: OFFSET_X + col * (CARD_W + GAP_PX),
-    y: OFFSET_Y + row * (CARD_H + GAP_PX),
-  };
-}
-
 // ─── localStorage ───────────────────────────────────────────────────────────────
 
 const DEFAULT_THEME: CardTheme = {
@@ -116,6 +94,24 @@ export default function PrintPage() {
   const [downloading, setDownloading] = useState<"all" | number | null>(null);
   const [dlProgress, setDlProgress] = useState("");
   const { user } = useAuth();
+
+  const [printSettings, setPrintSettings] = useState<PrintSettings>({
+    paperSize: "A4",
+    paperOrientation: "landscape",
+    documentHorizontal: false, // ID cards are always vertical
+  });
+
+  const printGrid = useMemo(() => calculatePrintGrid(printSettings, CARD_W, CARD_H, 24), [printSettings]);
+
+  function getSlotPos(idx: number) {
+    if (!printGrid.fits || printGrid.itemsPerPage === 0) return { x: 0, y: 0 };
+    const col = idx % printGrid.cols;
+    const row = Math.floor(idx / printGrid.cols);
+    return {
+      x: printGrid.offsetX + col * (CARD_W + 24),
+      y: printGrid.offsetY + row * (CARD_H + 24),
+    };
+  }
 
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -205,6 +201,7 @@ export default function PrintPage() {
   // ── Sheet slices ────────────────────────────────────────────────────────────
 
   const students = classData?.students ?? [];
+  const CPP = printGrid.itemsPerPage > 0 ? printGrid.itemsPerPage : 1;
   const totalSheets = Math.max(1, Math.ceil(students.length / CPP));
   const sheets: Student[][] = Array.from({ length: totalSheets }, (_, i) =>
     students.slice(i * CPP, (i + 1) * CPP),
@@ -223,7 +220,7 @@ export default function PrintPage() {
     if (!el) return null;
 
     try {
-      // Capture exactly at 1:1 pixel ratio (638x1013)
+      // Capture exactly at 1:1 pixel ratio
       const dataUrl = await toPng(el, {
         pixelRatio: 1,
         backgroundColor: "#ffffff",
@@ -245,28 +242,28 @@ export default function PrintPage() {
   };
 
   /**
-   * Composite images exactly onto the A4 Canvas
+   * Composite images exactly onto the Print Canvas
    */
-  const buildA4Canvas = (
+  const buildPrintCanvas = (
     cardImages: (HTMLImageElement | null)[],
     sheetStudents: Student[],
   ): HTMLCanvasElement => {
-    const a4 = document.createElement("canvas");
-    a4.width = A4_W;
-    a4.height = A4_H;
-    const ctx = a4.getContext("2d")!;
+    const canvas = document.createElement("canvas");
+    canvas.width = printGrid.paperW;
+    canvas.height = printGrid.paperH;
+    const ctx = canvas.getContext("2d")!;
 
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, A4_W, A4_H);
+    ctx.fillRect(0, 0, printGrid.paperW, printGrid.paperH);
 
     sheetStudents.forEach((_, i) => {
       const img = cardImages[i];
       if (!img) return;
-      const { x, y } = slotPos(i);
-      ctx.drawImage(img, x, y, CARD_W, CARD_H); // Drawn exactly at 638x1013!
+      const { x, y } = getSlotPos(i);
+      ctx.drawImage(img, x, y, CARD_W, CARD_H);
     });
 
-    return a4;
+    return canvas;
   };
 
   /**
@@ -294,9 +291,9 @@ export default function PrintPage() {
       const jsPDF = jsPDFMod.default || (jsPDFMod as any).jsPDF;
 
       const pdf = new jsPDF({
-        orientation: "landscape",
-        unit: "mm",
-        format: "a4",
+        orientation: printSettings.paperOrientation,
+        unit: "px",
+        format: [printGrid.paperW, printGrid.paperH],
       });
 
       for (let pi = 0; pi < indices.length; pi++) {
@@ -313,14 +310,14 @@ export default function PrintPage() {
         );
 
         setDlProgress(
-          `Sheet ${pi + 1} / ${indices.length}: compositing A4 sheet…`,
+          `Sheet ${pi + 1} / ${indices.length}: compositing sheet…`,
         );
 
-        const a4Canvas = buildA4Canvas(cardImages, sheetStudents);
-        const imgData = a4Canvas.toDataURL("image/jpeg", 0.97);
+        const canvas = buildPrintCanvas(cardImages, sheetStudents);
+        const imgData = canvas.toDataURL("image/jpeg", 0.97);
 
         if (pi > 0) pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, 0, 297, 210);
+        pdf.addImage(imgData, "JPEG", 0, 0, printGrid.paperW, printGrid.paperH);
       }
 
       const safe = (s: string) => (s ?? "").replace(/[^a-z0-9]/gi, "_");
@@ -403,8 +400,6 @@ export default function PrintPage() {
   const isBusy = downloading !== null || !settled;
 
   // ── Hidden card farm ────────────────────────────────────────────────────────
-  // To prevent "Blank PDFs", the farm is placed at top:0 left:0 but with a microscopic
-  // opacity so the browser still renders all the images and DOM nodes inside it.
   const hiddenWrapStyle: CSSProperties = {
     position: "absolute",
     top: "0",
@@ -425,7 +420,6 @@ export default function PrintPage() {
               else cardRefs.current.delete(student.id);
             }}
           >
-            {/* Note: Ensure your updated dynamic IdCard takes `template` prop instead if using the drag/drop feature */}
             <IdCard
               layout={layout}
               theme={theme}
@@ -438,9 +432,14 @@ export default function PrintPage() {
         ))}
       </div>
 
-      {/* ══ Page UI ═══════════════════════════════════════════════════════════ */}
+      <PrintSettingsPanel 
+        settings={printSettings} 
+        onChange={setPrintSettings} 
+        showDocumentOrientation={false} 
+      />
+
       <div className="min-h-screen bg-slate-200 pb-12">
-        <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm no-print">
           <div className="px-4 sm:px-6 py-3">
             <div className="flex items-center gap-3 mb-2">
               <Link
@@ -466,9 +465,10 @@ export default function PrintPage() {
                   {classData.school.name} — Class {classData.name}
                 </h1>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {students.length} cards · {totalSheets} A4 sheet
-                  {totalSheets !== 1 ? "s" : ""} · 300 DPI
+                  {students.length} cards · {totalSheets} sheet
+                  {totalSheets !== 1 ? "s" : ""}
                   {!settled && " · Loading images…"}
+                  {!printGrid.fits && <span className="text-rose-500 font-bold ml-2">Error: Paper size too small.</span>}
                 </p>
               </div>
             </div>
@@ -533,7 +533,6 @@ export default function PrintPage() {
           </div>
         </div>
 
-        {/* Sheet previews */}
         <div className="px-4 sm:px-6 py-8 space-y-10 max-w-7xl mx-auto">
           {sheets.map((sheetStudents, sheetIdx) => {
             const emptyCount = CPP - sheetStudents.length;
@@ -544,34 +543,29 @@ export default function PrintPage() {
                   <span className="text-xs font-bold text-gray-600 uppercase tracking-widest">
                     Sheet {sheetIdx + 1} / {totalSheets}
                   </span>
-                  <span className="text-xs text-gray-400">
-                    {sheetStudents.length} card
-                    {sheetStudents.length !== 1 ? "s" : ""}
-                    {emptyCount > 0 ? ` · ${emptyCount} empty` : ""}
-                  </span>
                 </div>
 
-                {/* VISUAL A4 PREVIEW 
-                  Fix: We wrap the entire exact-pixel layout inside an SVG <foreignObject>. 
-                  The SVG viewBox natively and perfectly scales everything inside it to fit your screen, 
-                  eliminating all CSS scaling bugs!
-                */}
-                <div className="bg-white shadow-2xl rounded-sm overflow-hidden border border-gray-300 w-full">
+                <div className="bg-white shadow-2xl rounded-sm overflow-hidden border border-gray-300 w-full relative">
+                  {!printGrid.fits && (
+                    <div className="absolute inset-0 bg-rose-500/10 flex items-center justify-center z-50">
+                      <div className="bg-white px-4 py-2 rounded-lg font-bold text-rose-600 shadow-lg">Paper size is too small</div>
+                    </div>
+                  )}
                   <svg
-                    viewBox={`0 0 ${A4_W} ${A4_H}`}
+                    viewBox={`0 0 ${printGrid.paperW} ${printGrid.paperH}`}
                     className="w-full h-auto block"
                   >
-                    <foreignObject width={A4_W} height={A4_H}>
+                    <foreignObject width={printGrid.paperW} height={printGrid.paperH}>
                       <div
                         style={{
-                          width: `${A4_W}px`,
-                          height: `${A4_H}px`,
+                          width: `${printGrid.paperW}px`,
+                          height: `${printGrid.paperH}px`,
                           position: "relative",
                           backgroundColor: "#ffffff",
                         }}
                       >
                         {sheetStudents.map((student, i) => {
-                          const { x, y } = slotPos(i);
+                          const { x, y } = getSlotPos(i);
                           return (
                             <div
                               key={student.id}
@@ -596,10 +590,8 @@ export default function PrintPage() {
                           );
                         })}
 
-                        {/* Show dashed empty slots for the remaining spaces on the sheet */}
                         {Array.from({ length: emptyCount }).map((_, i) => {
-                          const emptyIdx = sheetStudents.length + i;
-                          const { x, y } = slotPos(emptyIdx);
+                          const { x, y } = getSlotPos(sheetStudents.length + i);
                           return (
                             <div
                               key={`empty-${i}`}
@@ -609,17 +601,13 @@ export default function PrintPage() {
                                 top: `${y}px`,
                                 width: `${CARD_W}px`,
                                 height: `${CARD_H}px`,
-                                border: "16px dashed #cbd5e1",
+                                border: "4px dashed #e2e8f0",
                                 borderRadius: "24px",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                               }}
-                            >
-                              <span className="text-9xl text-slate-300 font-bold uppercase tracking-widest">
-                                Empty
-                              </span>
-                            </div>
+                            />
                           );
                         })}
                       </div>

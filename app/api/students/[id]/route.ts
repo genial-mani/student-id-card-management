@@ -66,7 +66,6 @@ export async function PUT(
     const {
       schoolId,
       name,
-      idNo,
       camSno,
       fatherName,
       fatherPhone,

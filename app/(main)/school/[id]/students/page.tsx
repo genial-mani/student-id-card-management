@@ -18,6 +18,8 @@ import { UserGroupIcon, IdentityCardIcon, Search01Icon, GridIcon, ListViewIcon, 
 import IdCard, { CardTheme } from "@/components/IdCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { toast } from "sonner";
+import BulkDeleteModal from "@/components/BulkDeleteModal";
+import BulkImportModal from "@/components/BulkImportModal";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -145,6 +147,25 @@ export default function AllStudentsPage() {
   const [selectedPreviewStudent, setSelectedPreviewStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
   const [showStudentForm, setShowStudentForm] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      setSelectedStudentIds(paginatedStudents.map(s => s.id));
+    } else {
+      setSelectedStudentIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string, selected: boolean) => {
+    if (selected) {
+      setSelectedStudentIds(prev => [...prev, id]);
+    } else {
+      setSelectedStudentIds(prev => prev.filter(i => i !== id));
+    }
+  };
 
   const fetchSchool = useCallback(async () => {
     try {
@@ -235,10 +256,6 @@ export default function AllStudentsPage() {
         return (a.className || "").localeCompare(b.className || "");
       } else if (sortBy === "class-desc") {
         return (b.className || "").localeCompare(a.className || "");
-      } else if (sortBy === "idNo-asc") {
-        return (a.idNo || "").localeCompare(b.idNo || "");
-      } else if (sortBy === "idNo-desc") {
-        return (b.idNo || "").localeCompare(a.idNo || "");
       } else if (sortBy === "camSno-asc") {
         return (a.camSno || "").localeCompare(b.camSno || "");
       } else if (sortBy === "camSno-desc") {
@@ -308,7 +325,6 @@ export default function AllStudentsPage() {
     if (!studentFields || studentFields.length === 0) {
       studentFields = [
         { key: "name", label: "Student Name", type: "text", required: true, default: true, enabled: true },
-        { key: "idNo", label: "ID Number", type: "text", required: false, default: true, enabled: true },
         { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
         { key: "fatherName", label: "Father Name", type: "text", required: false, default: true, enabled: true },
         { key: "fatherPhone", label: "Father Phone", type: "text", required: false, default: true, enabled: true },
@@ -330,6 +346,7 @@ export default function AllStudentsPage() {
     const nameIdx = activeStudentFields.findIndex((f: any) => f.key === "name");
     const classInsertIdx = nameIdx !== -1 ? nameIdx + 1 : 1;
     headers.splice(classInsertIdx, 0, "Class");
+    headers.push("CAM S.No");
 
     const rows = allStudents.map((student) => {
       let customVals = student.customValues;
@@ -355,6 +372,7 @@ export default function AllStudentsPage() {
 
       const className = student.className || "";
       rowData.splice(classInsertIdx, 0, `"${className.replace(/"/g, '""')}"`);
+      rowData.push(`"${(student.camSno || "").replace(/"/g, '""')}"`);
 
       return rowData;
     });
@@ -468,7 +486,7 @@ export default function AllStudentsPage() {
                 </h1>
               </div>
               <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {isAdmin && (
+                {canEditOrDelete && (
                   selectedClassId ? (
                     filteredStudents.length > 0 ? (
                       <Link
@@ -512,8 +530,28 @@ export default function AllStudentsPage() {
                   )
                 )}
 
-                {isAdmin && (
+                {canEditOrDelete && (
                   <div className="shrink-0 flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                    {selectedStudentIds.length > 0 && (
+                      <button
+                        onClick={() => setIsBulkDeleteOpen(true)}
+                        className="flex-1 sm:flex-none inline-flex items-center gap-1.5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 justify-center h-10"
+                        title="Delete selected students"
+                      >
+                        <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2.5} />
+                        <span>Delete ({selectedStudentIds.length})</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setIsBulkImportOpen(true)}
+                      className="flex-1 sm:flex-none inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 justify-center h-10"
+                      title="Import students from Excel"
+                    >
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      <span>Import</span>
+                    </button>
                     <button
                       onClick={() => setShowStudentForm(true)}
                       className="flex-1 sm:flex-none inline-flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 justify-center h-10"
@@ -649,6 +687,9 @@ export default function AllStudentsPage() {
                   sortBy={sortBy}
                   onSortChange={setSortBy}
                   customFieldsConfig={school?.customFieldsConfig}
+                  selectedIds={selectedStudentIds}
+                  onSelectAll={handleSelectAll}
+                  onSelectOne={handleSelectOne}
                 />
               </div>
             ) : (
@@ -673,6 +714,8 @@ export default function AllStudentsPage() {
                             onEdit={(student) => setEditingStudent(student)}
                             onDelete={handleDeleteClick}
                             onPreview={(student) => setSelectedPreviewStudent(student)}
+                            isSelected={selectedStudentIds.includes(student.id)}
+                            onSelect={handleSelectOne}
                           />
                         ))}
                       </div>
@@ -689,6 +732,8 @@ export default function AllStudentsPage() {
                       onEdit={(student) => setEditingStudent(student)}
                       onDelete={handleDeleteClick}
                       onPreview={(student) => setSelectedPreviewStudent(student)}
+                      isSelected={selectedStudentIds.includes(student.id)}
+                      onSelect={handleSelectOne}
                     />
                   ))}
                 </div>
@@ -862,6 +907,28 @@ export default function AllStudentsPage() {
             </div>
           )}
 
+          {/* Bulk Delete Modal */}
+          <BulkDeleteModal
+            isOpen={isBulkDeleteOpen}
+            onClose={() => setIsBulkDeleteOpen(false)}
+            selectedIds={selectedStudentIds}
+            onSuccess={() => {
+              setSelectedStudentIds([]);
+              fetchSchool();
+            }}
+          />
+
+          {/* Bulk Import Modal */}
+          <BulkImportModal
+            isOpen={isBulkImportOpen}
+            onClose={() => setIsBulkImportOpen(false)}
+            schoolId={schoolId}
+            classId={selectedClassId || undefined}
+            customFieldsConfig={school?.customFieldsConfig}
+            onSuccess={() => {
+              fetchSchool();
+            }}
+          />
         </div>
     </>
   );

@@ -15,10 +15,12 @@ import StudentListTable from "@/components/StudentListTable";
 import EditStudentModal from "@/components/EditStudentModal";
 import { Student } from "@/types/student";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft02Icon, Search01Icon, Search02Icon, ListViewIcon, IdentityCardIcon, UserGroupIcon, ArrowLeft01Icon, ArrowRight01Icon, UserAdd02Icon, PrinterIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeft02Icon, Search01Icon, Search02Icon, ListViewIcon, IdentityCardIcon, UserGroupIcon, ArrowLeft01Icon, ArrowRight01Icon, UserAdd02Icon, PrinterIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import BulkDeleteModal from "@/components/BulkDeleteModal";
+import BulkImportModal from "@/components/BulkImportModal";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -189,6 +191,7 @@ export default function ClassPage() {
   const classId = params.classId as string;
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const canEditOrDelete = isAdmin || ((user?.role === "user" || user?.role === "school_admin") && user?.schoolId === schoolId);
 
   const [classData, setClassData] = useState<ClassData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -204,7 +207,28 @@ export default function ClassPage() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [selectedPreviewStudent, setSelectedPreviewStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isClassDeleteOpen, setIsClassDeleteOpen] = useState(false);
+  const [isDeletingClass, setIsDeletingClass] = useState(false);
   const [classesList, setClassesList] = useState<{ id: string; name: string }[]>([]);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      setSelectedStudentIds(paginatedStudents.map(s => s.id));
+    } else {
+      setSelectedStudentIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string, selected: boolean) => {
+    if (selected) {
+      setSelectedStudentIds(prev => [...prev, id]);
+    } else {
+      setSelectedStudentIds(prev => prev.filter(i => i !== id));
+    }
+  };
 
   // Design — read directly from school database or fall back to localStorage
   const [selectedLayout, setSelectedLayout] = useState(DEFAULT_LAYOUT);
@@ -255,10 +279,6 @@ export default function ClassPage() {
         return (a.name || "").localeCompare(b.name || "");
       } else if (sortBy === "name-desc") {
         return (b.name || "").localeCompare(a.name || "");
-      } else if (sortBy === "idNo-asc") {
-        return (a.idNo || "").localeCompare(b.idNo || "");
-      } else if (sortBy === "idNo-desc") {
-        return (b.idNo || "").localeCompare(a.idNo || "");
       } else if (sortBy === "camSno-asc") {
         return (a.camSno || "").localeCompare(b.camSno || "");
       } else if (sortBy === "camSno-desc") {
@@ -313,6 +333,26 @@ export default function ClassPage() {
     }
   };
 
+  const confirmDeleteClass = async () => {
+    if (!classData) return;
+    setIsDeletingClass(true);
+    try {
+      const res = await fetch(`/api/classes/${classId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete class");
+
+      toast.success("Class deleted successfully");
+      router.push(`/school/${schoolId}/students`);
+    } catch (error) {
+      console.error("Error deleting class:", error);
+      toast.error("Failed to delete class. Please try again.");
+    } finally {
+      setIsDeletingClass(false);
+    }
+  };
+
   const handleExportToExcel = () => {
     if (!allStudents || allStudents.length === 0) {
       toast.error("No student data available to export.");
@@ -331,7 +371,6 @@ export default function ClassPage() {
     if (!studentFields || studentFields.length === 0) {
       studentFields = [
         { key: "name", label: "Student Name", type: "text", required: true, default: true, enabled: true },
-        { key: "idNo", label: "ID Number", type: "text", required: false, default: true, enabled: true },
         { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
         { key: "fatherName", label: "Father Name", type: "text", required: false, default: true, enabled: true },
         { key: "fatherPhone", label: "Father Phone", type: "text", required: false, default: true, enabled: true },
@@ -353,6 +392,7 @@ export default function ClassPage() {
     const nameIdx = activeStudentFields.findIndex((f: any) => f.key === "name");
     const classInsertIdx = nameIdx !== -1 ? nameIdx + 1 : 1;
     headers.splice(classInsertIdx, 0, "Class");
+    headers.push("CAM S.No");
 
     const rows = allStudents.map((student) => {
       let customVals = student.customValues;
@@ -378,6 +418,7 @@ export default function ClassPage() {
 
       const className = student.className || "";
       rowData.splice(classInsertIdx, 0, `"${className.replace(/"/g, '""')}"`);
+      rowData.push(`"${(student.camSno || "").replace(/"/g, '""')}"`);
 
       return rowData;
     });
@@ -402,8 +443,6 @@ export default function ClassPage() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-
-  const canEditOrDelete = isAdmin || ((user?.role === "user" || user?.role === "school_admin") && user?.schoolId === classData?.school?.id);
 
   useEffect(() => {
     if (classData) {
@@ -545,7 +584,7 @@ export default function ClassPage() {
               {/* Action buttons on the right */}
               <div className="flex flex-wrap gap-1.5 sm:gap-2 shrink-0">
                 {/* Export Excel (Admin only) */}
-                {isAdmin && (
+                {canEditOrDelete && (
                   <button
                     onClick={handleExportToExcel}
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 border-0 justify-center h-10"
@@ -558,7 +597,41 @@ export default function ClassPage() {
                   </button>
                 )}
 
+                {canEditOrDelete && (
+                  <button
+                    onClick={() => setIsClassDeleteOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm active:scale-95 border border-rose-200 justify-center h-10"
+                    title="Delete entire class"
+                  >
+                    <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2.5} />
+                    <span>Delete Class</span>
+                  </button>
+                )}
 
+                {canEditOrDelete && (
+                  <>
+                    {selectedStudentIds.length > 0 && (
+                      <button
+                        onClick={() => setIsBulkDeleteOpen(true)}
+                        className="py-2 px-3 sm:px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white transition-colors h-10 shadow-sm"
+                        title="Delete selected students"
+                      >
+                        <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2.5} />
+                        <span>Delete ({selectedStudentIds.length})</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setIsBulkImportOpen(true)}
+                      className="py-2 px-3 sm:px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors h-10 shadow-sm"
+                      title="Import students from Excel"
+                    >
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      <span>Import</span>
+                    </button>
+                  </>
+                )}
 
                 {/* Add student */}
                 <button
@@ -604,8 +677,6 @@ export default function ClassPage() {
                       options={[
                         { value: "name-asc", label: "Sort: Name (A-Z)" },
                         { value: "name-desc", label: "Sort: Name (Z-A)" },
-                        { value: "idNo-asc", label: "Sort: ID No (Asc)" },
-                        { value: "idNo-desc", label: "Sort: ID No (Desc)" },
                         { value: "camSno-asc", label: "Sort: CAM S.No (Asc)" },
                         { value: "camSno-desc", label: "Sort: CAM S.No (Desc)" },
                         { value: "fatherName-asc", label: "Sort: Father Name (A-Z)" },
@@ -657,6 +728,9 @@ export default function ClassPage() {
                   sortBy={sortBy}
                   onSortChange={setSortBy}
                   customFieldsConfig={classData?.school?.customFieldsConfig}
+                  selectedIds={selectedStudentIds}
+                  onSelectAll={handleSelectAll}
+                  onSelectOne={handleSelectOne}
                 />
               </div>
             ) : (
@@ -669,6 +743,8 @@ export default function ClassPage() {
                     onEdit={(student) => setEditingStudent(student)}
                     onDelete={handleDeleteClick}
                     onPreview={(student) => setSelectedPreviewStudent(student)}
+                    isSelected={selectedStudentIds.includes(student.id)}
+                    onSelect={handleSelectOne}
                   />
                 ))}
               </div>
@@ -822,6 +898,42 @@ export default function ClassPage() {
               </div>
             </div>
           )}
+
+          {/* Delete Class Modal */}
+          {isClassDeleteOpen && (
+            <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mb-4">
+                    <HugeiconsIcon icon={Cancel01Icon} size={24} className="text-rose-600" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Entire Class</h3>
+                  <p className="text-sm text-gray-500 mb-6">
+                    You are about to delete the class <span className="font-semibold text-gray-900">"{classData?.name}"</span>. 
+                    This will also permanently delete <strong>all {allStudents.length} students</strong> within this class and their associated data.
+                    <br/><br/>
+                    This action <strong>cannot</strong> be undone. Are you sure you want to proceed?
+                  </p>
+                  <div className="flex gap-3 w-full">
+                    <button
+                      onClick={() => setIsClassDeleteOpen(false)}
+                      disabled={isDeletingClass}
+                      className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmDeleteClass}
+                      disabled={isDeletingClass}
+                      className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {isDeletingClass ? "Deleting..." : "Delete Class"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
       {showStudentForm && (
@@ -833,6 +945,29 @@ export default function ClassPage() {
           onSuccess={() => fetchClass()}
         />
       )}
+
+      {/* Bulk Delete Modal */}
+      <BulkDeleteModal
+        isOpen={isBulkDeleteOpen}
+        onClose={() => setIsBulkDeleteOpen(false)}
+        selectedIds={selectedStudentIds}
+        onSuccess={() => {
+          setSelectedStudentIds([]);
+          fetchClass();
+        }}
+      />
+
+      {/* Bulk Import Modal */}
+      <BulkImportModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        schoolId={classData.school.id}
+        classId={classId}
+        customFieldsConfig={classData.school.customFieldsConfig}
+        onSuccess={() => {
+          fetchClass();
+        }}
+      />
     </>
   );
 }
