@@ -441,6 +441,7 @@ export default function SchoolPage() {
   const [showSchoolForm, setShowSchoolForm] = useState(false);
   const [showEditSchool, setShowEditSchool] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingSchool, setIsDeletingSchool] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [showOptions, setShowOptions] = useState(false);
@@ -929,6 +930,7 @@ export default function SchoolPage() {
   };
 
   const handleDeleteSchool = async () => {
+    setIsDeletingSchool(true);
     console.log("handleDeleteSchool executing... Sending DELETE request for:", schoolId);
     try {
       const res = await fetch(`/api/schools/${schoolId}`, { method: "DELETE" });
@@ -946,6 +948,7 @@ export default function SchoolPage() {
       console.error("DELETE catch block error:", err);
       toast.error("Failed to delete school");
     } finally {
+      setIsDeletingSchool(false);
       setShowDeleteConfirm(false);
     }
   };
@@ -2392,9 +2395,17 @@ export default function SchoolPage() {
               <button
                 type="button"
                 onClick={handleDeleteSchool}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer shadow-md hover:shadow-lg active:scale-95 border-0"
+                disabled={isDeletingSchool}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer shadow-md hover:shadow-lg active:scale-95 border-0 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
               >
-                Delete School
+                {isDeletingSchool ? (
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  "Delete School"
+                )}
               </button>
             </div>
           </div>

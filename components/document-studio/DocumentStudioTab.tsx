@@ -975,7 +975,7 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
 
               if (!content) return null;
 
-              const isImage = key === "school_logo" || key === "student_photo";
+              const isImage = key === "school_logo" || key === "student_photo" || key === "school_signature";
 
               return (
                 <div

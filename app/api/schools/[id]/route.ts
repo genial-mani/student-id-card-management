@@ -102,12 +102,23 @@ export async function DELETE(
 
     // Fetch all students to delete their photos in bulk
     const students = await prisma.student.findMany({ where: { schoolId: id }, select: { profilePictureUrl: true } });
-    const photoUrls = students.map(s => s.profilePictureUrl).filter(Boolean);
-    if (photoUrls.length > 0) {
-      await bulkDeleteImagesFromCloudinary(photoUrls);
+    const photoUrls = students.map(s => s.profilePictureUrl).filter(Boolean) as string[];
+
+    // Fetch all documents to delete their background images in bulk
+    const documents = await prisma.documentTemplate.findMany({ where: { schoolId: id }, select: { backgroundUrl: true } });
+    const docImageUrls = documents.map(d => d.backgroundUrl).filter(Boolean) as string[];
+
+    // Include the school's own logo and signature
+    const schoolImages = [school.logoUrl, school.signatureUrl].filter(Boolean) as string[];
+
+    const allImagesToDelete = [...photoUrls, ...docImageUrls, ...schoolImages];
+
+    if (allImagesToDelete.length > 0) {
+      await bulkDeleteImagesFromCloudinary(allImagesToDelete);
     }
 
-    // Delete associated students, classes, and users first to prevent orphans
+    // Delete associated documents, students, classes, and users first to prevent orphans
+    await prisma.documentTemplate.deleteMany({ where: { schoolId: id } });
     await prisma.student.deleteMany({ where: { schoolId: id } });
     await prisma.class.deleteMany({ where: { schoolId: id } });
     await prisma.user.deleteMany({ where: { schoolId: id } });
