@@ -242,7 +242,7 @@ export default function IdCard({
               alt="Student"
               crossOrigin="anonymous"
               style={{ ...fieldStyle, borderRadius: f.borderRadius || "0" }}
-              className="object-cover"
+              className="object-fit"
             />
           ) : null;
         }
