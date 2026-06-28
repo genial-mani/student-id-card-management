@@ -229,7 +229,7 @@ export default function IdCard({
               alt="Logo"
               crossOrigin="anonymous"
               style={fieldStyle}
-              className="object-contain"
+              className="object-fit"
             />
           ) : null;
         }
@@ -255,7 +255,7 @@ export default function IdCard({
               alt="Sign"
               crossOrigin="anonymous"
               style={fieldStyle}
-              className="object-contain"
+              className="object-fit"
             />
           ) : null;
         }
