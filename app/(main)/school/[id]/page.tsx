@@ -19,17 +19,7 @@ import Draggable from "react-draggable";
 import uploadImageToCloudinary from "@/utils/cloudService";
 import { toast } from "sonner";
 
-// Imported Assets
-import card1 from "@/assets/5_5918cf6f-84b7-4ed7-b3d9-0b78a62d3087.webp";
-import IdCard1 from "@/assets/71PuhvTnXXL-removebg-preview.png";
-import card2 from "@/assets/gcI8aHaX_5.webp";
-import flags1 from "@/assets/images (1).jpg";
-import flags2 from "@/assets/images (2).jpg";
-import printer1 from "@/assets/konica-minolta-accuriopress-c3080-color-production-printer-removebg-preview.png";
-import printer2 from "@/assets/RMGT340CCD-1-removebg-preview.png";
-import printer3 from "@/assets/solvent-printing-machines.png";
-import balaji from "@/assets/tirupati-balaji-hd-wallpaper-for-android-2745524-removebg-preview.png";
-import idcard2 from "@/assets/Vertical-Employee-ID-Card-Format-Template-removebg-preview.png";
+import AdBanner from "@/components/AdBanner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, AddSquareIcon, Delete01Icon, Folder01Icon, PaintBoardIcon, PencilEdit02Icon, SchoolIcon, Setting07Icon, Share08Icon, ShieldKeyIcon, StudentIcon } from "@hugeicons/core-free-icons";
 
@@ -55,234 +45,7 @@ interface Class {
   students: { id: string }[];
 }
 
-// ─── Ad Banner Component ────────────────────────────────────────────────────────
-const AdBanner = () => {
-  // Array of all imported images for the scroller
-  const scrollerImages = [
-    printer1,
-    printer2,
-    printer3,
-    IdCard1,
-    idcard2,
-    card1,
-    card2,
-    flags1,
-    flags2,
-  ];
 
-  const ARUN_DIGITAL_SERVICES = {
-    idCards: "ID Cards",
-    banner: "Banner",
-    weddingCards: "Wedding cards",
-    billBooks: "Bill Books",
-    visitingCards: "Visiting Cards",
-    photoFrame: "Photo Frame",
-    tShirts: "T-shirts",
-    posters: "Posters",
-    batchs: "Batchs",
-    kanduvas: "Kanduvas",
-  };
-
-  return (
-    <div className="relative bg-white rounded-xl shadow-sm border border-violet-100 mt-5 mb-8 overflow-hidden flex flex-col">
-      {/* Required style for the smooth infinite marquee */}
-      <style>{`
-        @keyframes marquee-scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          animation: marquee-scroll 40s linear infinite;
-        }
-        .animate-marquee:hover {
-          animation-play-state: paused;
-        }
-        @keyframes marquee-scroll-2 {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee-2 {
-          animation: marquee-scroll-2 40s linear infinite reverse;
-        }
-        .animate-marquee-2:hover {
-          animation-play-state: paused;
-        }
-      `}</style>
-
-      {/* Top Section: Details & Maps */}
-      <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 p-4 sm:p-6 lg:p-8 bg-linear-to-br from-violet-50/50 to-white">
-        {/* Left Side: Brand & Contact */}
-        <div className="flex flex-col gap-4 sm:gap-5 flex-1 justify-center min-w-0">
-          <div>
-            <span className="inline-block px-3 py-1 bg-violet-100 text-violet-700 text-[10px] font-bold uppercase tracking-widest rounded-full mb-3">
-              Printing Partner
-            </span>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
-              <Image
-                src={balaji}
-                alt="Arun ID Cards & Digital"
-                className="w-12 sm:w-16"
-              />
-              ARUN{" "}
-              <span className="text-violet-600 block sm:inline">
-                ID CARDS & DIGITAL
-              </span>
-            </h2>
-            <p className="text-gray-500 text-xs sm:text-sm lg:text-base mt-2 leading-relaxed">
-              Your trusted destination for premium ID cards, visiting cards,
-              banners, t-shirts, and professional digital printing services.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-2">
-            {/* Phone */}
-            <a
-              href="tel:+919000836876"
-              className="flex items-start sm:items-center gap-2 sm:gap-3 p-2 sm:p-0 text-xs sm:text-sm text-gray-700 hover:text-violet-600 transition-colors group active:bg-violet-50 sm:active:bg-transparent rounded-lg sm:rounded-none"
-            >
-              <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center group-hover:border-violet-300 group-hover:bg-violet-50 transition-colors shrink-0">
-                <svg
-                  className="w-3.5 sm:w-4 h-3.5 sm:h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498A1 1 0 0121 16.72V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                  />
-                </svg>
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs text-gray-400 font-medium">
-                  Call Us
-                </span>
-                <span className="font-bold">9000836876</span>
-              </div>
-            </a>
-
-            {/* Email */}
-            <a
-              href="mailto:arunachugatla341@gmail.com"
-              className="flex items-start sm:items-center gap-2 sm:gap-3 p-2 sm:p-0 text-xs sm:text-sm text-gray-700 hover:text-violet-600 transition-colors group active:bg-violet-50 sm:active:bg-transparent rounded-lg sm:rounded-none"
-            >
-              <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center group-hover:border-violet-300 group-hover:bg-violet-50 transition-colors shrink-0">
-                <svg
-                  className="w-3.5 sm:w-4 h-3.5 sm:h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs text-gray-400 font-medium">
-                  Email Us
-                </span>
-                <span
-                  className="font-bold truncate max-w-37.5 sm:max-w-none"
-                  title="arunachugatla341@gmail.com"
-                >
-                  arunachugatla...
-                </span>
-              </div>
-            </a>
-
-            {/* Address */}
-            <div className="flex items-start sm:items-center gap-2 sm:gap-3 p-2 sm:p-0 text-xs sm:text-sm text-gray-700 sm:col-span-2 rounded-lg sm:rounded-none">
-              <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center shrink-0">
-                <svg
-                  className="w-3.5 sm:w-4 h-3.5 sm:h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs text-gray-400 font-medium">
-                  Visit Us
-                </span>
-                <span className="font-bold">
-                  Nose Gas Office Beside, KOSGI.
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Side: Google Maps iframe */}
-        <div className="w-full lg:w-87.5 xl:w-100 shrink-0 h-56 sm:h-64 lg:h-80 rounded-xl lg:rounded-2xl overflow-hidden border border-gray-200 shadow-md bg-gray-100 relative">
-          <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d722.530454285001!2d77.71421661955428!3d16.987277208816362!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc9773df25ff433%3A0x1a26aaff8e11d0fb!2sVenkateshwara%20Offset%20Printers!5e0!3m2!1sen!2sin!4v1775272615800!5m2!1sen!2sin"
-            className="absolute inset-0 w-full h-full border-0"
-            allowFullScreen
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          ></iframe>
-        </div>
-      </div>
-
-      {/* services scroller */}
-      <div className="overflow-hidden flex mb-4 sm:mb-5">
-        <div className="animate-marquee-2 flex gap-3 sm:gap-4 lg:gap-6 px-3 sm:px-4 w-max items-center">
-          {/* We duplicate the array to create a seamless infinite loop effect */}
-          {[
-            ...Object.entries(ARUN_DIGITAL_SERVICES),
-            ...Object.entries(ARUN_DIGITAL_SERVICES),
-          ].map(([key, service], idx) => (
-            <div
-              key={idx}
-              className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-violet-50 text-violet-700 text-xs sm:text-sm font-medium rounded-lg border border-violet-200 shadow-sm flex items-center justify-center shrink-0 hover:bg-violet-100 transition-colors"
-            >
-              {service}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Bottom Section: Image Scroller */}
-      <div className="bg-[#1E2939] py-4 sm:py-6 overflow-hidden flex whitespace-nowrap border-t border-violet-950">
-        <div className="animate-marquee flex gap-3 sm:gap-4 lg:gap-6 px-3 sm:px-4 w-max items-center">
-          {/* We duplicate the array to create a seamless infinite loop effect */}
-          {[...scrollerImages, ...scrollerImages].map((img, idx) => (
-            <div
-              key={idx}
-              className="w-24 sm:w-32 lg:w-36 h-20 sm:h-24 lg:h-28 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg lg:rounded-xl p-2 sm:p-3 flex items-center justify-center shrink-0 hover:bg-white/20 transition-colors"
-            >
-              <Image
-                src={img}
-                alt={`Product sample ${idx}`}
-                className="max-w-full max-h-full object-contain drop-shadow-lg"
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-// ────────────────────────────────────────────────────────────────────────────
 
 const DUMMY_STUDENT = {
   id: "dummy1",
@@ -1650,11 +1413,11 @@ export default function SchoolPage() {
               {/* Student Form Configuration */}
               <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
                 <h3 className="text-sm font-bold text-gray-800 border-b pb-2 flex items-center gap-1.5"><HugeiconsIcon
-      icon={StudentIcon}
-      size={20}
-      color="#7f22fe"
-      strokeWidth={1.5}
-    /> Student Form Fields</h3>
+                  icon={StudentIcon}
+                  size={20}
+                  color="#7f22fe"
+                  strokeWidth={1.5}
+                /> Student Form Fields</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
                   {customFieldsConfig.student?.map((f: any) => (
                     <label key={f.key} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none truncate" title={f.key}>
@@ -1838,365 +1601,365 @@ export default function SchoolPage() {
 
               {/* ── Drag & Drop Editor (Shown for all preset & custom layouts) ── */}
               <div className="mt-4 p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col lg:flex-row gap-6 sm:gap-8 text-left animate-in fade-in duration-200">
-                  {/* Canvas block (Left) */}
-                  <div className="flex flex-col items-center gap-4 shrink-0 mx-auto lg:mx-0">
-                    <div className="text-center">
-                      <h3 className="text-sm font-bold text-gray-800">Dynamic Design Canvas</h3>
-                      <p className="text-[10px] text-gray-400">Scale: 50% (Drag elements and click to style)</p>
-                    </div>
-
-                    {selectedLayout === 0 && !idCardLayoutConfig.backgroundUrl ? (
-                      <div className="w-[336.5px] h-[543.5px] border-2 border-dashed border-gray-300 rounded-xl bg-white flex flex-col items-center justify-center p-6 text-center select-none shadow-xs">
-                        <span className="text-3xl mb-2">🖼️</span>
-                        <p className="text-xs font-bold text-gray-600">No Background Image</p>
-                        <p className="text-[10px] text-gray-400 mb-4 font-medium">Upload a custom ID Card layout image to start positioning.</p>
-
-                        <label className="px-4 py-2 bg-violet-650 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md select-none">
-                          {bgUploading ? "Uploading..." : "Upload Background"}
-                          <input type="file" accept="image/*" onChange={handleBgUpload} disabled={bgUploading} className="hidden" />
-                        </label>
-                      </div>
-                    ) : (
-                      <div
-                        className="relative overflow-hidden rounded-xl border border-gray-300 shadow-2xl bg-white select-none shrink-0"
-                        style={{ width: "336.5px", height: "543.5px" }}
-                        onClick={() => setSelectedFieldKey(null)}
-                      >
-                        {/* Background loaded */}
-                        {selectedLayout === 0 ? (
-                          <div
-                            className="absolute inset-0 bg-cover bg-center pointer-events-none"
-                            style={{
-                              backgroundImage: `url(${idCardLayoutConfig.backgroundUrl})`,
-                              backgroundColor: theme.background,
-                            }}
-                          />
-                        ) : (
-                          <div className="absolute inset-0 pointer-events-none scale-[0.5] origin-top-left" style={{ width: "673px", height: "1087px" }}>
-                            <IdCard
-                              layout={selectedLayout}
-                              theme={theme}
-                              school={{ ...school, idCardLayoutConfig: idCardLayoutConfig }}
-                              student={DUMMY_STUDENT}
-                              classNameStr="Demo Class"
-                              hideFields={true}
-                            />
-                          </div>
-                        )}
-
-                        {/* Placed Elements Container */}
-                        <div className="absolute top-0 left-0 w-[673px] h-[1087px] origin-top-left scale-[0.5]">
-                          {/* Vertical alignment guide lines */}
-                          {xGuides.map((xVal, idx) => (
-                            <div
-                              key={`v-guide-${idx}`}
-                              className="absolute top-0 bottom-0 border-l border-dashed border-rose-500 z-50 pointer-events-none"
-                              style={{
-                                left: `${xVal}px`,
-                                width: "0px",
-                                height: "100%",
-                              }}
-                            />
-                          ))}
-
-                          {/* Horizontal alignment guide lines */}
-                          {yGuides.map((yVal, idx) => (
-                            <div
-                              key={`h-guide-${idx}`}
-                              className="absolute left-0 right-0 border-t border-dashed border-rose-500 z-50 pointer-events-none"
-                              style={{
-                                top: `${yVal}px`,
-                                height: "0px",
-                                width: "100%",
-                              }}
-                            />
-                          ))}
-
-                          {/* Canvas Center Reference Lines while dragging */}
-                          {dragState && (
-                            <>
-                              {/* Horizontal Center Line */}
-                              <div
-                                className="absolute top-[543.5px] left-0 right-0 border-t border-violet-400/20 z-30 pointer-events-none"
-                                style={{ height: "0px", width: "100%" }}
-                              />
-                              {/* Vertical Center Line */}
-                              <div
-                                className="absolute left-[336.5px] top-0 bottom-0 border-l border-violet-400/20 z-30 pointer-events-none"
-                                style={{ width: "0px", height: "100%" }}
-                              />
-                            </>
-                          )}
-
-                          {Object.entries(idCardLayoutConfig.fields || {}).map(([fieldKey, f]: [string, any]) => {
-                            if (!f || !f.visible) return null;
-
-                            let displayContent: React.ReactNode = "";
-                            if (fieldKey === "school_logo") {
-                              displayContent = school.logoUrl ? (
-                                <img src={school.logoUrl} alt="Logo" className="w-full h-full object-contain pointer-events-none" />
-                              ) : (
-                                <div className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Logo</div>
-                              );
-                            } else if (fieldKey === "student_photo") {
-                              displayContent = (
-                                <img src={DUMMY_STUDENT.profilePictureUrl} alt="Photo" className="w-full h-full object-cover pointer-events-none" />
-                              );
-                            } else if (fieldKey === "principal_signature") {
-                              displayContent = school.signatureUrl ? (
-                                <img src={school.signatureUrl} alt="Sign" className="w-full h-full object-contain pointer-events-none" />
-                              ) : (
-                                <div className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Signature</div>
-                              );
-                            } else {
-                              let label = "";
-                              let val = "";
-                              if (fieldKey === "school_name") val = school.name;
-                              else if (fieldKey === "school_caption") val = school.caption || "Caption Text";
-                              else if (fieldKey === "school_address") val = school.address || "Address Text";
-                              else if (fieldKey === "school_phone") val = school.phone || "Phone Text";
-                              else if (fieldKey === "student_name") val = DUMMY_STUDENT.name;
-                              else if (fieldKey === "class_name") { val = "Demo Class"; label = "Class: "; }
-                              else if (fieldKey === "student_fatherName") { val = DUMMY_STUDENT.fatherName; label = "F/O: "; }
-                              else if (fieldKey === "student_motherName") { val = DUMMY_STUDENT.motherName; label = "M/O: "; }
-                              else if (fieldKey === "student_fatherPhone") { val = DUMMY_STUDENT.fatherPhone; label = "Cell: "; }
-                              else if (fieldKey === "student_motherPhone") { val = DUMMY_STUDENT.motherPhone; label = "Cell: "; }
-                              else if (fieldKey === "student_address") { val = DUMMY_STUDENT.address; label = "Address: "; }
-                              else if (fieldKey.startsWith("student_custom_")) {
-                                const key = fieldKey.replace("student_custom_", "");
-                                val = `[${key}]`;
-                                label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
-                              } else if (fieldKey.startsWith("school_custom_")) {
-                                const key = fieldKey.replace("school_custom_", "");
-                                val = `[${key}]`;
-                                label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
-                              } else if (fieldKey.startsWith("class_custom_")) {
-                                const key = fieldKey.replace("class_custom_", "");
-                                val = `[${key}]`;
-                                label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
-                              }
-
-                              displayContent = (
-                                <div className="leading-tight select-none whitespace-nowrap">
-                                  {f.labelVisible !== false && label ? <span className="font-bold opacity-80 mr-1">{label}</span> : null}
-                                  <span>{val}</span>
-                                </div>
-                              );
-                            }
-
-                            const isImage = ["school_logo", "student_photo", "principal_signature"].includes(fieldKey);
-
-                            return (
-                              <DraggableField
-                                key={fieldKey}
-                                fieldKey={fieldKey}
-                                f={f}
-                                isImage={isImage}
-                                selectedFieldKey={selectedFieldKey}
-                                setSelectedFieldKey={setSelectedFieldKey}
-                                handleFieldDrag={handleFieldDrag}
-                                displayContent={displayContent}
-                                onDragStart={handleDragStart}
-                                onDragMove={handleDragMove}
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                {/* Canvas block (Left) */}
+                <div className="flex flex-col items-center gap-4 shrink-0 mx-auto lg:mx-0">
+                  <div className="text-center">
+                    <h3 className="text-sm font-bold text-gray-800">Dynamic Design Canvas</h3>
+                    <p className="text-[10px] text-gray-400">Scale: 50% (Drag elements and click to style)</p>
                   </div>
 
-                  {/* Designer controls (Right) */}
-                  <div className="flex-1 space-y-6">
-                    {idCardLayoutConfig.backgroundUrl && (
-                      <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Layout Background</h4>
-                        <div className="flex items-center gap-4">
-                          <div className="w-16 h-16 border rounded bg-gray-100 bg-cover bg-center shrink-0" style={{ backgroundImage: `url(${idCardLayoutConfig.backgroundUrl})` }} />
-                          <label className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-750 text-xs font-semibold rounded-lg border border-gray-300 transition-colors cursor-pointer select-none">
-                            {bgUploading ? "Replacing..." : "Replace Image"}
-                            <input type="file" accept="image/*" onChange={handleBgUpload} disabled={bgUploading} className="hidden" />
-                          </label>
+                  {selectedLayout === 0 && !idCardLayoutConfig.backgroundUrl ? (
+                    <div className="w-[336.5px] h-[543.5px] border-2 border-dashed border-gray-300 rounded-xl bg-white flex flex-col items-center justify-center p-6 text-center select-none shadow-xs">
+                      <span className="text-3xl mb-2">🖼️</span>
+                      <p className="text-xs font-bold text-gray-600">No Background Image</p>
+                      <p className="text-[10px] text-gray-400 mb-4 font-medium">Upload a custom ID Card layout image to start positioning.</p>
+
+                      <label className="px-4 py-2 bg-violet-650 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md select-none">
+                        {bgUploading ? "Uploading..." : "Upload Background"}
+                        <input type="file" accept="image/*" onChange={handleBgUpload} disabled={bgUploading} className="hidden" />
+                      </label>
+                    </div>
+                  ) : (
+                    <div
+                      className="relative overflow-hidden rounded-xl border border-gray-300 shadow-2xl bg-white select-none shrink-0"
+                      style={{ width: "336.5px", height: "543.5px" }}
+                      onClick={() => setSelectedFieldKey(null)}
+                    >
+                      {/* Background loaded */}
+                      {selectedLayout === 0 ? (
+                        <div
+                          className="absolute inset-0 bg-cover bg-center pointer-events-none"
+                          style={{
+                            backgroundImage: `url(${idCardLayoutConfig.backgroundUrl})`,
+                            backgroundColor: theme.background,
+                          }}
+                        />
+                      ) : (
+                        <div className="absolute inset-0 pointer-events-none scale-[0.5] origin-top-left" style={{ width: "673px", height: "1087px" }}>
+                          <IdCard
+                            layout={selectedLayout}
+                            theme={theme}
+                            school={{ ...school, idCardLayoutConfig: idCardLayoutConfig }}
+                            student={DUMMY_STUDENT}
+                            classNameStr="Demo Class"
+                            hideFields={true}
+                          />
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Field Toggles list */}
-                    <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3">
-                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Active Layout Fields</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
-                        {[
-                          { key: "school_logo", label: "School Logo" },
-                          { key: "school_name", label: "School Name" },
-                          { key: "school_caption", label: "School Caption" },
-                          { key: "school_address", label: "School Address" },
-                          { key: "school_phone", label: "School Phone" },
-                          { key: "student_photo", label: "Student Photo" },
-                          { key: "student_name", label: "Student Name" },
-                          { key: "class_name", label: "Class Name" },
-                          { key: "student_fatherName", label: "Father Name" },
-                          { key: "student_motherName", label: "Mother Name" },
-                          { key: "student_fatherPhone", label: "Father Phone" },
-                          { key: "student_motherPhone", label: "Mother Phone" },
-                          { key: "student_address", label: "Student Address" },
-                          { key: "principal_signature", label: "Signature" },
-                          // Add dynamic configurations custom fields
-                          ...(customFieldsConfig.school || []).filter((f: any) => !f.default && f.enabled).map((f: any) => ({ key: `school_custom_${f.key}`, label: `(School) ${f.label}` })),
-                          ...(customFieldsConfig.class || []).filter((f: any) => !f.default && f.enabled).map((f: any) => ({ key: `class_custom_${f.key}`, label: `(Class) ${f.label}` })),
-                          ...(customFieldsConfig.student || []).filter((f: any) => !f.default && f.enabled).map((f: any) => ({ key: `student_custom_${f.key}`, label: `(Student) ${f.label}` }))
-                        ].map((item) => {
-                          // Filter elements to only show if enabled in Form configurations
-                          const actualKey = item.key.replace(/^(school_custom_|student_custom_|class_custom_)/, "");
-                          const defaultMapping = customFieldsConfig.student.concat(customFieldsConfig.school).concat(customFieldsConfig.class);
-                          const isEnabled = defaultMapping.find((f: any) => f.key === actualKey)?.enabled !== false;
+                      {/* Placed Elements Container */}
+                      <div className="absolute top-0 left-0 w-[673px] h-[1087px] origin-top-left scale-[0.5]">
+                        {/* Vertical alignment guide lines */}
+                        {xGuides.map((xVal, idx) => (
+                          <div
+                            key={`v-guide-${idx}`}
+                            className="absolute top-0 bottom-0 border-l border-dashed border-rose-500 z-50 pointer-events-none"
+                            style={{
+                              left: `${xVal}px`,
+                              width: "0px",
+                              height: "100%",
+                            }}
+                          />
+                        ))}
 
-                          if (!isEnabled) return null;
-                          const isVisible = !!idCardLayoutConfig.fields?.[item.key]?.visible;
+                        {/* Horizontal alignment guide lines */}
+                        {yGuides.map((yVal, idx) => (
+                          <div
+                            key={`h-guide-${idx}`}
+                            className="absolute left-0 right-0 border-t border-dashed border-rose-500 z-50 pointer-events-none"
+                            style={{
+                              top: `${yVal}px`,
+                              height: "0px",
+                              width: "100%",
+                            }}
+                          />
+                        ))}
+
+                        {/* Canvas Center Reference Lines while dragging */}
+                        {dragState && (
+                          <>
+                            {/* Horizontal Center Line */}
+                            <div
+                              className="absolute top-[543.5px] left-0 right-0 border-t border-violet-400/20 z-30 pointer-events-none"
+                              style={{ height: "0px", width: "100%" }}
+                            />
+                            {/* Vertical Center Line */}
+                            <div
+                              className="absolute left-[336.5px] top-0 bottom-0 border-l border-violet-400/20 z-30 pointer-events-none"
+                              style={{ width: "0px", height: "100%" }}
+                            />
+                          </>
+                        )}
+
+                        {Object.entries(idCardLayoutConfig.fields || {}).map(([fieldKey, f]: [string, any]) => {
+                          if (!f || !f.visible) return null;
+
+                          let displayContent: React.ReactNode = "";
+                          if (fieldKey === "school_logo") {
+                            displayContent = school.logoUrl ? (
+                              <img src={school.logoUrl} alt="Logo" className="w-full h-full object-contain pointer-events-none" />
+                            ) : (
+                              <div className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Logo</div>
+                            );
+                          } else if (fieldKey === "student_photo") {
+                            displayContent = (
+                              <img src={DUMMY_STUDENT.profilePictureUrl} alt="Photo" className="w-full h-full object-cover pointer-events-none" />
+                            );
+                          } else if (fieldKey === "principal_signature") {
+                            displayContent = school.signatureUrl ? (
+                              <img src={school.signatureUrl} alt="Sign" className="w-full h-full object-contain pointer-events-none" />
+                            ) : (
+                              <div className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Signature</div>
+                            );
+                          } else {
+                            let label = "";
+                            let val = "";
+                            if (fieldKey === "school_name") val = school.name;
+                            else if (fieldKey === "school_caption") val = school.caption || "Caption Text";
+                            else if (fieldKey === "school_address") val = school.address || "Address Text";
+                            else if (fieldKey === "school_phone") val = school.phone || "Phone Text";
+                            else if (fieldKey === "student_name") val = DUMMY_STUDENT.name;
+                            else if (fieldKey === "class_name") { val = "Demo Class"; label = "Class: "; }
+                            else if (fieldKey === "student_fatherName") { val = DUMMY_STUDENT.fatherName; label = "F/O: "; }
+                            else if (fieldKey === "student_motherName") { val = DUMMY_STUDENT.motherName; label = "M/O: "; }
+                            else if (fieldKey === "student_fatherPhone") { val = DUMMY_STUDENT.fatherPhone; label = "Cell: "; }
+                            else if (fieldKey === "student_motherPhone") { val = DUMMY_STUDENT.motherPhone; label = "Cell: "; }
+                            else if (fieldKey === "student_address") { val = DUMMY_STUDENT.address; label = "Address: "; }
+                            else if (fieldKey.startsWith("student_custom_")) {
+                              const key = fieldKey.replace("student_custom_", "");
+                              val = `[${key}]`;
+                              label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
+                            } else if (fieldKey.startsWith("school_custom_")) {
+                              const key = fieldKey.replace("school_custom_", "");
+                              val = `[${key}]`;
+                              label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
+                            } else if (fieldKey.startsWith("class_custom_")) {
+                              const key = fieldKey.replace("class_custom_", "");
+                              val = `[${key}]`;
+                              label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
+                            }
+
+                            displayContent = (
+                              <div className="leading-tight select-none whitespace-nowrap">
+                                {f.labelVisible !== false && label ? <span className="font-bold opacity-80 mr-1">{label}</span> : null}
+                                <span>{val}</span>
+                              </div>
+                            );
+                          }
+
+                          const isImage = ["school_logo", "student_photo", "principal_signature"].includes(fieldKey);
 
                           return (
-                            <label key={item.key} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
-                              <input
-                                type="checkbox"
-                                checked={isVisible}
-                                onChange={() => handleToggleFieldVisibility(item.key)}
-                                className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-4 h-4"
-                              />
-                              <span className="truncate">{item.label}</span>
-                            </label>
+                            <DraggableField
+                              key={fieldKey}
+                              fieldKey={fieldKey}
+                              f={f}
+                              isImage={isImage}
+                              selectedFieldKey={selectedFieldKey}
+                              setSelectedFieldKey={setSelectedFieldKey}
+                              handleFieldDrag={handleFieldDrag}
+                              displayContent={displayContent}
+                              onDragStart={handleDragStart}
+                              onDragMove={handleDragMove}
+                            />
                           );
                         })}
                       </div>
                     </div>
+                  )}
+                </div>
 
-                    {/* Style editing panel (only shown if a field is active) */}
-                    {selectedFieldKey && idCardLayoutConfig.fields?.[selectedFieldKey] && (
-                      (() => {
-                        const f = idCardLayoutConfig.fields[selectedFieldKey];
-                        const isImage = ["school_logo", "student_photo", "principal_signature"].includes(selectedFieldKey);
-                        const nameSafe = selectedFieldKey.replace(/^(school_|student_|class_|principal_)/, "").replace(/_custom_/, " ");
-                        const displayName = nameSafe.charAt(0).toUpperCase() + nameSafe.slice(1);
+                {/* Designer controls (Right) */}
+                <div className="flex-1 space-y-6">
+                  {idCardLayoutConfig.backgroundUrl && (
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3">
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Layout Background</h4>
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 border rounded bg-gray-100 bg-cover bg-center shrink-0" style={{ backgroundImage: `url(${idCardLayoutConfig.backgroundUrl})` }} />
+                        <label className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-750 text-xs font-semibold rounded-lg border border-gray-300 transition-colors cursor-pointer select-none">
+                          {bgUploading ? "Replacing..." : "Replace Image"}
+                          <input type="file" accept="image/*" onChange={handleBgUpload} disabled={bgUploading} className="hidden" />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Field Toggles list */}
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3">
+                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Active Layout Fields</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                      {[
+                        { key: "school_logo", label: "School Logo" },
+                        { key: "school_name", label: "School Name" },
+                        { key: "school_caption", label: "School Caption" },
+                        { key: "school_address", label: "School Address" },
+                        { key: "school_phone", label: "School Phone" },
+                        { key: "student_photo", label: "Student Photo" },
+                        { key: "student_name", label: "Student Name" },
+                        { key: "class_name", label: "Class Name" },
+                        { key: "student_fatherName", label: "Father Name" },
+                        { key: "student_motherName", label: "Mother Name" },
+                        { key: "student_fatherPhone", label: "Father Phone" },
+                        { key: "student_motherPhone", label: "Mother Phone" },
+                        { key: "student_address", label: "Student Address" },
+                        { key: "principal_signature", label: "Signature" },
+                        // Add dynamic configurations custom fields
+                        ...(customFieldsConfig.school || []).filter((f: any) => !f.default && f.enabled).map((f: any) => ({ key: `school_custom_${f.key}`, label: `(School) ${f.label}` })),
+                        ...(customFieldsConfig.class || []).filter((f: any) => !f.default && f.enabled).map((f: any) => ({ key: `class_custom_${f.key}`, label: `(Class) ${f.label}` })),
+                        ...(customFieldsConfig.student || []).filter((f: any) => !f.default && f.enabled).map((f: any) => ({ key: `student_custom_${f.key}`, label: `(Student) ${f.label}` }))
+                      ].map((item) => {
+                        // Filter elements to only show if enabled in Form configurations
+                        const actualKey = item.key.replace(/^(school_custom_|student_custom_|class_custom_)/, "");
+                        const defaultMapping = customFieldsConfig.student.concat(customFieldsConfig.school).concat(customFieldsConfig.class);
+                        const isEnabled = defaultMapping.find((f: any) => f.key === actualKey)?.enabled !== false;
+
+                        if (!isEnabled) return null;
+                        const isVisible = !!idCardLayoutConfig.fields?.[item.key]?.visible;
 
                         return (
-                          <div className="p-4 bg-white border-2 border-violet-150 rounded-xl space-y-4 animate-in fade-in duration-200">
-                            <div className="flex justify-between items-center border-b pb-2">
-                              <h4 className="text-xs font-bold text-violet-900 uppercase tracking-widest">
-                                Style: {displayName}
-                              </h4>
-                              <button
-                                onClick={() => setSelectedFieldKey(null)}
-                                className="text-gray-405 hover:text-gray-600 font-bold text-xs bg-transparent border-0 cursor-pointer"
-                              >
-                                Close
-                              </button>
-                            </div>
+                          <label key={item.key} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={isVisible}
+                              onChange={() => handleToggleFieldVisibility(item.key)}
+                              className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-4 h-4"
+                            />
+                            <span className="truncate">{item.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-                            {!isImage && (
-                              <>
-                                <div className="flex flex-col gap-1.5">
-                                  <label className="text-[10px] font-bold text-gray-500 uppercase">Font Family</label>
-                                  <select
-                                    value={f.fontFamily || ""}
-                                    onChange={(e) => handleFieldStyleChange("fontFamily", e.target.value)}
-                                    className="w-full text-xs bg-white border border-gray-300 rounded-lg p-2 font-medium"
-                                  >
-                                    <option value="">Default Font</option>
-                                    {GOOGLE_FONTS.map((font) => (
-                                      <option key={font} value={font} style={{ fontFamily: font }}>{font}</option>
-                                    ))}
-                                  </select>
+                  {/* Style editing panel (only shown if a field is active) */}
+                  {selectedFieldKey && idCardLayoutConfig.fields?.[selectedFieldKey] && (
+                    (() => {
+                      const f = idCardLayoutConfig.fields[selectedFieldKey];
+                      const isImage = ["school_logo", "student_photo", "principal_signature"].includes(selectedFieldKey);
+                      const nameSafe = selectedFieldKey.replace(/^(school_|student_|class_|principal_)/, "").replace(/_custom_/, " ");
+                      const displayName = nameSafe.charAt(0).toUpperCase() + nameSafe.slice(1);
+
+                      return (
+                        <div className="p-4 bg-white border-2 border-violet-150 rounded-xl space-y-4 animate-in fade-in duration-200">
+                          <div className="flex justify-between items-center border-b pb-2">
+                            <h4 className="text-xs font-bold text-violet-900 uppercase tracking-widest">
+                              Style: {displayName}
+                            </h4>
+                            <button
+                              onClick={() => setSelectedFieldKey(null)}
+                              className="text-gray-405 hover:text-gray-600 font-bold text-xs bg-transparent border-0 cursor-pointer"
+                            >
+                              Close
+                            </button>
+                          </div>
+
+                          {!isImage && (
+                            <>
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Font Family</label>
+                                <select
+                                  value={f.fontFamily || ""}
+                                  onChange={(e) => handleFieldStyleChange("fontFamily", e.target.value)}
+                                  className="w-full text-xs bg-white border border-gray-300 rounded-lg p-2 font-medium"
+                                >
+                                  <option value="">Default Font</option>
+                                  {GOOGLE_FONTS.map((font) => (
+                                    <option key={font} value={font} style={{ fontFamily: font }}>{font}</option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Font Weight</label>
+                                <select
+                                  value={f.fontWeight || ""}
+                                  onChange={(e) => handleFieldStyleChange("fontWeight", e.target.value)}
+                                  className="w-full text-xs bg-white border border-gray-300 rounded-lg p-2 font-medium"
+                                >
+                                  <option value="">Default Weight</option>
+                                  {FONT_WEIGHTS.map((fw) => (
+                                    <option key={fw.value} value={fw.value}>{fw.label} ({fw.value})</option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase">
+                                  <span>Font Size</span>
+                                  <span className="text-violet-650 bg-violet-50 px-2 rounded font-bold">{f.fontSize || "20"}px</span>
                                 </div>
+                                <input
+                                  type="range"
+                                  min="12"
+                                  max="70"
+                                  value={f.fontSize || "20"}
+                                  onChange={(e) => handleFieldStyleChange("fontSize", parseInt(e.target.value, 10))}
+                                  className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
+                                />
+                              </div>
 
-                                <div className="flex flex-col gap-1.5">
-                                  <label className="text-[10px] font-bold text-gray-500 uppercase">Font Weight</label>
-                                  <select
-                                    value={f.fontWeight || ""}
-                                    onChange={(e) => handleFieldStyleChange("fontWeight", e.target.value)}
-                                    className="w-full text-xs bg-white border border-gray-300 rounded-lg p-2 font-medium"
-                                  >
-                                    <option value="">Default Weight</option>
-                                    {FONT_WEIGHTS.map((fw) => (
-                                      <option key={fw.value} value={fw.value}>{fw.label} ({fw.value})</option>
-                                    ))}
-                                  </select>
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                  <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase">
-                                    <span>Font Size</span>
-                                    <span className="text-violet-650 bg-violet-50 px-2 rounded font-bold">{f.fontSize || "20"}px</span>
-                                  </div>
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Text Color</label>
+                                <div className="flex items-center gap-2">
                                   <input
-                                    type="range"
-                                    min="12"
-                                    max="70"
-                                    value={f.fontSize || "20"}
-                                    onChange={(e) => handleFieldStyleChange("fontSize", parseInt(e.target.value, 10))}
-                                    className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
+                                    type="color"
+                                    value={f.color || "#000000"}
+                                    onChange={(e) => handleFieldStyleChange("color", e.target.value)}
+                                    className="w-8 h-8 rounded-lg cursor-pointer border shadow-xs appearance-none p-0.5 bg-white"
                                   />
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                  <label className="text-[10px] font-bold text-gray-500 uppercase">Text Color</label>
-                                  <div className="flex items-center gap-2">
-                                    <input
-                                      type="color"
-                                      value={f.color || "#000000"}
-                                      onChange={(e) => handleFieldStyleChange("color", e.target.value)}
-                                      className="w-8 h-8 rounded-lg cursor-pointer border shadow-xs appearance-none p-0.5 bg-white"
-                                    />
-                                    <input
-                                      type="text"
-                                      value={f.color || "#000000"}
-                                      onChange={(e) => handleFieldStyleChange("color", e.target.value)}
-                                      className="w-24 px-2 py-1 text-xs border rounded-lg"
-                                    />
-                                  </div>
-                                </div>
-
-                                <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer pt-1 select-none">
                                   <input
-                                    type="checkbox"
-                                    checked={f.labelVisible !== false}
-                                    onChange={(e) => handleFieldStyleChange("labelVisible", e.target.checked)}
-                                    className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-4 h-4"
-                                  />
-                                  <span>Show Field Label Prefix</span>
-                                </label>
-                              </>
-                            )}
-
-                            {isImage && (
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="flex flex-col gap-1">
-                                  <label className="text-[10px] font-bold text-gray-500 uppercase">Width (px)</label>
-                                  <input
-                                    type="number"
-                                    min="20"
-                                    max="600"
-                                    value={f.width || "120"}
-                                    onChange={(e) => handleFieldStyleChange("width", parseInt(e.target.value, 10))}
-                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg"
-                                  />
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                  <label className="text-[10px] font-bold text-gray-500 uppercase">Height (px)</label>
-                                  <input
-                                    type="number"
-                                    min="20"
-                                    max="800"
-                                    value={f.height || "120"}
-                                    onChange={(e) => handleFieldStyleChange("height", parseInt(e.target.value, 10))}
-                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg"
+                                    type="text"
+                                    value={f.color || "#000000"}
+                                    onChange={(e) => handleFieldStyleChange("color", e.target.value)}
+                                    className="w-24 px-2 py-1 text-xs border rounded-lg"
                                   />
                                 </div>
                               </div>
-                            )}
-                          </div>
-                        );
-                      })()
-                    )}
-                  </div>
+
+                              <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer pt-1 select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={f.labelVisible !== false}
+                                  onChange={(e) => handleFieldStyleChange("labelVisible", e.target.checked)}
+                                  className="rounded text-violet-650 focus:ring-violet-500 cursor-pointer w-4 h-4"
+                                />
+                                <span>Show Field Label Prefix</span>
+                              </label>
+                            </>
+                          )}
+
+                          {isImage && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Width (px)</label>
+                                <input
+                                  type="number"
+                                  min="20"
+                                  max="600"
+                                  value={f.width || "120"}
+                                  onChange={(e) => handleFieldStyleChange("width", parseInt(e.target.value, 10))}
+                                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Height (px)</label>
+                                <input
+                                  type="number"
+                                  min="20"
+                                  max="800"
+                                  value={f.height || "120"}
+                                  onChange={(e) => handleFieldStyleChange("height", parseInt(e.target.value, 10))}
+                                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()
+                  )}
                 </div>
+              </div>
               {/* Preset Layout Selection */}
               <div className="mt-8 pt-8 border-t border-gray-200 text-left">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -2306,10 +2069,10 @@ export default function SchoolPage() {
 
           {/* ── TAB 4: Document Studio ──────────────────────── */}
           {activeTab === "documents" && isAdmin && (
-            <DocumentStudioTab 
-              schoolId={schoolId} 
-              schoolName={school.name} 
-              students={school.classes.flatMap(c => 
+            <DocumentStudioTab
+              schoolId={schoolId}
+              schoolName={school.name}
+              students={school.classes.flatMap(c =>
                 (c.students || []).map(s => ({
                   ...s,
                   class: { id: c.id, name: c.name, customValues: (c as any).customValues },
