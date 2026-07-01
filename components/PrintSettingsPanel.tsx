@@ -67,6 +67,22 @@ export function PrintSettingsPanel({ settings, onChange, showDocumentOrientation
             </div>
           </div>
         )}
+
+        {/* Gap Configuration */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Gap (mm)</label>
+          <input 
+            type="number" 
+            value={settings.gapMm ?? 2}
+            onChange={(e) => {
+              const val = e.target.value;
+              onChange({ ...settings, gapMm: val === "" ? 0 : parseFloat(val) });
+            }}
+            min="0"
+            step="1"
+            className="w-[80px] h-[34px] px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all"
+          />
+        </div>
       </div>
     </div>
   );

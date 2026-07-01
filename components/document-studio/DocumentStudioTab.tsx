@@ -893,8 +893,9 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
               {sheetStudents.map((student: any, i: number) => {
                 const col = i % printGrid.cols;
                 const row = Math.floor(i / printGrid.cols);
-                const xMm = printGrid.offsetX + col * (printGrid.docW + 2); // 2mm gap
-                const yMm = printGrid.offsetY + row * (printGrid.docH + 2);
+                const actualGap = printSettings.gapMm ?? 2;
+                const xMm = printGrid.offsetX + col * (printGrid.docW + actualGap);
+                const yMm = printGrid.offsetY + row * (printGrid.docH + actualGap);
 
                 const isRotated = printSettings.documentHorizontal;
                 const docWrapperWidth = isRotated ? printGrid.docH : printGrid.docW;
@@ -922,13 +923,10 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
                         transformOrigin: "center center",
                       }}
                     >
-                      {/* Scale content from MM to Canvas PX for rendering */}
                       <div 
                         style={{
                           width: `${widthMm * MM_TO_PX}px`,
                           height: `${heightMm * MM_TO_PX}px`,
-                          transform: `scale(${1 / MM_TO_PX})`,
-                          transformOrigin: "top left",
                         }}
                       >
             {backgroundUrl && (

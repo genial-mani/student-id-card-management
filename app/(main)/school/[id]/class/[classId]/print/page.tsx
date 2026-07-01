@@ -101,15 +101,16 @@ export default function PrintPage() {
     documentHorizontal: false, // ID cards are always vertical
   });
 
-  const printGrid = useMemo(() => calculatePrintGrid(printSettings, CARD_W, CARD_H, 24), [printSettings]);
+  const printGrid = useMemo(() => calculatePrintGrid(printSettings, CARD_W, CARD_H), [printSettings]);
 
   function getSlotPos(idx: number) {
     if (!printGrid.fits || printGrid.itemsPerPage === 0) return { x: 0, y: 0 };
     const col = idx % printGrid.cols;
     const row = Math.floor(idx / printGrid.cols);
+    const actualGapPx = printSettings.gapMm !== undefined ? printSettings.gapMm * 3.7795275591 : 24;
     return {
-      x: printGrid.offsetX + col * (CARD_W + 24),
-      y: printGrid.offsetY + row * (CARD_H + 24),
+      x: printGrid.offsetX + col * (CARD_W + actualGapPx),
+      y: printGrid.offsetY + row * (CARD_H + actualGapPx),
     };
   }
 

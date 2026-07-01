@@ -14,6 +14,7 @@ export interface PrintSettings {
   paperSize: PaperSize;
   paperOrientation: Orientation;
   documentHorizontal: boolean; 
+  gapMm?: number;
 }
 
 export function calculatePrintGrid(
@@ -23,6 +24,7 @@ export function calculatePrintGrid(
   gapPx: number = 24
 ) {
   const paper = PAPER_SIZES[settings.paperSize];
+  const actualGapPx = settings.gapMm !== undefined ? settings.gapMm * 3.7795275591 : gapPx;
   
   // Apply paper orientation
   const paperW = settings.paperOrientation === "portrait" ? paper.widthPx : paper.heightPx;
@@ -54,16 +56,16 @@ export function calculatePrintGrid(
   }
 
   // Calculate maximum columns and rows
-  // Formula: (cols * docW) + ((cols - 1) * gapPx) <= paperW
-  // cols * (docW + gapPx) <= paperW + gapPx
-  const cols = Math.floor((paperW + gapPx) / (docW + gapPx));
-  const rows = Math.floor((paperH + gapPx) / (docH + gapPx));
+  // Formula: (cols * docW) + ((cols - 1) * actualGapPx) <= paperW
+  // cols * (docW + actualGapPx) <= paperW + actualGapPx
+  const cols = Math.floor((paperW + actualGapPx) / (docW + actualGapPx));
+  const rows = Math.floor((paperH + actualGapPx) / (docH + actualGapPx));
 
   const itemsPerPage = cols * rows;
 
   // Center the grid on the page
-  const totalGridW = (cols * docW) + ((cols - 1) * gapPx);
-  const totalGridH = (rows * docH) + ((rows - 1) * gapPx);
+  const totalGridW = (cols * docW) + ((cols - 1) * actualGapPx);
+  const totalGridH = (rows * docH) + ((rows - 1) * actualGapPx);
 
   const offsetX = (paperW - totalGridW) / 2;
   const offsetY = (paperH - totalGridH) / 2;
@@ -91,6 +93,7 @@ export function calculatePrintGridMm(
   gapMm: number = 2
 ) {
   const paper = PAPER_SIZES[settings.paperSize];
+  const actualGapMm = settings.gapMm !== undefined ? settings.gapMm : gapMm;
   
   const paperWMm = settings.paperOrientation === "portrait" ? paper.widthMm : paper.heightMm;
   const paperHMm = settings.paperOrientation === "portrait" ? paper.heightMm : paper.widthMm;
@@ -102,12 +105,12 @@ export function calculatePrintGridMm(
     return { fits: false, cols: 0, rows: 0, offsetX: 0, offsetY: 0, itemsPerPage: 0, paperWMm, paperHMm, docW, docH };
   }
 
-  const cols = Math.floor((paperWMm + gapMm) / (docW + gapMm));
-  const rows = Math.floor((paperHMm + gapMm) / (docH + gapMm));
+  const cols = Math.floor((paperWMm + actualGapMm) / (docW + actualGapMm));
+  const rows = Math.floor((paperHMm + actualGapMm) / (docH + actualGapMm));
   const itemsPerPage = cols * rows;
 
-  const totalGridW = (cols * docW) + ((cols - 1) * gapMm);
-  const totalGridH = (rows * docH) + ((rows - 1) * gapMm);
+  const totalGridW = (cols * docW) + ((cols - 1) * actualGapMm);
+  const totalGridH = (rows * docH) + ((rows - 1) * actualGapMm);
 
   const offsetX = (paperWMm - totalGridW) / 2;
   const offsetY = (paperHMm - totalGridH) / 2;
