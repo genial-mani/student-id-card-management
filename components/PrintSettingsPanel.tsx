@@ -11,7 +11,7 @@ interface PrintSettingsPanelProps {
 
 export function PrintSettingsPanel({ settings, onChange, showDocumentOrientation, showPaperOrientation = true }: PrintSettingsPanelProps) {
   return (
-    <div className="bg-white p-4 border-b border-gray-200 no-print flex flex-wrap gap-4 items-center justify-between shadow-sm z-40 relative">
+    <div className="bg-white p-4 border-b border-gray-200 no-print flex flex-wrap gap-4 items-center justify-between shadow-sm z-[60] relative">
       <div className="flex flex-wrap gap-6 items-end">
         {/* Paper Size */}
         <div className="flex flex-col gap-1.5 w-[200px]">
