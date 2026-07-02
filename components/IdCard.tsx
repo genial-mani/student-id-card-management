@@ -207,8 +207,14 @@ export default function IdCard({
       {!hideFields && Object.entries(fields).map(([fieldKey, f]: [string, any]) => {
         if (!f || !f.visible) return null;
 
-        const fieldStyle = {
-          position: "absolute" as const,
+        const isMultiline =
+          fieldKey === "school_address" ||
+          fieldKey === "student_address" ||
+          fieldKey === "school_name" ||
+          fieldKey === "school_caption";
+
+        const fieldStyle: React.CSSProperties = {
+          position: "absolute",
           left: `${f.x}px`,
           top: `${f.y}px`,
           width: f.width ? `${f.width}px` : undefined,
@@ -219,6 +225,7 @@ export default function IdCard({
           color: f.color || undefined,
           textAlign: f.align || "left",
           zIndex: 20, // Ensure fields are above background elements
+          whiteSpace: isMultiline ? "normal" : "nowrap",
         };
 
         if (fieldKey === "school_logo") {

@@ -210,6 +210,8 @@ export default function PrintPage() {
 
   // ── PDF core ────────────────────────────────────────────────────────────────
 
+  const QUALITY_MULTIPLIER = 2; // Renders at 600 DPI for high quality
+
   /**
    * Capture one IdCard to a Data URL using html-to-image
    */
@@ -221,9 +223,9 @@ export default function PrintPage() {
     if (!el) return null;
 
     try {
-      // Capture exactly at 1:1 pixel ratio
+      // Capture at higher pixel ratio for print clarity
       const dataUrl = await toPng(el, {
-        pixelRatio: 1,
+        pixelRatio: QUALITY_MULTIPLIER,
         backgroundColor: "#ffffff",
         width: CARD_W,
         height: CARD_H,
@@ -250,18 +252,27 @@ export default function PrintPage() {
     sheetStudents: Student[],
   ): HTMLCanvasElement => {
     const canvas = document.createElement("canvas");
-    canvas.width = printGrid.paperW;
-    canvas.height = printGrid.paperH;
+    canvas.width = printGrid.paperW * QUALITY_MULTIPLIER;
+    canvas.height = printGrid.paperH * QUALITY_MULTIPLIER;
     const ctx = canvas.getContext("2d")!;
+    
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
 
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, printGrid.paperW, printGrid.paperH);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     sheetStudents.forEach((_, i) => {
       const img = cardImages[i];
       if (!img) return;
       const { x, y } = getSlotPos(i);
-      ctx.drawImage(img, x, y, CARD_W, CARD_H);
+      ctx.drawImage(
+        img,
+        x * QUALITY_MULTIPLIER,
+        y * QUALITY_MULTIPLIER,
+        CARD_W * QUALITY_MULTIPLIER,
+        CARD_H * QUALITY_MULTIPLIER
+      );
     });
 
     return canvas;
