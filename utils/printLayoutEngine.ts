@@ -14,17 +14,20 @@ export interface PrintSettings {
   paperSize: PaperSize;
   paperOrientation: Orientation;
   documentHorizontal: boolean; 
-  gapMm?: number;
+  gapX?: number;
+  gapY?: number;
 }
 
 export function calculatePrintGrid(
   settings: PrintSettings,
   docWidthPx: number,
   docHeightPx: number,
-  gapPx: number = 24
+  defaultGapPx: number = 24
 ) {
   const paper = PAPER_SIZES[settings.paperSize];
-  const actualGapPx = settings.gapMm !== undefined ? settings.gapMm * 3.7795275591 : gapPx;
+  const MM_TO_PX = 3.7795275591;
+  const actualGapX = settings.gapX !== undefined ? settings.gapX * MM_TO_PX : defaultGapPx;
+  const actualGapY = settings.gapY !== undefined ? settings.gapY * MM_TO_PX : defaultGapPx;
   
   // Apply paper orientation
   const paperW = settings.paperOrientation === "portrait" ? paper.widthPx : paper.heightPx;
@@ -56,16 +59,14 @@ export function calculatePrintGrid(
   }
 
   // Calculate maximum columns and rows
-  // Formula: (cols * docW) + ((cols - 1) * actualGapPx) <= paperW
-  // cols * (docW + actualGapPx) <= paperW + actualGapPx
-  const cols = Math.floor((paperW + actualGapPx) / (docW + actualGapPx));
-  const rows = Math.floor((paperH + actualGapPx) / (docH + actualGapPx));
+  const cols = Math.floor((paperW + actualGapX) / (docW + actualGapX));
+  const rows = Math.floor((paperH + actualGapY) / (docH + actualGapY));
 
   const itemsPerPage = cols * rows;
 
   // Center the grid on the page
-  const totalGridW = (cols * docW) + ((cols - 1) * actualGapPx);
-  const totalGridH = (rows * docH) + ((rows - 1) * actualGapPx);
+  const totalGridW = (cols * docW) + ((cols - 1) * actualGapX);
+  const totalGridH = (rows * docH) + ((rows - 1) * actualGapY);
 
   const offsetX = (paperW - totalGridW) / 2;
   const offsetY = (paperH - totalGridH) / 2;
@@ -90,30 +91,38 @@ export function calculatePrintGridMm(
   settings: PrintSettings,
   docWidthMm: number,
   docHeightMm: number,
-  gapMm: number = 2
+  defaultGapMm: number = 2
 ) {
   const paper = PAPER_SIZES[settings.paperSize];
-  const actualGapMm = settings.gapMm !== undefined ? settings.gapMm : gapMm;
+  const actualGapX = settings.gapX !== undefined ? settings.gapX : defaultGapMm;
+  const actualGapY = settings.gapY !== undefined ? settings.gapY : defaultGapMm;
   
   const paperWMm = settings.paperOrientation === "portrait" ? paper.widthMm : paper.heightMm;
   const paperHMm = settings.paperOrientation === "portrait" ? paper.heightMm : paper.widthMm;
 
+  // Apply document orientation
   const docW = settings.documentHorizontal ? docHeightMm : docWidthMm;
   const docH = settings.documentHorizontal ? docWidthMm : docHeightMm;
 
   if (docW > paperWMm || docH > paperHMm) {
-    return { fits: false, cols: 0, rows: 0, offsetX: 0, offsetY: 0, itemsPerPage: 0, paperWMm, paperHMm, docW, docH };
+    return {
+      fits: false, cols: 0, rows: 0, offsetX: 0, offsetY: 0,
+      itemsPerPage: 0, paperWMm, paperHMm, docW, docH
+    };
   }
 
-  const cols = Math.floor((paperWMm + actualGapMm) / (docW + actualGapMm));
-  const rows = Math.floor((paperHMm + actualGapMm) / (docH + actualGapMm));
+  const cols = Math.floor((paperWMm + actualGapX) / (docW + actualGapX));
+  const rows = Math.floor((paperHMm + actualGapY) / (docH + actualGapY));
   const itemsPerPage = cols * rows;
 
-  const totalGridW = (cols * docW) + ((cols - 1) * actualGapMm);
-  const totalGridH = (rows * docH) + ((rows - 1) * actualGapMm);
+  const totalGridW = (cols * docW) + ((cols - 1) * actualGapX);
+  const totalGridH = (rows * docH) + ((rows - 1) * actualGapY);
 
   const offsetX = (paperWMm - totalGridW) / 2;
   const offsetY = (paperHMm - totalGridH) / 2;
 
-  return { fits: true, cols, rows, offsetX, offsetY, itemsPerPage, paperWMm, paperHMm, docW, docH };
+  return {
+    fits: true, cols, rows, offsetX, offsetY, itemsPerPage,
+    paperWMm, paperHMm, docW, docH
+  };
 }

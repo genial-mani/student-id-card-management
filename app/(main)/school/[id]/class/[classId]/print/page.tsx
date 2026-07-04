@@ -107,10 +107,12 @@ export default function PrintPage() {
     if (!printGrid.fits || printGrid.itemsPerPage === 0) return { x: 0, y: 0 };
     const col = idx % printGrid.cols;
     const row = Math.floor(idx / printGrid.cols);
-    const actualGapPx = printSettings.gapMm !== undefined ? printSettings.gapMm * 3.7795275591 : 24;
+    const MM_TO_PX = 3.7795275591;
+    const actualGapX = printSettings.gapX !== undefined ? printSettings.gapX * MM_TO_PX : 24;
+    const actualGapY = printSettings.gapY !== undefined ? printSettings.gapY * MM_TO_PX : 24;
     return {
-      x: printGrid.offsetX + col * (CARD_W + actualGapPx),
-      y: printGrid.offsetY + row * (CARD_H + actualGapPx),
+      x: printGrid.offsetX + col * (CARD_W + actualGapX),
+      y: printGrid.offsetY + row * (CARD_H + actualGapY),
     };
   }
 
@@ -191,13 +193,13 @@ export default function PrintPage() {
     return () => clearTimeout(t);
   }, [loading]);
 
-  useEffect(()=>{
-    if(user){
-      if(user.role !== "admin"){
+  useEffect(() => {
+    if (user) {
+      if (user.role !== "admin") {
         setForbidden(true);
       }
     }
-  },[user])
+  }, [user])
 
   // ── Sheet slices ────────────────────────────────────────────────────────────
 
@@ -255,7 +257,7 @@ export default function PrintPage() {
     canvas.width = printGrid.paperW * QUALITY_MULTIPLIER;
     canvas.height = printGrid.paperH * QUALITY_MULTIPLIER;
     const ctx = canvas.getContext("2d")!;
-    
+
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
@@ -341,14 +343,66 @@ export default function PrintPage() {
           isAll ? `all_${totalSheets}_sheets` : `sheet_${indices[0] + 1}`,
         ].join("_") + ".pdf";
 
-      setDlProgress("Saving PDF…");
-      pdf.save(fileName);
+      setDlProgress("Injecting CMYK Print Profile…");
+      const { PDFDocument, PDFName } = await import("pdf-lib");
+      const pdfBytes = pdf.output("arraybuffer");
+      const pdfDoc = await PDFDocument.load(pdfBytes);
+
+      try {
+        const iccRes = await fetch("/icc/default_cmyk.icc");
+        if (iccRes.ok) {
+          const iccProfile = await iccRes.arrayBuffer();
+          const iccStream = pdfDoc.context.stream(new Uint8Array(iccProfile), {
+            Length: iccProfile.byteLength,
+          });
+          const iccRef = pdfDoc.context.register(iccStream);
+
+          const outputIntent = pdfDoc.context.obj({
+            Type: PDFName.of("OutputIntent"),
+            S: PDFName.of("GTS_PDFX"),
+            OutputConditionIdentifier: "Fogra39",
+            DestOutputProfile: iccRef,
+          });
+
+          pdfDoc.catalog.set(
+            PDFName.of("OutputIntents"),
+            pdfDoc.context.obj([outputIntent])
+          );
+        }
+      } catch (e) {
+        console.warn("Could not inject ICC profile, continuing without it.");
+      }
+
+      const finalPdfBytes = await pdfDoc.save();
+
+      if (typeof window !== 'undefined' && (window as any).electronAPI) {
+        setDlProgress("Sending directly to local printer...");
+        try {
+          // Convert Uint8Array to normal array for IPC transfer
+          await (window as any).electronAPI.printPdf(Array.from(finalPdfBytes));
+          alert("Sent to local printer successfully!");
+        } catch (e: any) {
+          console.error("Print failed:", e);
+          alert("Local print failed: " + e.message);
+        }
+      } else {
+        const blob = new Blob([finalPdfBytes as any], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
     } catch (err) {
       console.error("PDF error:", err);
       alert(
         `PDF generation failed:\n${err instanceof Error ? err.message : String(err)}`,
       );
     } finally {
+      setDownloading(null);
       setDownloading(null);
       setDlProgress("");
     }
@@ -444,10 +498,10 @@ export default function PrintPage() {
         ))}
       </div>
 
-      <PrintSettingsPanel 
-        settings={printSettings} 
-        onChange={setPrintSettings} 
-        showDocumentOrientation={false} 
+      <PrintSettingsPanel
+        settings={printSettings}
+        onChange={setPrintSettings}
+        showDocumentOrientation={false}
       />
 
       <div className="min-h-screen bg-slate-200 pb-12">
@@ -517,11 +571,10 @@ export default function PrintPage() {
                   type="button"
                   onClick={() => downloadSheets([i])}
                   disabled={isBusy}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border shadow-sm transition-colors disabled:opacity-40 ${
-                    downloading === i
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border shadow-sm transition-colors disabled:opacity-40 ${downloading === i
                       ? "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-700"
                       : "border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
-                  }`}
+                    }`}
                 >
                   {downloading === i ? "…" : `Sheet ${i + 1}`}
                 </Button>

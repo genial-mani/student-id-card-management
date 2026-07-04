@@ -1,5 +1,7 @@
 "use client";
 
+import { PDFDocument, StandardFonts, cmyk } from "pdf-lib";
+
 import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -363,6 +365,7 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
         y: 50,
         fontSize: isImage ? undefined : 16,
         color: isImage ? undefined : "#000000",
+        colorCmyk: isImage ? undefined : { c: 0, m: 0, y: 0, k: 100 },
         fontWeight: isImage ? undefined : "500",
         fontFamily: isImage ? undefined : "Inter",
         width: isImage ? 100 : undefined,
@@ -643,6 +646,7 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                       <input type="text" value={fields[selectedFieldKey].color || "#000000"} onChange={e => updateFieldProperty("color", e.target.value)} className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" />
                     </div>
                   </div>
+
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">Font Family</label>
                     <select value={fields[selectedFieldKey].fontFamily || "Inter"} onChange={e => updateFieldProperty("fontFamily", e.target.value)} className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm">
@@ -694,7 +698,7 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
         {/* Scrollable Container */}
         <div className="flex-1 overflow-auto relative p-8" ref={containerRef}>
           <div 
-            className="relative bg-white shadow-xl transition-transform origin-top-left mx-auto"
+            className="relative bg-white shadow-xl transition-transform origin-top-left"
             style={{ 
               width: `${canvasWidthPx}px`, 
               height: `${canvasHeightPx}px`,
@@ -841,6 +845,97 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
     window.print();
   };
 
+  const [isGeneratingCmyk, setIsGeneratingCmyk] = useState(false);
+
+  const handleDownloadCmyk = async () => {
+    setIsGeneratingCmyk(true);
+    try {
+      const h2iMod = await import("html-to-image");
+      const jsPDFMod = await import("jspdf");
+      
+      const { toPng } = h2iMod;
+      const jsPDF = jsPDFMod.default || (jsPDFMod as any).jsPDF;
+      
+      const pdf = new jsPDF({
+        orientation: printSettings.paperOrientation,
+        unit: "mm",
+        format: [printGrid.paperWMm, printGrid.paperHMm],
+      });
+      
+      const sheets = document.querySelectorAll('.sheet');
+      
+      for (let i = 0; i < sheets.length; i++) {
+        const el = sheets[i] as HTMLElement;
+        const dataUrl = await toPng(el, {
+          pixelRatio: 2,
+          backgroundColor: "#ffffff",
+        });
+        
+        if (i > 0) pdf.addPage();
+        pdf.addImage(dataUrl, "PNG", 0, 0, printGrid.paperWMm, printGrid.paperHMm);
+      }
+      
+      const { PDFDocument, PDFName } = await import("pdf-lib");
+      const pdfBytes = pdf.output("arraybuffer");
+      const pdfDoc = await PDFDocument.load(pdfBytes);
+      
+      try {
+        const iccRes = await fetch("/icc/default_cmyk.icc");
+        if (iccRes.ok) {
+          const iccProfile = await iccRes.arrayBuffer();
+          const iccStream = pdfDoc.context.stream(new Uint8Array(iccProfile), {
+            Length: iccProfile.byteLength,
+          });
+          const iccRef = pdfDoc.context.register(iccStream);
+          
+          const outputIntent = pdfDoc.context.obj({
+            Type: PDFName.of("OutputIntent"),
+            S: PDFName.of("GTS_PDFX"),
+            OutputConditionIdentifier: "Fogra39",
+            DestOutputProfile: iccRef,
+          });
+          
+          pdfDoc.catalog.set(
+            PDFName.of("OutputIntents"),
+            pdfDoc.context.obj([outputIntent])
+          );
+        }
+      } catch (e) {
+        console.warn("Could not inject ICC profile, continuing without it.");
+      }
+      
+      const finalPdfBytes = await pdfDoc.save();
+      
+      if (typeof window !== 'undefined' && (window as any).electronAPI) {
+        toast.loading("Sending to local printer...");
+        try {
+          await (window as any).electronAPI.printPdf(Array.from(finalPdfBytes));
+          toast.dismiss();
+          toast.success("Sent to local printer successfully!");
+        } catch (e: any) {
+          console.error("Print failed:", e);
+          toast.dismiss();
+          toast.error("Local print failed: " + e.message);
+        }
+      } else {
+        const blob = new Blob([finalPdfBytes as any], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "Document_CMYK.pdf";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate CMYK PDF.");
+    } finally {
+      setIsGeneratingCmyk(false);
+    }
+  };
+
   const canvasWidthPx = widthMm * MM_TO_PX;
   const canvasHeightPx = heightMm * MM_TO_PX;
 
@@ -859,10 +954,15 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
             </p>
           </div>
         </div>
-        <Button onClick={handlePrint} className="bg-violet-600 hover:bg-violet-700 text-white">
-          <HugeiconsIcon icon={PrinterIcon} size={16} color="currentColor" />
-          <span className="ml-2">Print Documents</span>
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button onClick={handleDownloadCmyk} disabled={isGeneratingCmyk} className="bg-black hover:bg-gray-800 text-white">
+            <span className="ml-2">{isGeneratingCmyk ? "Generating CMYK..." : "Download CMYK PDF"}</span>
+          </Button>
+          <Button onClick={handlePrint} className="bg-violet-600 hover:bg-violet-700 text-white">
+            <HugeiconsIcon icon={PrinterIcon} size={16} color="currentColor" />
+            <span className="ml-2">Print Documents</span>
+          </Button>
+        </div>
       </div>
 
       <PrintSettingsPanel 
@@ -893,9 +993,10 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
               {sheetStudents.map((student: any, i: number) => {
                 const col = i % printGrid.cols;
                 const row = Math.floor(i / printGrid.cols);
-                const actualGap = printSettings.gapMm ?? 2;
-                const xMm = printGrid.offsetX + col * (printGrid.docW + actualGap);
-                const yMm = printGrid.offsetY + row * (printGrid.docH + actualGap);
+                const actualGapX = printSettings.gapX ?? 2;
+                const actualGapY = printSettings.gapY ?? 2;
+                const xMm = printGrid.offsetX + col * (printGrid.docW + actualGapX);
+                const yMm = printGrid.offsetY + row * (printGrid.docH + actualGapY);
 
                 const isRotated = printSettings.documentHorizontal;
                 const docWrapperWidth = isRotated ? printGrid.docH : printGrid.docW;
@@ -915,7 +1016,7 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
                     }}
                   >
                     <div 
-                      className="relative bg-white"
+                      className="relative bg-white border-[0.5px] border-gray-300 box-border"
                       style={{ 
                         width: `${docWrapperWidth}mm`, 
                         height: `${docWrapperHeight}mm`,

@@ -1720,10 +1720,10 @@ export default function SchoolPage() {
                             else if (fieldKey === "school_phone") val = school.phone || "Phone Text";
                             else if (fieldKey === "student_name") val = DUMMY_STUDENT.name;
                             else if (fieldKey === "class_name") { val = "Demo Class"; label = "Class: "; }
-                            else if (fieldKey === "student_fatherName") { val = DUMMY_STUDENT.fatherName; label = "F/O: "; }
-                            else if (fieldKey === "student_motherName") { val = DUMMY_STUDENT.motherName; label = "M/O: "; }
+                            else if (fieldKey === "student_fatherName") { val = DUMMY_STUDENT.fatherName; label = "F's Name: "; }
+                            else if (fieldKey === "student_motherName") { val = DUMMY_STUDENT.motherName; label = "M's Name: "; }
                             else if (fieldKey === "student_fatherPhone") { val = DUMMY_STUDENT.fatherPhone; label = "Cell: "; }
-                            else if (fieldKey === "student_motherPhone") { val = DUMMY_STUDENT.motherPhone; label = "Cell: "; }
+                            else if (fieldKey === "student_motherPhone") { val = DUMMY_STUDENT.motherPhone; label = "M's Cell: "; }
                             else if (fieldKey === "student_address") { val = DUMMY_STUDENT.address; label = "Address: "; }
                             else if (fieldKey.startsWith("student_custom_")) {
                               const key = fieldKey.replace("student_custom_", "");
