@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import IdCard, { CardTheme } from "@/components/IdCard";
 import DocumentStudioTab from "@/components/document-studio/DocumentStudioTab";
-import Draggable from "react-draggable";
+import { Rnd } from "react-rnd";
 import uploadImageToCloudinary from "@/utils/cloudService";
 import { toast } from "sonner";
 
@@ -133,6 +133,7 @@ interface DraggableFieldProps {
   displayContent: React.ReactNode;
   onDragStart: (key: string, x: number, y: number, w: number, h: number) => void;
   onDragMove: (key: string, x: number, y: number, w: number, h: number) => void;
+  handleFieldResize: (key: string, width: number, height: number, scaleX: number, scaleY: number, x: number, y: number) => void;
 }
 
 const DraggableField = ({
@@ -145,44 +146,82 @@ const DraggableField = ({
   displayContent,
   onDragStart,
   onDragMove,
+  handleFieldResize,
 }: DraggableFieldProps) => {
-  const nodeRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  
+  const handleStyle = {
+    background: '#8b5cf6', // violet-500
+    border: '1px solid white',
+    boxShadow: '0 0 2px rgba(0,0,0,0.3)'
+  };
+  
+  const resizeHandleStyles = {
+    bottomRight: { ...handleStyle, width: '10px', height: '10px', right: '-5px', bottom: '-5px', cursor: 'se-resize' },
+    bottomLeft: { ...handleStyle, width: '10px', height: '10px', left: '-5px', bottom: '-5px', cursor: 'sw-resize' },
+    topRight: { ...handleStyle, width: '10px', height: '10px', right: '-5px', top: '-5px', cursor: 'ne-resize' },
+    topLeft: { ...handleStyle, width: '10px', height: '10px', left: '-5px', top: '-5px', cursor: 'nw-resize' },
+    top: { ...handleStyle, width: '16px', height: '8px', left: '50%', top: '-4px', transform: 'translateX(-50%)', cursor: 'n-resize' },
+    bottom: { ...handleStyle, width: '16px', height: '8px', left: '50%', bottom: '-4px', transform: 'translateX(-50%)', cursor: 's-resize' },
+    left: { ...handleStyle, width: '8px', height: '16px', top: '50%', left: '-4px', transform: 'translateY(-50%)', cursor: 'w-resize' },
+    right: { ...handleStyle, width: '8px', height: '16px', top: '50%', right: '-4px', transform: 'translateY(-50%)', cursor: 'e-resize' },
+  };
+
   return (
-    <Draggable
-      nodeRef={nodeRef}
+    <Rnd
+      bounds="parent"
       position={{ x: f.x || 0, y: f.y || 0 }}
+      size={{ width: f.width || 'auto', height: f.height || 'auto' }}
       scale={0.5}
-      onStart={(e, data) => {
-        onDragStart(fieldKey, data.x, data.y, nodeRef.current?.offsetWidth || 0, nodeRef.current?.offsetHeight || 0);
+      onDragStart={(e, data) => {
+        onDragStart(fieldKey, data.x, data.y, innerRef.current?.offsetWidth || 0, innerRef.current?.offsetHeight || 0);
       }}
       onDrag={(e, data) => {
-        onDragMove(fieldKey, data.x, data.y, nodeRef.current?.offsetWidth || 0, nodeRef.current?.offsetHeight || 0);
+        onDragMove(fieldKey, data.x, data.y, innerRef.current?.offsetWidth || 0, innerRef.current?.offsetHeight || 0);
       }}
-      onStop={(e, data) => {
+      onDragStop={(e, data) => {
         handleFieldDrag(fieldKey, data.x, data.y);
       }}
+      onResizeStop={(e, direction, ref, delta, position) => {
+        const newW = parseInt(ref.style.width, 10);
+        const newH = parseInt(ref.style.height, 10);
+        
+        if (isImage) {
+          handleFieldResize(fieldKey, newW, newH, 1, 1, position.x, position.y);
+        } else {
+          const unscaledW = innerRef.current?.offsetWidth || 1;
+          const unscaledH = innerRef.current?.offsetHeight || 1;
+          handleFieldResize(fieldKey, newW, newH, newW / unscaledW, newH / unscaledH, position.x, position.y);
+        }
+      }}
+      resizeHandleStyles={resizeHandleStyles}
+      className={`absolute flex items-center justify-center border ${selectedFieldKey === fieldKey ? "border-violet-650 ring-1 ring-violet-650 z-50" : "border-transparent hover:border-slate-300 hover:border-dashed z-10"}`}
+      enableResizing={selectedFieldKey === fieldKey}
+      style={{ padding: 0 }}
     >
       <div
-        ref={nodeRef}
+        ref={innerRef}
         onClick={(e) => {
           e.stopPropagation();
           setSelectedFieldKey(fieldKey);
         }}
-        className={`absolute select-none flex items-center justify-center border cursor-move ${selectedFieldKey === fieldKey ? "border-violet-650 ring-1 ring-violet-650" : "border-slate-300"
-          }`}
+        className="w-full h-full flex items-center justify-center cursor-move select-none"
         style={{
-          width: f.width ? `${f.width}px` : (isImage ? "120px" : "auto"),
-          height: f.height ? `${f.height}px` : (isImage ? "120px" : "auto"),
+          width: isImage ? '100%' : 'max-content',
+          height: isImage ? '100%' : 'max-content',
           padding: isImage ? "0px" : "4px 8px",
           fontFamily: f.fontFamily ? `'${f.fontFamily}', sans-serif` : undefined,
           fontSize: f.fontSize ? `${f.fontSize}px` : "20px",
           fontWeight: f.fontWeight || "500",
           color: f.color || "#000",
+          transform: isImage ? 'none' : `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
+          transformOrigin: 'top left',
+          whiteSpace: 'nowrap'
         }}
       >
         {displayContent}
       </div>
-    </Draggable>
+    </Rnd>
   );
 };
 
@@ -577,6 +616,22 @@ export default function SchoolPage() {
     setDragState({ activeKey: key, x, y, width: w, height: h });
   };
 
+  const handleFieldResize = (fieldKey: string, width: number, height: number, scaleX: number, scaleY: number, x: number, y: number) => {
+    setIdCardLayoutConfig((prev: any) => {
+      const fields = { ...prev.fields };
+      fields[fieldKey] = {
+        ...fields[fieldKey],
+        width,
+        height,
+        scaleX,
+        scaleY,
+        x,
+        y
+      };
+      return { ...prev, fields };
+    });
+  };
+
   const getActiveGuides = () => {
     if (!dragState) return { xGuides: [], yGuides: [] };
 
@@ -655,10 +710,20 @@ export default function SchoolPage() {
     if (!selectedFieldKey) return;
     setIdCardLayoutConfig((prev: any) => {
       const fields = { ...prev.fields };
-      fields[selectedFieldKey] = {
+      const updatedField = {
         ...fields[selectedFieldKey],
         [key]: value
       };
+      
+      // If font size changes, reset the stretch bounds so it fits naturally again
+      if (key === 'fontSize') {
+        delete updatedField.width;
+        delete updatedField.height;
+        delete updatedField.scaleX;
+        delete updatedField.scaleY;
+      }
+      
+      fields[selectedFieldKey] = updatedField;
       return { ...prev, fields };
     });
   };
@@ -1761,6 +1826,7 @@ export default function SchoolPage() {
                               displayContent={displayContent}
                               onDragStart={handleDragStart}
                               onDragMove={handleDragMove}
+                              handleFieldResize={handleFieldResize}
                             />
                           );
                         })}

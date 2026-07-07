@@ -5,7 +5,7 @@ import { PDFDocument, StandardFonts, cmyk } from "pdf-lib";
 import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import Draggable from "react-draggable";
+import { Rnd } from "react-rnd";
 import { Button } from "@/components/ui/button";
 import uploadImageToCloudinary from "@/utils/cloudService";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -387,13 +387,25 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
 
   const updateFieldProperty = (key: string, value: any) => {
     if (!selectedFieldKey) return;
-    setFields((prev: any) => ({
-      ...(prev || {}),
-      [selectedFieldKey]: {
-        ...(prev || {})[selectedFieldKey],
+    setFields((prev: any) => {
+      const currentFields = prev || {};
+      const updatedField = {
+        ...currentFields[selectedFieldKey],
         [key]: value
+      };
+      
+      if (key === 'fontSize') {
+        delete updatedField.width;
+        delete updatedField.height;
+        delete updatedField.scaleX;
+        delete updatedField.scaleY;
       }
-    }));
+      
+      return {
+        ...currentFields,
+        [selectedFieldKey]: updatedField
+      };
+    });
   };
 
   const handleDragStart = (key: string, x: number, y: number, w: number, h: number) => {
@@ -402,6 +414,21 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
 
   const handleDragMove = (key: string, x: number, y: number, w: number, h: number) => {
     setDragState({ activeKey: key, x, y, width: w, height: h });
+  };
+
+  const handleFieldResize = (fieldKey: string, width: number, height: number, scaleX: number, scaleY: number, x: number, y: number) => {
+    setFields((prev: any) => ({
+      ...(prev || {}),
+      [fieldKey]: {
+        ...(prev || {})[fieldKey],
+        width,
+        height,
+        scaleX,
+        scaleY,
+        x,
+        y
+      }
+    }));
   };
 
   const handleDragStop = (fieldKey: string, x: number, y: number) => {
@@ -742,6 +769,7 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                 handleDragStop={handleDragStop}
                 onDragStart={handleDragStart}
                 onDragMove={handleDragMove}
+                handleFieldResize={handleFieldResize}
               />
             );
           })}
@@ -756,33 +784,71 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
 // DRAGGABLE FIELD COMPONENT
 // ----------------------------------------------------------------------
 
-function StudioDraggableField({ fieldKey, f, scale, fieldInfo, isSelected, setSelectedFieldKey, handleDragStop, onDragStart, onDragMove }: any) {
-  const nodeRef = useRef<HTMLDivElement>(null);
+function StudioDraggableField({ fieldKey, f, scale, fieldInfo, isSelected, setSelectedFieldKey, handleDragStop, onDragStart, onDragMove, handleFieldResize }: any) {
+  const innerRef = useRef<HTMLDivElement>(null);
   
+  const handleStyle = {
+    background: '#8b5cf6', // violet-500
+    border: '1px solid white',
+    boxShadow: '0 0 2px rgba(0,0,0,0.3)'
+  };
+  
+  const resizeHandleStyles = {
+    bottomRight: { ...handleStyle, width: '10px', height: '10px', right: '-5px', bottom: '-5px', cursor: 'se-resize' },
+    bottomLeft: { ...handleStyle, width: '10px', height: '10px', left: '-5px', bottom: '-5px', cursor: 'sw-resize' },
+    topRight: { ...handleStyle, width: '10px', height: '10px', right: '-5px', top: '-5px', cursor: 'ne-resize' },
+    topLeft: { ...handleStyle, width: '10px', height: '10px', left: '-5px', top: '-5px', cursor: 'nw-resize' },
+    top: { ...handleStyle, width: '16px', height: '8px', left: '50%', top: '-4px', transform: 'translateX(-50%)', cursor: 'n-resize' },
+    bottom: { ...handleStyle, width: '16px', height: '8px', left: '50%', bottom: '-4px', transform: 'translateX(-50%)', cursor: 's-resize' },
+    left: { ...handleStyle, width: '8px', height: '16px', top: '50%', left: '-4px', transform: 'translateY(-50%)', cursor: 'w-resize' },
+    right: { ...handleStyle, width: '8px', height: '16px', top: '50%', right: '-4px', transform: 'translateY(-50%)', cursor: 'e-resize' },
+  };
+
   return (
-    <Draggable
+    <Rnd
       bounds="parent"
-      nodeRef={nodeRef}
       position={{ x: f.x || 0, y: f.y || 0 }}
+      size={{ width: f.width || 'auto', height: f.height || 'auto' }}
       scale={scale}
-      onStart={(e, data) => onDragStart && onDragStart(fieldKey, data.x, data.y, nodeRef.current?.offsetWidth || 0, nodeRef.current?.offsetHeight || 0)}
-      onDrag={(e, data) => onDragMove && onDragMove(fieldKey, data.x, data.y, nodeRef.current?.offsetWidth || 0, nodeRef.current?.offsetHeight || 0)}
-      onStop={(e, data) => handleDragStop(fieldKey, data.x, data.y)}
+      onDragStart={(e, data) => onDragStart && onDragStart(fieldKey, data.x, data.y, innerRef.current?.offsetWidth || 0, innerRef.current?.offsetHeight || 0)}
+      onDrag={(e, data) => onDragMove && onDragMove(fieldKey, data.x, data.y, innerRef.current?.offsetWidth || 0, innerRef.current?.offsetHeight || 0)}
+      onDragStop={(e, data) => handleDragStop(fieldKey, data.x, data.y)}
+      onResizeStop={(e, direction, ref, delta, position) => {
+        const newW = parseInt(ref.style.width, 10);
+        const newH = parseInt(ref.style.height, 10);
+        
+        if (fieldInfo.isImage) {
+          handleFieldResize && handleFieldResize(fieldKey, newW, newH, 1, 1, position.x, position.y);
+        } else {
+          const unscaledW = innerRef.current?.offsetWidth || 1;
+          const unscaledH = innerRef.current?.offsetHeight || 1;
+          handleFieldResize && handleFieldResize(fieldKey, newW, newH, newW / unscaledW, newH / unscaledH, position.x, position.y);
+        }
+      }}
+      resizeHandleStyles={resizeHandleStyles}
+      className={`absolute flex items-center justify-center ${isSelected ? 'ring-2 ring-violet-500 shadow-md z-50' : 'ring-1 ring-transparent hover:ring-gray-300 hover:ring-dashed z-10'}`}
+      enableResizing={isSelected}
+      style={{ padding: 0 }}
     >
       <div 
-        ref={nodeRef}
-        onClick={(e) => { e.stopPropagation(); setSelectedFieldKey(fieldKey); }}
-        className={`absolute select-none cursor-move flex items-center justify-center ${isSelected ? 'ring-2 ring-violet-500 shadow-md z-10' : 'ring-1 ring-transparent hover:ring-gray-300 hover:ring-dashed z-0'}`}
+        ref={innerRef}
+        onClick={(e) => {
+          e.stopPropagation();
+          setSelectedFieldKey(fieldKey);
+        }}
+        className="w-full h-full flex items-center justify-center cursor-move select-none"
         style={{
-          width: fieldInfo.isImage ? `${f.width || 100}px` : 'auto',
-          height: fieldInfo.isImage ? `${f.height || 100}px` : 'auto',
+          width: fieldInfo.isImage ? '100%' : 'max-content',
+          height: fieldInfo.isImage ? '100%' : 'max-content',
           fontSize: `${f.fontSize || 16}px`,
           color: f.color || "#000000",
           fontFamily: `'${f.fontFamily || "Inter"}', sans-serif`,
           fontWeight: f.fontWeight || "500",
           whiteSpace: 'nowrap',
           background: fieldInfo.isImage ? 'rgba(0,0,0,0.1)' : 'transparent',
-          border: fieldInfo.isImage && !isSelected ? '1px dashed #cbd5e1' : 'none'
+          border: fieldInfo.isImage && !isSelected ? '1px dashed #cbd5e1' : 'none',
+          transform: fieldInfo.isImage ? 'none' : `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
+          transformOrigin: 'top left'
         }}
       >
         {fieldInfo.isImage ? (
@@ -794,7 +860,7 @@ function StudioDraggableField({ fieldKey, f, scale, fieldInfo, isSelected, setSe
           <span>{fieldInfo.defaultLabel}</span>
         )}
       </div>
-    </Draggable>
+    </Rnd>
   );
 }
 
@@ -1090,6 +1156,8 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
                     fontFamily: `'${f.fontFamily || "Inter"}', sans-serif`,
                     fontWeight: f.fontWeight || "500",
                     whiteSpace: 'nowrap',
+                    transform: isImage ? 'none' : `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
+                    transformOrigin: 'top left'
                   }}
                 >
                   {content}

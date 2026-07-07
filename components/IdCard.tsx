@@ -226,6 +226,8 @@ export default function IdCard({
           textAlign: f.align || "left",
           zIndex: 20, // Ensure fields are above background elements
           whiteSpace: isMultiline ? "normal" : "nowrap",
+          transform: `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
+          transformOrigin: "top left",
         };
 
         if (fieldKey === "school_logo") {
