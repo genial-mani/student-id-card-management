@@ -559,15 +559,18 @@ export default function SchoolPage() {
       h = dragState.height;
     }
 
+    let snappedToCenter = false;
     // Center of canvas
     if (w > 0) {
       const activeCenterX = snappedX + w / 2;
       if (Math.abs(activeCenterX - 336.5) < threshold) {
         snappedX = Math.round(336.5 - w / 2);
+        snappedToCenter = true;
       }
     }
     if (Math.abs(snappedX - 336.5) < threshold) {
       snappedX = 336.5;
+      snappedToCenter = true;
     }
 
     if (h > 0) {
@@ -597,10 +600,12 @@ export default function SchoolPage() {
 
     setIdCardLayoutConfig((prev: any) => {
       const fields = { ...prev.fields };
+      const currentField = fields[fieldKey] || {};
       fields[fieldKey] = {
-        ...fields[fieldKey],
+        ...currentField,
         x: snappedX,
-        y: snappedY
+        y: snappedY,
+        align: snappedToCenter ? "center" : (currentField.align || "left")
       };
       return { ...prev, fields };
     });
@@ -1979,6 +1984,39 @@ export default function SchoolPage() {
                                     onChange={(e) => handleFieldStyleChange("color", e.target.value)}
                                     className="w-24 px-2 py-1 text-xs border rounded-lg"
                                   />
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Text Alignment</label>
+                                <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFieldStyleChange("align", "left")}
+                                    className={`flex-1 py-1 text-xs font-semibold rounded-md transition-colors ${
+                                      (f.align || "left") === "left" ? "bg-white text-violet-600 shadow-xs" : "text-gray-600 hover:text-gray-900"
+                                    }`}
+                                  >
+                                    Left
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFieldStyleChange("align", "center")}
+                                    className={`flex-1 py-1 text-xs font-semibold rounded-md transition-colors ${
+                                      f.align === "center" ? "bg-white text-violet-600 shadow-xs" : "text-gray-600 hover:text-gray-900"
+                                    }`}
+                                  >
+                                    Center
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFieldStyleChange("align", "right")}
+                                    className={`flex-1 py-1 text-xs font-semibold rounded-md transition-colors ${
+                                      f.align === "right" ? "bg-white text-violet-600 shadow-xs" : "text-gray-600 hover:text-gray-900"
+                                    }`}
+                                  >
+                                    Right
+                                  </button>
                                 </div>
                               </div>
 

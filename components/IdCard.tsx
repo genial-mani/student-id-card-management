@@ -213,9 +213,29 @@ export default function IdCard({
           fieldKey === "school_name" ||
           fieldKey === "school_caption";
 
+        const align = f.align || "left";
+        const scaleX = f.scaleX || 1;
+        const scaleY = f.scaleY || 1;
+
+        let leftPos = `${f.x}px`;
+        let transformStr = `scale(${scaleX}, ${scaleY})`;
+        let transformOriginStr = "top left";
+
+        if (align === "center") {
+          const centerX = f.width ? f.x + f.width / 2 : (f.x > 0 && f.x < 336.5 ? 336.5 : f.x);
+          leftPos = `${centerX}px`;
+          transformStr = `translate(-50%, 0) scale(${scaleX}, ${scaleY})`;
+          transformOriginStr = "top center";
+        } else if (align === "right") {
+          const rightX = f.width ? f.x + f.width : f.x;
+          leftPos = `${rightX}px`;
+          transformStr = `translate(-100%, 0) scale(${scaleX}, ${scaleY})`;
+          transformOriginStr = "top right";
+        }
+
         const fieldStyle: React.CSSProperties = {
           position: "absolute",
-          left: `${f.x}px`,
+          left: leftPos,
           top: `${f.y}px`,
           width: f.width ? `${f.width}px` : undefined,
           height: f.height ? `${f.height}px` : undefined,
@@ -223,11 +243,11 @@ export default function IdCard({
           fontSize: f.fontSize ? `${f.fontSize}px` : undefined,
           fontWeight: f.fontWeight || undefined,
           color: f.color || undefined,
-          textAlign: f.align || "left",
+          textAlign: align as React.CSSProperties["textAlign"],
           zIndex: 20, // Ensure fields are above background elements
           whiteSpace: isMultiline ? "normal" : "nowrap",
-          transform: `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
-          transformOrigin: "top left",
+          transform: transformStr,
+          transformOrigin: transformOriginStr,
         };
 
         if (fieldKey === "school_logo") {

@@ -434,9 +434,12 @@ function renderText(
   // Determine anchor position from alignment
   let anchorX = x;
   let canvasAlign: CanvasTextAlign = "left";
-  if (fieldWidth > 0) {
-    if (align === "center") { anchorX = x + fieldWidth / 2; canvasAlign = "center"; }
-    else if (align === "right") { anchorX = x + fieldWidth; canvasAlign = "right"; }
+  if (align === "center") {
+    anchorX = fieldWidth > 0 ? x + fieldWidth / 2 : (x > 0 && x < CARD_W / 2 ? CARD_W / 2 : x);
+    canvasAlign = "center";
+  } else if (align === "right") {
+    anchorX = fieldWidth > 0 ? x + fieldWidth : x;
+    canvasAlign = "right";
   }
 
   if (!isMultiline) {

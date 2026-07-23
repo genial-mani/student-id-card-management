@@ -202,16 +202,18 @@ export default function EditStudentModal({
         
         const cleanCamId = (formData.camSno || student.camSno || student.id || randomSuffix)
           .trim()
-          .replace(/[^a-zA-Z0-9_-]/g, "_");
+          .replace(/[^a-zA-Z0-9_-]/g, "_")
+          .substring(0, 12);
 
-        const generatedCamId = `${cleanCamId}_${Date.now()}_${randomSuffix}`;
         const folderName = schoolName.trim().split(/\s+/)[0];
 
-        finalPictureUrl = await uploadImageToCloudinary(
+        const rawUrl = await uploadImageToCloudinary(
           profilePictureFile,
           folderName,
-          generatedCamId
+          cleanCamId
         );
+        // Append cache-busting timestamp query parameter to URL to ensure immediate refresh on edit
+        finalPictureUrl = `${rawUrl.split("?")[0]}?v=${Date.now()}`;
       }
 
       const response = await fetch(`/api/students/${student.id}`, {
