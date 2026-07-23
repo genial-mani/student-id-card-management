@@ -9,7 +9,7 @@
  * and mathematically distribute the leftover space as margins/gaps.
  */
 
-import { useState, useEffect, useRef, useCallback, CSSProperties, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import IdCard, { CardTheme } from "@/components/IdCard";
@@ -17,7 +17,9 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { PrintSettingsPanel } from "@/components/PrintSettingsPanel";
-import { PrintSettings, calculatePrintGrid } from "@/utils/printLayoutEngine";
+import { PrintSettings, calculatePrintGrid, PAPER_SIZES } from "@/utils/printLayoutEngine";
+import { prefetchImages, drawCardOnCanvas } from "@/utils/canvasCardRenderer";
+import { jsPDF } from "jspdf";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -116,7 +118,7 @@ export default function PrintPage() {
     };
   }
 
-  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -212,76 +214,10 @@ export default function PrintPage() {
 
   // ── PDF core ────────────────────────────────────────────────────────────────
 
-  const QUALITY_MULTIPLIER = 2; // Renders at 600 DPI for high quality
-
-  /**
-   * Capture one IdCard to a Data URL using html-to-image
-   */
-  const captureCardImage = async (
-    toPng: any,
-    studentId: string,
-  ): Promise<HTMLImageElement | null> => {
-    const el = cardRefs.current.get(studentId);
-    if (!el) return null;
-
-    try {
-      // Capture at higher pixel ratio for print clarity
-      const dataUrl = await toPng(el, {
-        pixelRatio: QUALITY_MULTIPLIER,
-        backgroundColor: "#ffffff",
-        width: CARD_W,
-        height: CARD_H,
-      });
-
-      // Convert Data URL to an Image object so we can draw it on the A4 canvas
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise((resolve) => {
-        img.onload = resolve;
-      });
-      return img;
-    } catch (err) {
-      console.error("Capture failed for", studentId, err);
-      return null;
-    }
-  };
-
-  /**
-   * Composite images exactly onto the Print Canvas
-   */
-  const buildPrintCanvas = (
-    cardImages: (HTMLImageElement | null)[],
-    sheetStudents: Student[],
-  ): HTMLCanvasElement => {
-    const canvas = document.createElement("canvas");
-    canvas.width = printGrid.paperW * QUALITY_MULTIPLIER;
-    canvas.height = printGrid.paperH * QUALITY_MULTIPLIER;
-    const ctx = canvas.getContext("2d")!;
-
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    sheetStudents.forEach((_, i) => {
-      const img = cardImages[i];
-      if (!img) return;
-      const { x, y } = getSlotPos(i);
-      ctx.drawImage(
-        img,
-        x * QUALITY_MULTIPLIER,
-        y * QUALITY_MULTIPLIER,
-        CARD_W * QUALITY_MULTIPLIER,
-        CARD_H * QUALITY_MULTIPLIER
-      );
-    });
-
-    return canvas;
-  };
-
   /**
    * Main PDF generation function.
+   * Draws cards directly to offscreen Canvas elements (no DOM cloning),
+   * then encodes each sheet as JPEG and adds to jsPDF.
    */
   const downloadSheets = async (indices: number[]) => {
     if (!settled) {
@@ -293,47 +229,80 @@ export default function PrintPage() {
 
     const isAll = indices.length > 1;
     setDownloading(isAll ? "all" : indices[0]);
-    setDlProgress("Loading libraries…");
 
     try {
-      const [h2iMod, jsPDFMod] = await Promise.all([
-        import("html-to-image"),
-        import("jspdf"),
-      ]);
+      const QUALITY_MULTIPLIER = 1.5; // Balances quality with memory limits (v8 string max length)
 
-      const { toPng } = h2iMod;
-      const jsPDF = jsPDFMod.default || (jsPDFMod as any).jsPDF;
+      // 1. Wait for web fonts (used by Canvas fillText)
+      await document.fonts.ready;
 
+      // 3. Pre-fetch every image the cards will need
+      setDlProgress("Pre-fetching images…");
+      const allStudents = indices.flatMap((i) => sheets[i]);
+      const imageCache = await prefetchImages(
+        classData!.school,
+        allStudents,
+        layout,
+        classData!.school.idCardLayoutConfig,
+      );
+
+      // 4. Render all target sheets to offscreen canvases in parallel
+      setDlProgress("Rendering sheets…");
+      const sheetImages = await Promise.all(
+        indices.map(async (sheetIdx) => {
+          const sheetStudents = sheets[sheetIdx];
+          const canvas = document.createElement("canvas");
+          
+          // Scale canvas physical pixels up for higher quality
+          canvas.width = printGrid.paperW * QUALITY_MULTIPLIER;
+          canvas.height = printGrid.paperH * QUALITY_MULTIPLIER;
+          
+          const ctx = canvas.getContext("2d")!;
+          
+          // Scale the drawing context so coordinates remain the same
+          ctx.scale(QUALITY_MULTIPLIER, QUALITY_MULTIPLIER);
+
+          // White background
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, printGrid.paperW, printGrid.paperH);
+
+          // Draw each card at its slot position
+          for (let i = 0; i < sheetStudents.length; i++) {
+            const { x, y } = getSlotPos(i);
+            drawCardOnCanvas(
+              ctx, x, y,
+              classData!.school,
+              sheetStudents[i],
+              (sheetStudents[i] as any).className || classData!.name,
+              classData!.customValues,
+              layout,
+              theme,
+              classData!.school.idCardLayoutConfig,
+              imageCache,
+            );
+          }
+
+          // Maximize quality without blowing up file size / hitting string limits
+          return canvas.toDataURL("image/jpeg", 0.92);
+        }),
+      );
+
+      // 5. Build PDF
+      setDlProgress("Building PDF…");
       const pdf = new jsPDF({
         orientation: printSettings.paperOrientation,
         unit: "px",
         format: [printGrid.paperW, printGrid.paperH],
       });
 
-      for (let pi = 0; pi < indices.length; pi++) {
-        const sheetIdx = indices[pi];
-        const sheetStudents = sheets[sheetIdx];
-
-        setDlProgress(
-          `Sheet ${pi + 1} / ${indices.length}: capturing ${sheetStudents.length} card${sheetStudents.length !== 1 ? "s" : ""}…`,
-        );
-
-        // Capture cards
-        const cardImages = await Promise.all(
-          sheetStudents.map((s) => captureCardImage(toPng, s.id)),
-        );
-
-        setDlProgress(
-          `Sheet ${pi + 1} / ${indices.length}: compositing sheet…`,
-        );
-
-        const canvas = buildPrintCanvas(cardImages, sheetStudents);
-        const imgData = canvas.toDataURL("image/jpeg", 0.97);
-
-        if (pi > 0) pdf.addPage();
+      let pageCount = 0;
+      for (const imgData of sheetImages) {
+        if (pageCount > 0) pdf.addPage();
         pdf.addImage(imgData, "JPEG", 0, 0, printGrid.paperW, printGrid.paperH);
+        pageCount++;
       }
 
+      // 6. Save / download
       const safe = (s: string) => (s ?? "").replace(/[^a-z0-9]/gi, "_");
       const fileName =
         [
@@ -343,42 +312,11 @@ export default function PrintPage() {
           isAll ? `all_${totalSheets}_sheets` : `sheet_${indices[0] + 1}`,
         ].join("_") + ".pdf";
 
-      setDlProgress("Injecting CMYK Print Profile…");
-      const { PDFDocument, PDFName } = await import("pdf-lib");
-      const pdfBytes = pdf.output("arraybuffer");
-      const pdfDoc = await PDFDocument.load(pdfBytes);
+      const finalPdfBytes = new Uint8Array(pdf.output("arraybuffer"));
 
-      try {
-        const iccRes = await fetch("/icc/default_cmyk.icc");
-        if (iccRes.ok) {
-          const iccProfile = await iccRes.arrayBuffer();
-          const iccStream = pdfDoc.context.stream(new Uint8Array(iccProfile), {
-            Length: iccProfile.byteLength,
-          });
-          const iccRef = pdfDoc.context.register(iccStream);
-
-          const outputIntent = pdfDoc.context.obj({
-            Type: PDFName.of("OutputIntent"),
-            S: PDFName.of("GTS_PDFX"),
-            OutputConditionIdentifier: "Fogra39",
-            DestOutputProfile: iccRef,
-          });
-
-          pdfDoc.catalog.set(
-            PDFName.of("OutputIntents"),
-            pdfDoc.context.obj([outputIntent])
-          );
-        }
-      } catch (e) {
-        console.warn("Could not inject ICC profile, continuing without it.");
-      }
-
-      const finalPdfBytes = await pdfDoc.save();
-
-      if (typeof window !== 'undefined' && (window as any).electronAPI) {
+      if (typeof window !== "undefined" && (window as any).electronAPI) {
         setDlProgress("Sending directly to local printer...");
         try {
-          // Convert Uint8Array to normal array for IPC transfer
           await (window as any).electronAPI.printPdf(Array.from(finalPdfBytes));
           alert("Sent to local printer successfully!");
         } catch (e: any) {
@@ -386,7 +324,7 @@ export default function PrintPage() {
           alert("Local print failed: " + e.message);
         }
       } else {
-        const blob = new Blob([finalPdfBytes as any], { type: "application/pdf" });
+        const blob = new Blob([finalPdfBytes], { type: "application/pdf" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
@@ -402,7 +340,6 @@ export default function PrintPage() {
         `PDF generation failed:\n${err instanceof Error ? err.message : String(err)}`,
       );
     } finally {
-      setDownloading(null);
       setDownloading(null);
       setDlProgress("");
     }
@@ -465,38 +402,86 @@ export default function PrintPage() {
 
   const isBusy = downloading !== null || !settled;
 
-  // ── Hidden card farm ────────────────────────────────────────────────────────
-  const hiddenWrapStyle: CSSProperties = {
-    position: "absolute",
-    top: "0",
-    left: "0",
-    zIndex: -1000,
-    opacity: 0.01,
-    pointerEvents: "none",
+  // ── Native browser print (INSTANT — no html-to-image needed) ───────────────
+  const handleNativePrint = () => {
+    window.print();
   };
+
+  // Dynamic print CSS based on current paper settings
+  const paper = PAPER_SIZES[printSettings.paperSize];
+  const printPageW = printSettings.paperOrientation === "portrait" ? paper.widthMm : paper.heightMm;
+  const printPageH = printSettings.paperOrientation === "portrait" ? paper.heightMm : paper.widthMm;
+
+  const printCSS = `
+    @media print {
+      @page {
+        size: ${printPageW}mm ${printPageH}mm;
+        margin: 0;
+      }
+
+      /* Hide all screen-only UI */
+      .no-print,
+      .print-settings-panel,
+      .sheet-label,
+      .empty-slot {
+        display: none !important;
+      }
+
+      /* Reset page background */
+      body {
+        background: white !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+
+      /* Full-bleed sheets */
+      .print-page-wrapper {
+        background: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        min-height: auto !important;
+      }
+
+      .print-sheets-container {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: none !important;
+        gap: 0 !important;
+      }
+
+      .print-sheet {
+        page-break-after: always;
+        break-after: page;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .print-sheet:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+
+      /* Sheet container — remove decorative styles */
+      .print-sheet-inner {
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+      }
+
+      /* SVG fills the entire print page */
+      .print-sheet-inner svg {
+        width: ${printPageW}mm !important;
+        height: ${printPageH}mm !important;
+        display: block !important;
+      }
+    }
+  `;
 
   return (
     <>
-      <div style={hiddenWrapStyle}>
-        {students.map((student) => (
-          <div
-            key={`farm-${student.id}`}
-            ref={(el) => {
-              if (el) cardRefs.current.set(student.id, el);
-              else cardRefs.current.delete(student.id);
-            }}
-          >
-            <IdCard
-              layout={layout}
-              theme={theme}
-              school={classData.school}
-              student={student}
-              classNameStr={(student as any).className || classData.name}
-              classCustomValues={classData.customValues}
-            />
-          </div>
-        ))}
-      </div>
+      <style dangerouslySetInnerHTML={{ __html: printCSS }} />
 
       <PrintSettingsPanel
         settings={printSettings}
@@ -504,7 +489,7 @@ export default function PrintPage() {
         showDocumentOrientation={false}
       />
 
-      <div className="min-h-screen bg-slate-200 pb-12">
+      <div className="min-h-screen bg-slate-200 pb-12 print-page-wrapper">
         <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm no-print">
           <div className="px-4 sm:px-6 py-3">
             <div className="flex items-center gap-3 mb-2">
@@ -540,6 +525,22 @@ export default function PrintPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              {/* ⚡ PRIMARY: Instant native print */}
+              <Button
+                type="button"
+                onClick={handleNativePrint}
+                disabled={!settled || !printGrid.fits}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors disabled:opacity-40"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.25 7.034V3m0 4.034H5.75" />
+                </svg>
+                ⚡ Print Now (Instant)
+              </Button>
+
+              {/* Separator */}
+              <span className="text-gray-300 text-xs font-medium">or</span>
+
               {dlProgress && (
                 <span className="text-xs text-fuchsia-700 font-medium flex items-center gap-1.5 mr-1">
                   <svg
@@ -598,21 +599,21 @@ export default function PrintPage() {
           </div>
         </div>
 
-        <div className="px-4 sm:px-6 py-8 space-y-10 max-w-7xl mx-auto">
+        <div className="px-4 sm:px-6 py-8 space-y-10 max-w-7xl mx-auto print-sheets-container">
           {sheets.map((sheetStudents, sheetIdx) => {
             const emptyCount = CPP - sheetStudents.length;
 
             return (
-              <section key={sheetIdx}>
-                <div className="flex items-center justify-between mb-3">
+              <section key={sheetIdx} className="print-sheet">
+                <div className="flex items-center justify-between mb-3 sheet-label">
                   <span className="text-xs font-bold text-gray-600 uppercase tracking-widest">
                     Sheet {sheetIdx + 1} / {totalSheets}
                   </span>
                 </div>
 
-                <div className="bg-white shadow-2xl rounded-sm overflow-hidden border border-gray-300 w-full relative">
+                <div className="bg-white shadow-2xl rounded-sm overflow-hidden border border-gray-300 w-full relative print-sheet-inner">
                   {!printGrid.fits && (
-                    <div className="absolute inset-0 bg-rose-500/10 flex items-center justify-center z-50">
+                    <div className="absolute inset-0 bg-rose-500/10 flex items-center justify-center z-50 no-print">
                       <div className="bg-white px-4 py-2 rounded-lg font-bold text-rose-600 shadow-lg">Paper size is too small</div>
                     </div>
                   )}
@@ -660,6 +661,7 @@ export default function PrintPage() {
                           return (
                             <div
                               key={`empty-${i}`}
+                              className="empty-slot"
                               style={{
                                 position: "absolute",
                                 left: `${x}px`,
