@@ -32,6 +32,7 @@ interface School {
   logoUrl: string;
   signatureUrl: string;
   classes: Class[];
+  students?: any[];
   idCardLayout?: number | null;
   idCardTheme?: string | null;
   customFieldsConfig?: any;
@@ -134,6 +135,7 @@ interface DraggableFieldProps {
   onDragStart: (key: string, x: number, y: number, w: number, h: number) => void;
   onDragMove: (key: string, x: number, y: number, w: number, h: number) => void;
   handleFieldResize: (key: string, width: number, height: number, scaleX: number, scaleY: number, x: number, y: number) => void;
+  onBoundsUpdate?: (key: string, width: number, height: number) => void;
 }
 
 const DraggableField = ({
@@ -147,8 +149,17 @@ const DraggableField = ({
   onDragStart,
   onDragMove,
   handleFieldResize,
+  onBoundsUpdate,
 }: DraggableFieldProps) => {
   const innerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (innerRef.current) {
+      const w = innerRef.current.offsetWidth || f.width || 100;
+      const h = innerRef.current.offsetHeight || f.height || 30;
+      onBoundsUpdate?.(fieldKey, w, h);
+    }
+  });
   
   const handleStyle = {
     background: '#8b5cf6', // violet-500
@@ -214,7 +225,7 @@ const DraggableField = ({
           fontSize: f.fontSize ? `${f.fontSize}px` : "20px",
           fontWeight: f.fontWeight || "500",
           color: f.color || "#000",
-          transform: isImage ? 'none' : `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
+          transform: `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
           transformOrigin: 'top left',
           whiteSpace: 'nowrap',
           WebkitTextStroke: !isImage && f.strokeWidth ? `${f.strokeWidth}px ${f.strokeColor || "#ffffff"}` : undefined,
@@ -226,6 +237,297 @@ const DraggableField = ({
     </Rnd>
   );
 };
+
+interface CustomClassDropdownProps {
+  selectedClassFilter: string;
+  setSelectedClassFilter: (classId: string) => void;
+  schoolClasses: any[];
+  totalStudentsCount: number;
+  schoolStudents: any[];
+}
+
+function CustomClassDropdown({
+  selectedClassFilter,
+  setSelectedClassFilter,
+  schoolClasses,
+  totalStudentsCount,
+  schoolStudents,
+}: CustomClassDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const activeClassObj = schoolClasses.find((c: any) => c.id === selectedClassFilter);
+  const activeLabel = selectedClassFilter === "all" ? "All Classes" : activeClassObj?.name || "Class";
+  const activeCount = selectedClassFilter === "all"
+    ? totalStudentsCount
+    : schoolStudents.filter((s: any) => s.classId === selectedClassFilter).length;
+
+  return (
+    <div className="relative flex-1 min-w-0" ref={dropdownRef}>
+      {/* Trigger Button */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all cursor-pointer shadow-2xs group"
+      >
+        <div className="flex items-center gap-1.5 min-w-0 flex-1 text-left">
+          <span className="text-xs font-bold text-gray-800 truncate">{activeLabel}</span>
+          <span className="px-1.5 py-0.2 text-[9px] font-extrabold bg-gray-200 text-gray-700 rounded-md shrink-0">
+            ({activeCount})
+          </span>
+        </div>
+
+        <svg
+          className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Menu Popup */}
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl max-h-56 overflow-y-auto p-1.5 animate-in fade-in zoom-in-95 duration-150">
+          {/* All Classes Option */}
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedClassFilter("all");
+              setIsOpen(false);
+            }}
+            className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left text-xs font-bold transition-colors ${
+              selectedClassFilter === "all" ? "bg-violet-600 text-white" : "hover:bg-violet-50 text-gray-700"
+            }`}
+          >
+            <span className="truncate">All Classes</span>
+            <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md shrink-0 ${
+              selectedClassFilter === "all" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
+            }`}>
+              ({totalStudentsCount})
+            </span>
+          </button>
+
+          {schoolClasses.length > 0 && <div className="my-1 border-t border-gray-100" />}
+
+          {/* Classes List */}
+          {schoolClasses.map((cls: any) => {
+            const isSelected = selectedClassFilter === cls.id;
+            const count = schoolStudents.filter((s: any) => s.classId === cls.id).length;
+
+            return (
+              <button
+                key={cls.id}
+                type="button"
+                onClick={() => {
+                  setSelectedClassFilter(cls.id);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left text-xs transition-colors ${
+                  isSelected ? "bg-violet-600 text-white font-bold" : "hover:bg-violet-50 text-gray-800 font-semibold"
+                }`}
+              >
+                <span className="truncate">{cls.name}</span>
+                <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md shrink-0 ${
+                  isSelected ? "bg-white/20 text-white" : "bg-violet-100 text-violet-800"
+                }`}>
+                  ({count})
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface CustomStudentDropdownProps {
+  previewStudentIndex: number;
+  setPreviewStudentIndex: (idx: number) => void;
+  filteredPreviewStudents: any[];
+  schoolClasses: any[];
+}
+
+function CustomStudentDropdown({
+  previewStudentIndex,
+  setPreviewStudentIndex,
+  filteredPreviewStudents,
+  schoolClasses,
+}: CustomStudentDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const activeStudent =
+    previewStudentIndex >= 0 && previewStudentIndex < filteredPreviewStudents.length
+      ? filteredPreviewStudents[previewStudentIndex]
+      : null;
+
+  const activeClass = activeStudent
+    ? schoolClasses.find((c: any) => c.id === activeStudent.classId)?.name || activeStudent.className || ""
+    : "";
+
+  return (
+    <div className="relative flex-1 min-w-0" ref={dropdownRef}>
+      {/* Trigger Button */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between gap-1.5 px-3 py-1.5 bg-violet-50/70 hover:bg-violet-100/80 border border-violet-200/80 rounded-xl transition-all cursor-pointer shadow-2xs group"
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
+          {activeStudent?.profilePictureUrl ? (
+            <img
+              src={activeStudent.profilePictureUrl}
+              alt=""
+              className="w-5 h-5 rounded-full object-cover shrink-0 border border-violet-200"
+            />
+          ) : (
+            <div className="w-5 h-5 rounded-full bg-violet-200 text-violet-700 font-bold text-[10px] flex items-center justify-center shrink-0">
+              {activeStudent ? activeStudent.name.charAt(0).toUpperCase() : "★"}
+            </div>
+          )}
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-violet-950 truncate">
+                {previewStudentIndex === -1 ? "Demo Sample Student" : `${previewStudentIndex + 1}. ${activeStudent?.name}`}
+              </span>
+              {activeClass && previewStudentIndex !== -1 && (
+                <span className="px-1.5 py-0.2 text-[9px] font-extrabold bg-violet-200/60 text-violet-800 rounded-md shrink-0 uppercase tracking-tight">
+                  {activeClass}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <svg
+          className={`w-3.5 h-3.5 text-violet-600 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Menu Popup */}
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl max-h-64 overflow-y-auto p-1.5 animate-in fade-in zoom-in-95 duration-150">
+          {/* Demo Student Option */}
+          <button
+            type="button"
+            onClick={() => {
+              setPreviewStudentIndex(-1);
+              setIsOpen(false);
+            }}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold transition-colors ${
+              previewStudentIndex === -1 ? "bg-violet-600 text-white" : "hover:bg-violet-50 text-gray-700"
+            }`}
+          >
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+              previewStudentIndex === -1 ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
+            }`}>
+              ★
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="truncate">Demo Sample Student</p>
+              <p className={`text-[10px] font-medium ${previewStudentIndex === -1 ? "text-violet-100" : "text-gray-400"}`}>
+                Sample placeholder data
+              </p>
+            </div>
+          </button>
+
+          {filteredPreviewStudents.length > 0 && <div className="my-1 border-t border-gray-100" />}
+
+          {/* Student List */}
+          {filteredPreviewStudents.length === 0 ? (
+            <div className="p-3 text-center text-xs font-medium text-gray-400">
+              No matching students found
+            </div>
+          ) : (
+            filteredPreviewStudents.map((st: any, idx: number) => {
+              const clsName = schoolClasses.find((c: any) => c.id === st.classId)?.name || st.className || "";
+              const isSelected = previewStudentIndex === idx;
+
+              return (
+                <button
+                  key={st.id || idx}
+                  type="button"
+                  onClick={() => {
+                    setPreviewStudentIndex(idx);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors ${
+                    isSelected ? "bg-violet-600 text-white font-bold" : "hover:bg-violet-50 text-gray-800 font-semibold"
+                  }`}
+                >
+                  {st.profilePictureUrl ? (
+                    <img
+                      src={st.profilePictureUrl}
+                      alt=""
+                      className="w-7 h-7 rounded-full object-cover shrink-0 border border-black/10"
+                    />
+                  ) : (
+                    <div className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
+                      isSelected ? "bg-white/20 text-white" : "bg-violet-100 text-violet-700"
+                    }`}>
+                      {st.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs truncate">
+                        {idx + 1}. {st.name}
+                      </span>
+                      {clsName && (
+                        <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md shrink-0 uppercase ${
+                          isSelected ? "bg-white/20 text-white" : "bg-violet-100 text-violet-800"
+                        }`}>
+                          {clsName}
+                        </span>
+                      )}
+                    </div>
+                    {st.camSno && (
+                      <span className={`text-[10px] font-medium block truncate ${
+                        isSelected ? "text-violet-200" : "text-gray-400"
+                      }`}>
+                        S.No: {st.camSno}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function SchoolPage() {
   const params = useParams();
@@ -289,6 +591,281 @@ export default function SchoolPage() {
   });
 
   const [selectedFieldKey, setSelectedFieldKey] = useState<string | null>(null);
+
+  // Student Preview Carousel & Filtering State
+  const [previewStudentIndex, setPreviewStudentIndex] = useState<number>(-1);
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string>("all");
+  const [studentSearchQuery, setStudentSearchQuery] = useState<string>("");
+
+  // Canvas Alignment Ruler Scale & Grid Overlay State
+  const [showRulerScale, setShowRulerScale] = useState<boolean>(true);
+  const [showGridOverlay, setShowGridOverlay] = useState<boolean>(false);
+  const [snapThreshold, setSnapThreshold] = useState<number>(8);
+  const [editorUnit, setEditorUnit] = useState<"mm" | "px">("mm");
+  const [userXGuides, setUserXGuides] = useState<number[]>([]);
+  const [userYGuides, setUserYGuides] = useState<number[]>([]);
+
+  // Guideline Drag State & Event Handlers
+  const [activeGuideDrag, setActiveGuideDrag] = useState<{
+    type: "x" | "y";
+    originalPx: number;
+    currentPx: number;
+    currentMm: number;
+  } | null>(null);
+  const topRulerRef = useRef<HTMLDivElement>(null);
+  const leftRulerRef = useRef<HTMLDivElement>(null);
+  const fieldBoundsRef = useRef<Record<string, { w: number; h: number }>>({});
+  const handleBoundsUpdate = (key: string, w: number, h: number) => {
+    fieldBoundsRef.current[key] = { w, h };
+  };
+
+  // Calculate Live Dynamic Smart Alignment Lines while Dragging
+  const getActiveSnapLines = () => {
+    if (!dragState || snapThreshold <= 0) return { xLines: [], yLines: [] };
+
+    const activeKey = dragState.activeKey;
+    const x = dragState.x;
+    const y = dragState.y;
+    const w = dragState.width || fieldBoundsRef.current[activeKey]?.w || 100;
+    const h = dragState.height || fieldBoundsRef.current[activeKey]?.h || 30;
+
+    const threshold = snapThreshold;
+    const xLines: { pos: number; label: string }[] = [];
+    const yLines: { pos: number; label: string }[] = [];
+
+    const activeEdgesX = [x, x + w / 2, x + w];
+    const activeEdgesY = [y, y + h / 2, y + h];
+
+    // 1. Center of Canvas
+    if (Math.abs(x + w / 2 - 336.5) < threshold) {
+      xLines.push({ pos: 336.5, label: "Center X" });
+    }
+    if (Math.abs(x - 336.5) < threshold) {
+      xLines.push({ pos: 336.5, label: "Center X" });
+    }
+    if (Math.abs(y + h / 2 - 543.5) < threshold) {
+      yLines.push({ pos: 543.5, label: "Center Y" });
+    }
+    if (Math.abs(y - 543.5) < threshold) {
+      yLines.push({ pos: 543.5, label: "Center Y" });
+    }
+
+    // 2. User MM Scale Guidelines
+    userXGuides.forEach((g) => {
+      if (activeEdgesX.some((e) => Math.abs(e - g) < threshold)) {
+        xLines.push({ pos: g, label: `${((g / 673) * 54).toFixed(1)}mm Guide` });
+      }
+    });
+    userYGuides.forEach((g) => {
+      if (activeEdgesY.some((e) => Math.abs(e - g) < threshold)) {
+        yLines.push({ pos: g, label: `${((g / 1087) * 87).toFixed(1)}mm Guide` });
+      }
+    });
+
+    // 3. Other Visible Fields (Photos, Logos, Text fields)
+    Object.entries(idCardLayoutConfig.fields || {}).forEach(([otherKey, otherField]: [string, any]) => {
+      if (otherKey === activeKey || !otherField || !otherField.visible) return;
+
+      const oX = otherField.x || 0;
+      const oY = otherField.y || 0;
+      const bounds = fieldBoundsRef.current[otherKey];
+      const oW = otherField.width || bounds?.w || 100;
+      const oH = otherField.height || bounds?.h || 30;
+
+      const otherEdgesX = [oX, oX + oW / 2, oX + oW];
+      const otherEdgesY = [oY, oY + oH / 2, oY + oH];
+
+      // X-alignment (Left, Center, Right, Side align)
+      activeEdgesX.forEach((ae, aIdx) => {
+        otherEdgesX.forEach((oe, oIdx) => {
+          if (Math.abs(ae - oe) < threshold) {
+            let label = "Align X";
+            if (aIdx === 0 && oIdx === 0) label = "Left Align";
+            else if (aIdx === 2 && oIdx === 2) label = "Right Align";
+            else if (aIdx === 1 && oIdx === 1) label = "Center X";
+            else if ((aIdx === 0 && oIdx === 2) || (aIdx === 2 && oIdx === 0)) label = "Side Align";
+            xLines.push({ pos: oe, label });
+          }
+        });
+      });
+
+      // Y-alignment (Top, Middle, Bottom, Below, Above)
+      activeEdgesY.forEach((ae, aIdx) => {
+        otherEdgesY.forEach((oe, oIdx) => {
+          if (Math.abs(ae - oe) < threshold) {
+            let label = "Align Y";
+            if (aIdx === 0 && oIdx === 0) label = "Top Align";
+            else if (aIdx === 2 && oIdx === 2) label = "Bottom Align";
+            else if (aIdx === 1 && oIdx === 1) label = "Center Y";
+            else if (aIdx === 0 && oIdx === 2) label = "Below Align";
+            else if (aIdx === 2 && oIdx === 0) label = "Above Align";
+            yLines.push({ pos: oe, label });
+          }
+        });
+      });
+    });
+
+    return {
+      xLines: Array.from(new Map(xLines.map((l) => [l.pos, l])).values()),
+      yLines: Array.from(new Map(yLines.map((l) => [l.pos, l])).values()),
+    };
+  };
+
+  const handleStartDragXGuide = (e: React.MouseEvent, originalPx = -1) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!topRulerRef.current) return;
+    const rect = topRulerRef.current.getBoundingClientRect();
+    const clickX = Math.max(0, Math.min(336.5, e.clientX - rect.left));
+    const mmVal = parseFloat(((clickX / 336.5) * 54).toFixed(1));
+    const pxVal = parseFloat(((mmVal / 54) * 673).toFixed(1));
+
+    setActiveGuideDrag({
+      type: "x",
+      originalPx: originalPx >= 0 ? originalPx : -1,
+      currentPx: pxVal,
+      currentMm: mmVal,
+    });
+  };
+
+  const handleStartDragYGuide = (e: React.MouseEvent, originalPx = -1) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!leftRulerRef.current) return;
+    const rect = leftRulerRef.current.getBoundingClientRect();
+    const clickY = Math.max(0, Math.min(543.5, e.clientY - rect.top));
+    const mmVal = parseFloat(((clickY / 543.5) * 87).toFixed(1));
+    const pxVal = parseFloat(((mmVal / 87) * 1087).toFixed(1));
+
+    setActiveGuideDrag({
+      type: "y",
+      originalPx: originalPx >= 0 ? originalPx : -1,
+      currentPx: pxVal,
+      currentMm: mmVal,
+    });
+  };
+
+  useEffect(() => {
+    if (!activeGuideDrag) return;
+
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      if (activeGuideDrag.type === "x" && topRulerRef.current) {
+        const rect = topRulerRef.current.getBoundingClientRect();
+        const clickX = Math.max(0, Math.min(336.5, e.clientX - rect.left));
+        const mmVal = parseFloat(((clickX / 336.5) * 54).toFixed(1));
+        const pxVal = parseFloat(((mmVal / 54) * 673).toFixed(1));
+        setActiveGuideDrag((prev) => (prev ? { ...prev, currentPx: pxVal, currentMm: mmVal } : null));
+      } else if (activeGuideDrag.type === "y" && leftRulerRef.current) {
+        const rect = leftRulerRef.current.getBoundingClientRect();
+        const clickY = Math.max(0, Math.min(543.5, e.clientY - rect.top));
+        const mmVal = parseFloat(((clickY / 543.5) * 87).toFixed(1));
+        const pxVal = parseFloat(((mmVal / 87) * 1087).toFixed(1));
+        setActiveGuideDrag((prev) => (prev ? { ...prev, currentPx: pxVal, currentMm: mmVal } : null));
+      }
+    };
+
+    const handleWindowMouseUp = () => {
+      if (activeGuideDrag) {
+        const { type, originalPx, currentPx } = activeGuideDrag;
+        if (type === "x") {
+          setUserXGuides((prev) => {
+            let next = [...prev];
+            if (originalPx >= 0) {
+              next = next.filter((g) => g !== originalPx);
+            }
+            if (!next.includes(currentPx)) {
+              next.push(currentPx);
+            }
+            return next;
+          });
+        } else if (type === "y") {
+          setUserYGuides((prev) => {
+            let next = [...prev];
+            if (originalPx >= 0) {
+              next = next.filter((g) => g !== originalPx);
+            }
+            if (!next.includes(currentPx)) {
+              next.push(currentPx);
+            }
+            return next;
+          });
+        }
+      }
+      setActiveGuideDrag(null);
+    };
+
+    window.addEventListener("mousemove", handleWindowMouseMove);
+    window.addEventListener("mouseup", handleWindowMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleWindowMouseMove);
+      window.removeEventListener("mouseup", handleWindowMouseUp);
+    };
+  }, [activeGuideDrag]);
+
+  const schoolStudents = useMemo(() => {
+    return school?.students || [];
+  }, [school]);
+
+  const filteredPreviewStudents = useMemo(() => {
+    let list = schoolStudents;
+
+    if (selectedClassFilter !== "all") {
+      list = list.filter((st: any) => st.classId === selectedClassFilter);
+    }
+
+    if (studentSearchQuery.trim()) {
+      const q = studentSearchQuery.trim().toLowerCase();
+      list = list.filter((st: any) => {
+        const nameMatch = st.name?.toLowerCase().includes(q);
+        const camMatch = st.camSno?.toLowerCase().includes(q);
+        const fatherMatch = st.fatherName?.toLowerCase().includes(q);
+        return nameMatch || camMatch || fatherMatch;
+      });
+    }
+
+    return list;
+  }, [schoolStudents, selectedClassFilter, studentSearchQuery]);
+
+  useEffect(() => {
+    if (filteredPreviewStudents.length > 0) {
+      setPreviewStudentIndex(0);
+    } else {
+      setPreviewStudentIndex(-1);
+    }
+  }, [selectedClassFilter, studentSearchQuery, filteredPreviewStudents.length]);
+
+  const activePreviewStudent = useMemo(() => {
+    if (previewStudentIndex >= 0 && previewStudentIndex < filteredPreviewStudents.length) {
+      const st = filteredPreviewStudents[previewStudentIndex];
+      const clsName = school?.classes?.find((c: any) => c.id === st.classId)?.name || (st as any).className || "";
+      return {
+        ...st,
+        classNameStr: clsName,
+      };
+    }
+    return {
+      ...DUMMY_STUDENT,
+      classNameStr: "Demo Class",
+    };
+  }, [previewStudentIndex, filteredPreviewStudents, school]);
+
+  const handlePrevStudent = () => {
+    if (filteredPreviewStudents.length === 0) return;
+    setPreviewStudentIndex((prev) => {
+      if (prev <= 0) return filteredPreviewStudents.length - 1;
+      return prev - 1;
+    });
+  };
+
+  const handleNextStudent = () => {
+    if (filteredPreviewStudents.length === 0) return;
+    setPreviewStudentIndex((prev) => {
+      if (prev >= filteredPreviewStudents.length - 1) return 0;
+      return prev + 1;
+    });
+  };
 
   // Form Config Inputs State
   const [editingField, setEditingField] = useState<{
@@ -552,53 +1129,63 @@ export default function SchoolPage() {
   const handleFieldDrag = (fieldKey: string, x: number, y: number) => {
     let snappedX = Math.round(x);
     let snappedY = Math.round(y);
-    const threshold = 8; // Snap within 8 pixels in 673x1087 system
-
-    let w = 0;
-    let h = 0;
-    if (dragState && dragState.activeKey === fieldKey) {
-      w = dragState.width;
-      h = dragState.height;
-    }
+    const threshold = snapThreshold;
 
     let snappedToCenter = false;
-    // Center of canvas
-    if (w > 0) {
-      const activeCenterX = snappedX + w / 2;
-      if (Math.abs(activeCenterX - 336.5) < threshold) {
-        snappedX = Math.round(336.5 - w / 2);
+    if (threshold > 0) {
+      let w = 0;
+      let h = 0;
+      if (dragState && dragState.activeKey === fieldKey) {
+        w = dragState.width;
+        h = dragState.height;
+      }
+
+      // Center of canvas
+      if (w > 0) {
+        const activeCenterX = snappedX + w / 2;
+        if (Math.abs(activeCenterX - 336.5) < threshold) {
+          snappedX = Math.round(336.5 - w / 2);
+          snappedToCenter = true;
+        }
+      }
+      if (Math.abs(snappedX - 336.5) < threshold) {
+        snappedX = 336.5;
         snappedToCenter = true;
       }
-    }
-    if (Math.abs(snappedX - 336.5) < threshold) {
-      snappedX = 336.5;
-      snappedToCenter = true;
-    }
 
-    if (h > 0) {
-      const activeCenterY = snappedY + h / 2;
-      if (Math.abs(activeCenterY - 543.5) < threshold) {
-        snappedY = Math.round(543.5 - h / 2);
+      if (h > 0) {
+        const activeCenterY = snappedY + h / 2;
+        if (Math.abs(activeCenterY - 543.5) < threshold) {
+          snappedY = Math.round(543.5 - h / 2);
+        }
       }
-    }
-    if (Math.abs(snappedY - 543.5) < threshold) {
-      snappedY = 543.5;
-    }
-
-    // Align with other visible fields (starting edges)
-    Object.entries(idCardLayoutConfig.fields || {}).forEach(([otherKey, otherField]: [string, any]) => {
-      if (otherKey === fieldKey || !otherField || !otherField.visible) return;
-
-      const otherX = otherField.x || 0;
-      const otherY = otherField.y || 0;
-
-      if (Math.abs(snappedX - otherX) < threshold) {
-        snappedX = otherX;
+      if (Math.abs(snappedY - 543.5) < threshold) {
+        snappedY = 543.5;
       }
-      if (Math.abs(snappedY - otherY) < threshold) {
-        snappedY = otherY;
-      }
-    });
+
+      // Align with user-created mm guide lines
+      userXGuides.forEach((g) => {
+        if (Math.abs(snappedX - g) < threshold) snappedX = g;
+      });
+      userYGuides.forEach((g) => {
+        if (Math.abs(snappedY - g) < threshold) snappedY = g;
+      });
+
+      // Align with other visible fields (starting edges)
+      Object.entries(idCardLayoutConfig.fields || {}).forEach(([otherKey, otherField]: [string, any]) => {
+        if (otherKey === fieldKey || !otherField || !otherField.visible) return;
+
+        const otherX = otherField.x || 0;
+        const otherY = otherField.y || 0;
+
+        if (Math.abs(snappedX - otherX) < threshold) {
+          snappedX = otherX;
+        }
+        if (Math.abs(snappedY - otherY) < threshold) {
+          snappedY = otherY;
+        }
+      });
+    }
 
     setIdCardLayoutConfig((prev: any) => {
       const fields = { ...prev.fields };
@@ -680,6 +1267,14 @@ export default function SchoolPage() {
       if (Math.abs(activeY - otherY) < threshold) {
         yGuides.push(otherY);
       }
+    });
+
+    // 3. Align with user-created mm guide lines
+    userXGuides.forEach((g) => {
+      if (Math.abs(activeX - g) < threshold) xGuides.push(g);
+    });
+    userYGuides.forEach((g) => {
+      if (Math.abs(activeY - g) < threshold) yGuides.push(g);
     });
 
     return {
@@ -1674,185 +2269,571 @@ export default function SchoolPage() {
               {/* ── Drag & Drop Editor (Shown for all preset & custom layouts) ── */}
               <div className="mt-4 p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col lg:flex-row gap-6 sm:gap-8 text-left animate-in fade-in duration-200">
                 {/* Canvas block (Left) */}
-                <div className="flex flex-col items-center gap-4 shrink-0 mx-auto lg:mx-0">
-                  <div className="text-center">
-                    <h3 className="text-sm font-bold text-gray-800">Dynamic Design Canvas</h3>
-                    <p className="text-[10px] text-gray-400">Scale: 50% (Drag elements and click to style)</p>
+                <div className="flex flex-col items-center gap-2 shrink-0 mx-auto lg:mx-0">
+                  {/* Canvas Header & Scale Controls */}
+                  <div className="w-full max-w-[360.5px] space-y-2 select-none">
+                    {/* Header Title Row */}
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-extrabold text-gray-800 tracking-wide uppercase">
+                        Dynamic Design Canvas
+                      </h3>
+                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                        54mm × 87mm
+                      </span>
+                    </div>
+
+                    {/* Toolbar Buttons Row */}
+                    <div className="flex flex-wrap items-center justify-start gap-1.5 w-full">
+                      <button
+                        type="button"
+                        onClick={() => setShowRulerScale(!showRulerScale)}
+                        className={`px-2 py-1 text-[10.5px] font-bold rounded-lg border transition-all cursor-pointer select-none ${
+                          showRulerScale
+                            ? "bg-violet-600 text-white border-violet-600 shadow-2xs"
+                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        }`}
+                        title="Toggle Alignment Scale Ruler in Millimeters (mm)"
+                      >
+                        📏 Scale (mm)
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowGridOverlay(!showGridOverlay)}
+                        className={`px-2 py-1 text-[10.5px] font-bold rounded-lg border transition-all cursor-pointer select-none ${
+                          showGridOverlay
+                            ? "bg-violet-600 text-white border-violet-600 shadow-2xs"
+                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        }`}
+                        title="Toggle Grid Overlay"
+                      >
+                        🌐 Grid
+                      </button>
+
+                      {/* Unit Mode Selector (mm / px) */}
+                      <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200 select-none shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => setEditorUnit("mm")}
+                          className={`px-2 py-0.5 text-[10.5px] font-extrabold rounded-md transition-all cursor-pointer ${
+                            editorUnit === "mm" ? "bg-violet-600 text-white shadow-2xs" : "text-gray-600 hover:text-gray-900"
+                          }`}
+                        >
+                          mm
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditorUnit("px")}
+                          className={`px-2 py-0.5 text-[10.5px] font-extrabold rounded-md transition-all cursor-pointer ${
+                            editorUnit === "px" ? "bg-violet-600 text-white shadow-2xs" : "text-gray-600 hover:text-gray-900"
+                          }`}
+                        >
+                          px
+                        </button>
+                      </div>
+
+                      {/* Configurable Magnetic Snap Threshold Input */}
+                      <div
+                        className="flex items-center gap-1 text-[10.5px] font-bold text-gray-700 bg-white border border-gray-200 px-2 py-0.5 rounded-lg shadow-2xs"
+                        title={`Magnetic snap distance threshold in ${editorUnit}. Set to 0 to turn off snapping.`}
+                      >
+                        <span className="select-none">🧲 Snap:</span>
+                        {editorUnit === "mm" ? (
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="5"
+                            value={((snapThreshold / 673) * 54).toFixed(1)}
+                            onChange={(e) => {
+                              const mmVal = parseFloat(e.target.value || "0");
+                              const pxVal = Math.max(0, Math.round((mmVal / 54) * 673));
+                              setSnapThreshold(pxVal);
+                            }}
+                            className="w-11 px-1 py-0.5 text-[10.5px] font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        ) : (
+                          <input
+                            type="number"
+                            min="0"
+                            max="50"
+                            value={snapThreshold}
+                            onChange={(e) => setSnapThreshold(Math.max(0, parseInt(e.target.value || "0", 10)))}
+                            className="w-10 px-1 py-0.5 text-[10.5px] font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        )}
+                        <span className="text-[9px] text-gray-400 select-none">{editorUnit}</span>
+                      </div>
+
+                      {(userXGuides.length > 0 || userYGuides.length > 0) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUserXGuides([]);
+                            setUserYGuides([]);
+                          }}
+                          className="px-2 py-1 text-[10.5px] font-bold rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all cursor-pointer select-none"
+                          title="Clear all alignment guide lines"
+                        >
+                          🗑️ Clear ({userXGuides.length + userYGuides.length})
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  {selectedLayout === 0 && !idCardLayoutConfig.backgroundUrl ? (
-                    <div className="w-[336.5px] h-[543.5px] border-2 border-dashed border-gray-300 rounded-xl bg-white flex flex-col items-center justify-center p-6 text-center select-none shadow-xs">
-                      <span className="text-3xl mb-2">🖼️</span>
-                      <p className="text-xs font-bold text-gray-600">No Background Image</p>
-                      <p className="text-[10px] text-gray-400 mb-4 font-medium">Upload a custom ID Card layout image to start positioning.</p>
-
-                      <label className="px-4 py-2 bg-violet-650 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md select-none">
-                        {bgUploading ? "Uploading..." : "Upload Background"}
-                        <input type="file" accept="image/*" onChange={handleBgUpload} disabled={bgUploading} className="hidden" />
-                      </label>
-                    </div>
-                  ) : (
-                    <div
-                      className="relative overflow-hidden rounded-xl border border-gray-300 shadow-2xl bg-white select-none shrink-0"
-                      style={{ width: "336.5px", height: "543.5px" }}
-                      onClick={() => setSelectedFieldKey(null)}
-                    >
-                      {/* Background loaded */}
-                      {selectedLayout === 0 ? (
-                        <div
-                          className="absolute inset-0 bg-cover bg-center pointer-events-none"
-                          style={{
-                            backgroundImage: `url(${idCardLayoutConfig.backgroundUrl})`,
-                            backgroundColor: theme.background,
-                          }}
-                        />
-                      ) : (
-                        <div className="absolute inset-0 pointer-events-none scale-[0.5] origin-top-left" style={{ width: "673px", height: "1087px" }}>
-                          <IdCard
-                            layout={selectedLayout}
-                            theme={theme}
-                            school={{ ...school, idCardLayoutConfig: idCardLayoutConfig }}
-                            student={DUMMY_STUDENT}
-                            classNameStr="Demo Class"
-                            hideFields={true}
-                          />
-                        </div>
-                      )}
-
-                      {/* Placed Elements Container */}
-                      <div className="absolute top-0 left-0 w-[673px] h-[1087px] origin-top-left scale-[0.5]">
-                        {/* Vertical alignment guide lines */}
-                        {xGuides.map((xVal, idx) => (
-                          <div
-                            key={`v-guide-${idx}`}
-                            className="absolute top-0 bottom-0 border-l border-dashed border-rose-500 z-50 pointer-events-none"
-                            style={{
-                              left: `${xVal}px`,
-                              width: "0px",
-                              height: "100%",
-                            }}
-                          />
-                        ))}
-
-                        {/* Horizontal alignment guide lines */}
-                        {yGuides.map((yVal, idx) => (
-                          <div
-                            key={`h-guide-${idx}`}
-                            className="absolute left-0 right-0 border-t border-dashed border-rose-500 z-50 pointer-events-none"
-                            style={{
-                              top: `${yVal}px`,
-                              height: "0px",
-                              width: "100%",
-                            }}
-                          />
-                        ))}
-
-                        {/* Canvas Center Reference Lines while dragging */}
-                        {dragState && (
-                          <>
-                            {/* Horizontal Center Line */}
-                            <div
-                              className="absolute top-[543.5px] left-0 right-0 border-t border-violet-400/20 z-30 pointer-events-none"
-                              style={{ height: "0px", width: "100%" }}
-                            />
-                            {/* Vertical Center Line */}
-                            <div
-                              className="absolute left-[336.5px] top-0 bottom-0 border-l border-violet-400/20 z-30 pointer-events-none"
-                              style={{ width: "0px", height: "100%" }}
-                            />
-                          </>
-                        )}
-
-                        {Object.entries(idCardLayoutConfig.fields || {}).map(([fieldKey, f]: [string, any]) => {
-                          if (!f || !f.visible) return null;
-
-                          let displayContent: React.ReactNode = "";
-                          if (fieldKey === "school_logo") {
-                            displayContent = school.logoUrl ? (
-                              <img src={school.logoUrl} alt="Logo" className="w-full h-full object-contain pointer-events-none" />
-                            ) : (
-                              <div className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Logo</div>
-                            );
-                          } else if (fieldKey === "student_photo") {
-                            displayContent = (
-                              <img src={DUMMY_STUDENT.profilePictureUrl} alt="Photo" className="w-full h-full object-cover pointer-events-none" />
-                            );
-                          } else if (fieldKey === "principal_signature") {
-                            displayContent = school.signatureUrl ? (
-                              <img src={school.signatureUrl} alt="Sign" className="w-full h-full object-contain pointer-events-none" />
-                            ) : (
-                              <div className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Signature</div>
-                            );
-                          } else {
-                            let label = "";
-                            let val = "";
-                            if (fieldKey === "school_name") val = school.name;
-                            else if (fieldKey === "school_caption") val = school.caption || "Caption Text";
-                            else if (fieldKey === "school_address") val = school.address || "Address Text";
-                            else if (fieldKey === "school_phone") val = school.phone || "Phone Text";
-                            else if (fieldKey === "student_name") val = DUMMY_STUDENT.name;
-                            else if (fieldKey === "class_name") { val = "Demo Class"; label = "Class: "; }
-                            else if (fieldKey === "student_fatherName") { val = DUMMY_STUDENT.fatherName; label = "F's Name: "; }
-                            else if (fieldKey === "student_motherName") { val = DUMMY_STUDENT.motherName; label = "M's Name: "; }
-                            else if (fieldKey === "student_fatherPhone") { val = DUMMY_STUDENT.fatherPhone; label = "Cell: "; }
-                            else if (fieldKey === "student_motherPhone") { val = DUMMY_STUDENT.motherPhone; label = "M's Cell: "; }
-                            else if (fieldKey === "student_address") { val = DUMMY_STUDENT.address; label = "Address: "; }
-                            else if (fieldKey.startsWith("student_custom_")) {
-                              const key = fieldKey.replace("student_custom_", "");
-                              val = `[${key}]`;
-                              label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
-                            } else if (fieldKey.startsWith("school_custom_")) {
-                              const key = fieldKey.replace("school_custom_", "");
-                              val = `[${key}]`;
-                              label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
-                            } else if (fieldKey.startsWith("class_custom_")) {
-                              const key = fieldKey.replace("class_custom_", "");
-                              val = `[${key}]`;
-                              label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
-                            }
-
-                            displayContent = (
-                              <div className="leading-tight select-none whitespace-nowrap">
-                                {f.labelVisible !== false && label ? <span className="font-bold opacity-80 mr-1">{label}</span> : null}
-                                <span>{val}</span>
-                              </div>
-                            );
-                          }
-
-                          const isImage = ["school_logo", "student_photo", "principal_signature"].includes(fieldKey);
+                  {/* Top Horizontal Scale Ruler (mm) */}
+                  {showRulerScale && (
+                    <div className="flex items-end self-start ml-auto lg:ml-0">
+                      <div className="w-6 h-5 bg-slate-200 border border-slate-300 rounded-tl-lg flex items-center justify-center text-[8.5px] font-extrabold text-slate-700 shrink-0 select-none">
+                        mm
+                      </div>
+                      <div
+                        ref={topRulerRef}
+                        onMouseDown={(e) => handleStartDragXGuide(e, -1)}
+                        className="w-[336.5px] h-5 bg-slate-100 border-t border-r border-b border-slate-300 relative overflow-hidden select-none cursor-col-resize group"
+                        title="Click and drag horizontally from scale to place vertical guide line at any mm position"
+                      >
+                        {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 54].map((mmVal) => {
+                          const pct = (mmVal / 54) * 100;
+                          const pxVal = Math.round((mmVal / 54) * 673);
+                          const hasGuide = userXGuides.includes(pxVal);
 
                           return (
-                            <DraggableField
-                              key={fieldKey}
-                              fieldKey={fieldKey}
-                              f={f}
-                              isImage={isImage}
-                              selectedFieldKey={selectedFieldKey}
-                              setSelectedFieldKey={setSelectedFieldKey}
-                              handleFieldDrag={handleFieldDrag}
-                              displayContent={displayContent}
-                              onDragStart={handleDragStart}
-                              onDragMove={handleDragMove}
-                              handleFieldResize={handleFieldResize}
-                            />
+                            <div
+                              key={`top-tick-${mmVal}`}
+                              onMouseDown={(e) => handleStartDragXGuide(e, hasGuide ? pxVal : -1)}
+                              className={`absolute top-0 bottom-0 border-l transition-colors hover:bg-violet-200/60 cursor-col-resize ${
+                                hasGuide ? "border-rose-500 border-l-2" : "border-slate-350"
+                              }`}
+                              style={{ left: `${pct}%` }}
+                              title={`Drag to move or place ${mmVal}mm vertical guide line`}
+                            >
+                              <span className={`absolute top-0 left-0.5 text-[7.5px] font-bold leading-none select-none ${
+                                hasGuide ? "text-rose-600 font-extrabold" : "text-slate-600"
+                              }`}>
+                                {mmVal}
+                              </span>
+                            </div>
                           );
                         })}
+
+                        {/* Active selected element X marker line */}
+                        {selectedFieldKey && idCardLayoutConfig.fields?.[selectedFieldKey] && (
+                          <div
+                            className="absolute top-0 bottom-0 border-l-2 border-violet-600 z-10 pointer-events-none"
+                            style={{ left: `${((idCardLayoutConfig.fields[selectedFieldKey].x || 0) / 673) * 100}%` }}
+                          />
+                        )}
                       </div>
                     </div>
                   )}
+
+                  <div className="flex items-start">
+                    {/* Left Vertical Scale Ruler (mm) */}
+                    {showRulerScale && (
+                      <div
+                        ref={leftRulerRef}
+                        onMouseDown={(e) => handleStartDragYGuide(e, -1)}
+                        className="w-6 h-[543.5px] bg-slate-100 border-l border-b border-r border-slate-300 relative overflow-hidden shrink-0 select-none rounded-bl-lg cursor-row-resize group"
+                        title="Click and drag vertically from scale to place horizontal guide line at any mm position"
+                      >
+                        {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 87].map((mmVal) => {
+                          const pct = (mmVal / 87) * 100;
+                          const pxVal = Math.round((mmVal / 87) * 1087);
+                          const hasGuide = userYGuides.includes(pxVal);
+
+                          return (
+                            <div
+                              key={`left-tick-${mmVal}`}
+                              onMouseDown={(e) => handleStartDragYGuide(e, hasGuide ? pxVal : -1)}
+                              className={`absolute left-0 right-0 border-t transition-colors hover:bg-violet-200/60 cursor-row-resize ${
+                                hasGuide ? "border-rose-500 border-t-2" : "border-slate-350"
+                              }`}
+                              style={{ top: `${pct}%` }}
+                              title={`Drag to move or place ${mmVal}mm horizontal guide line`}
+                            >
+                              <span className={`absolute left-0.5 top-0.5 text-[7px] font-bold leading-none select-none ${
+                                hasGuide ? "text-rose-600 font-extrabold" : "text-slate-600"
+                              }`}>
+                                {mmVal}
+                              </span>
+                            </div>
+                          );
+                        })}
+
+                        {/* Active selected element Y marker line */}
+                        {selectedFieldKey && idCardLayoutConfig.fields?.[selectedFieldKey] && (
+                          <div
+                            className="absolute left-0 right-0 border-t-2 border-violet-600 z-10 pointer-events-none"
+                            style={{ top: `${((idCardLayoutConfig.fields[selectedFieldKey].y || 0) / 1087) * 100}%` }}
+                          />
+                        )}
+                      </div>
+                    )}
+
+                    {selectedLayout === 0 && !idCardLayoutConfig.backgroundUrl ? (
+                      <div className="w-[336.5px] h-[543.5px] border-2 border-dashed border-gray-300 rounded-xl bg-white flex flex-col items-center justify-center p-6 text-center select-none shadow-xs">
+                        <span className="text-3xl mb-2">🖼️</span>
+                        <p className="text-xs font-bold text-gray-600">No Background Image</p>
+                        <p className="text-[10px] text-gray-400 mb-4 font-medium">Upload a custom ID Card layout image to start positioning.</p>
+
+                        <label className="px-4 py-2 bg-violet-650 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md select-none">
+                          {bgUploading ? "Uploading..." : "Upload Background"}
+                          <input type="file" accept="image/*" onChange={handleBgUpload} disabled={bgUploading} className="hidden" />
+                        </label>
+                      </div>
+                    ) : (
+                      <div
+                        className="relative overflow-hidden rounded-xl border border-gray-300 shadow-2xl bg-white select-none shrink-0"
+                        style={{ width: "336.5px", height: "543.5px" }}
+                        onClick={() => setSelectedFieldKey(null)}
+                      >
+                        {/* Grid Overlay */}
+                        {showGridOverlay && (
+                          <div
+                            className="absolute inset-0 pointer-events-none z-40 opacity-25"
+                            style={{
+                              backgroundImage: `
+                                linear-gradient(to right, rgba(124, 58, 237, 0.4) 1px, transparent 1px),
+                                linear-gradient(to bottom, rgba(124, 58, 237, 0.4) 1px, transparent 1px)
+                              `,
+                              backgroundSize: `25px 25px`,
+                            }}
+                          />
+                        )}
+
+                        {/* Background loaded */}
+                        {selectedLayout === 0 ? (
+                          <div
+                            className="absolute inset-0 bg-cover bg-center pointer-events-none"
+                            style={{
+                              backgroundImage: `url(${idCardLayoutConfig.backgroundUrl})`,
+                              backgroundColor: theme.background,
+                            }}
+                          />
+                        ) : (
+                          <div className="absolute inset-0 pointer-events-none scale-[0.5] origin-top-left" style={{ width: "673px", height: "1087px" }}>
+                            <IdCard
+                              layout={selectedLayout}
+                              theme={theme}
+                              school={{ ...school, idCardLayoutConfig: idCardLayoutConfig }}
+                              student={activePreviewStudent}
+                              classNameStr={activePreviewStudent.classNameStr || "Demo Class"}
+                              hideFields={true}
+                            />
+                          </div>
+                        )}
+
+                        {/* Placed Elements Container */}
+                        <div className="absolute top-0 left-0 w-[673px] h-[1087px] origin-top-left scale-[0.5]">
+                          {/* Live dragging guide line indicator */}
+                          {activeGuideDrag && (
+                            <div
+                              className={`absolute border-rose-500 z-50 pointer-events-none ${
+                                activeGuideDrag.type === "x"
+                                  ? "top-0 bottom-0 border-l-2 border-dashed w-0 h-full"
+                                  : "left-0 right-0 border-t-2 border-dashed h-0 w-full"
+                              }`}
+                              style={{
+                                left: activeGuideDrag.type === "x" ? `${activeGuideDrag.currentPx}px` : 0,
+                                top: activeGuideDrag.type === "y" ? `${activeGuideDrag.currentPx}px` : 0,
+                              }}
+                            >
+                              <span className="bg-rose-600 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-md absolute top-2 left-2 whitespace-nowrap shadow-md">
+                                📍 {activeGuideDrag.currentMm}mm
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Vertical alignment guide lines (mm) */}
+                          {userXGuides.map((xVal, idx) => {
+                            const mmStr = ((xVal / 673) * 54).toFixed(1);
+                            return (
+                              <div
+                                key={`v-guide-${idx}`}
+                                onMouseDown={(e) => handleStartDragXGuide(e, xVal)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setUserXGuides((prev) => prev.filter((g) => g !== xVal));
+                                }}
+                                className="absolute top-0 bottom-0 border-l-2 border-dashed border-rose-500 z-50 cursor-col-resize group"
+                                style={{ left: `${xVal}px`, width: "0px", height: "100%" }}
+                                title={`Drag to reposition or click to remove ${mmStr}mm vertical guide line`}
+                              >
+                                <span className="opacity-0 group-hover:opacity-100 bg-rose-600 text-white text-[9px] font-bold px-1 rounded absolute top-2 left-1 whitespace-nowrap shadow-xs pointer-events-none">
+                                  {mmStr}mm
+                                </span>
+                              </div>
+                            );
+                          })}
+
+                          {/* Horizontal alignment guide lines (mm) */}
+                          {userYGuides.map((yVal, idx) => {
+                            const mmStr = ((yVal / 1087) * 87).toFixed(1);
+                            return (
+                              <div
+                                key={`h-guide-${idx}`}
+                                onMouseDown={(e) => handleStartDragYGuide(e, yVal)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setUserYGuides((prev) => prev.filter((g) => g !== yVal));
+                                }}
+                                className="absolute left-0 right-0 border-t-2 border-dashed border-rose-500 z-50 cursor-row-resize group"
+                                style={{ top: `${yVal}px`, height: "0px", width: "100%" }}
+                                title={`Drag to reposition or click to remove ${mmStr}mm horizontal guide line`}
+                              >
+                                <span className="opacity-0 group-hover:opacity-100 bg-rose-600 text-white text-[9px] font-bold px-1 rounded absolute left-2 top-1 whitespace-nowrap shadow-xs pointer-events-none">
+                                  {mmStr}mm
+                                </span>
+                              </div>
+                            );
+                          })}
+
+                          {/* Live Dynamic Smart Alignment Lines while dragging */}
+                          {dragState && (() => {
+                            const { xLines, yLines } = getActiveSnapLines();
+                            return (
+                              <>
+                                {xLines.map((l, idx) => (
+                                  <div
+                                    key={`active-snap-x-${idx}`}
+                                    className="absolute top-0 bottom-0 border-l-2 border-dashed border-violet-600 z-40 pointer-events-none shadow-md"
+                                    style={{ left: `${l.pos}px`, width: "0px", height: "100%" }}
+                                  >
+                                    <span className="bg-violet-600 text-white text-[9px] font-extrabold px-1 rounded absolute top-1 left-1 whitespace-nowrap shadow-xs">
+                                      {l.label}
+                                    </span>
+                                  </div>
+                                ))}
+
+                                {yLines.map((l, idx) => (
+                                  <div
+                                    key={`active-snap-y-${idx}`}
+                                    className="absolute left-0 right-0 border-t-2 border-dashed border-violet-600 z-40 pointer-events-none shadow-md"
+                                    style={{ top: `${l.pos}px`, height: "0px", width: "100%" }}
+                                  >
+                                    <span className="bg-violet-600 text-white text-[9px] font-extrabold px-1 rounded absolute left-1 top-1 whitespace-nowrap shadow-xs">
+                                      {l.label}
+                                    </span>
+                                  </div>
+                                ))}
+                              </>
+                            );
+                          })()}
+
+                          {Object.entries(idCardLayoutConfig.fields || {}).map(([fieldKey, f]: [string, any]) => {
+                            if (!f || !f.visible) return null;
+
+                            let displayContent: React.ReactNode = "";
+                            if (fieldKey === "school_logo") {
+                              displayContent = school.logoUrl ? (
+                                <img src={school.logoUrl} alt="Logo" className="w-full h-full object-contain pointer-events-none" />
+                              ) : (
+                                <div className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Logo</div>
+                              );
+                            } else if (fieldKey === "student_photo") {
+                              displayContent = (
+                                <img src={activePreviewStudent.profilePictureUrl || DUMMY_STUDENT.profilePictureUrl} alt="Photo" className="w-full h-full object-cover pointer-events-none" />
+                              );
+                            } else if (fieldKey === "principal_signature") {
+                              displayContent = school.signatureUrl ? (
+                                <img src={school.signatureUrl} alt="Sign" className="w-full h-full object-contain pointer-events-none" />
+                              ) : (
+                                <div className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Signature</div>
+                              );
+                            } else {
+                              let label = "";
+                              let val = "";
+                              let customVals = activePreviewStudent.customValues;
+                              if (typeof customVals === "string") {
+                                try { customVals = JSON.parse(customVals); } catch { customVals = null; }
+                              }
+
+                              if (fieldKey === "school_name") val = school.name;
+                              else if (fieldKey === "school_caption") val = school.caption || "Caption Text";
+                              else if (fieldKey === "school_address") val = school.address || "Address Text";
+                              else if (fieldKey === "school_phone") val = school.phone || "Phone Text";
+                              else if (fieldKey === "student_name") val = activePreviewStudent.name;
+                              else if (fieldKey === "class_name") { val = activePreviewStudent.classNameStr || "Demo Class"; label = "Class: "; }
+                              else if (fieldKey === "student_fatherName") { val = activePreviewStudent.fatherName; label = "F's Name: "; }
+                              else if (fieldKey === "student_motherName") { val = (activePreviewStudent as any).motherName || customVals?.motherName || customVals?.mother_name || ""; label = "M's Name: "; }
+                              else if (fieldKey === "student_fatherPhone") { val = activePreviewStudent.fatherPhone; label = "Cell: "; }
+                              else if (fieldKey === "student_motherPhone") { val = (activePreviewStudent as any).motherPhone || customVals?.motherPhone || customVals?.mother_phone || ""; label = "M's Cell: "; }
+                              else if (fieldKey === "student_address") { val = activePreviewStudent.address; label = "Address: "; }
+                              else if (fieldKey === "student_idNo") { val = (activePreviewStudent as any).idNo || ""; label = "ID No: "; }
+                              else if (fieldKey === "student_camSno") { val = activePreviewStudent.camSno || ""; label = "CAM S.No: "; }
+                              else if (fieldKey.startsWith("student_custom_")) {
+                                const key = fieldKey.replace("student_custom_", "");
+                                val = customVals?.[key] || `[${key}]`;
+                                label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
+                              } else if (fieldKey.startsWith("school_custom_")) {
+                                const key = fieldKey.replace("school_custom_", "");
+                                val = `[${key}]`;
+                                label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
+                              } else if (fieldKey.startsWith("class_custom_")) {
+                                const key = fieldKey.replace("class_custom_", "");
+                                val = `[${key}]`;
+                                label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
+                              }
+
+                              displayContent = (
+                                <div className="leading-tight select-none whitespace-nowrap">
+                                  {f.labelVisible !== false && label ? <span className="font-bold opacity-80 mr-1">{label}</span> : null}
+                                  <span>{val}</span>
+                                </div>
+                              );
+                            }
+
+                            const isImage = ["school_logo", "student_photo", "principal_signature"].includes(fieldKey);
+
+                            return (
+                              <DraggableField
+                                key={fieldKey}
+                                fieldKey={fieldKey}
+                                f={f}
+                                isImage={isImage}
+                                selectedFieldKey={selectedFieldKey}
+                                setSelectedFieldKey={setSelectedFieldKey}
+                                handleFieldDrag={handleFieldDrag}
+                                displayContent={displayContent}
+                                onDragStart={handleDragStart}
+                                onDragMove={handleDragMove}
+                                handleFieldResize={handleFieldResize}
+                                onBoundsUpdate={handleBoundsUpdate}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Designer controls (Right) */}
                 <div className="flex-1 space-y-6">
-                  {idCardLayoutConfig.backgroundUrl && (
-                    <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3">
+                  {/* Student Preview Switcher & Filter Controls Card */}
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-xs select-none">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Student Preview Navigator</h4>
+                    </div>
+
+                    {/* Filter & Search Inputs */}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      {/* Class Filter Dropdown */}
+                      <CustomClassDropdown
+                        selectedClassFilter={selectedClassFilter}
+                        setSelectedClassFilter={setSelectedClassFilter}
+                        schoolClasses={school?.classes || []}
+                        totalStudentsCount={schoolStudents.length}
+                        schoolStudents={schoolStudents}
+                      />
+
+                      {/* Student Search Input */}
+                      <div className="flex-1 relative flex items-center">
+                        <input
+                          type="text"
+                          placeholder="Search student..."
+                          value={studentSearchQuery}
+                          onChange={(e) => setStudentSearchQuery(e.target.value)}
+                          className="w-full text-xs font-medium bg-gray-50 border border-gray-200 rounded-xl pl-3 pr-7 py-2 focus:ring-1 focus:ring-violet-500 truncate"
+                        />
+                        {studentSearchQuery ? (
+                          <button
+                            type="button"
+                            onClick={() => setStudentSearchQuery("")}
+                            className="absolute right-2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                            title="Clear search"
+                          >
+                            ✕
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {/* Arrow Navigation & Student Selector Bar */}
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
+                      <button
+                        type="button"
+                        onClick={handlePrevStudent}
+                        disabled={filteredPreviewStudents.length === 0}
+                        className="p-2 rounded-xl bg-gray-100 hover:bg-violet-100 text-gray-700 hover:text-violet-700 transition-colors cursor-pointer disabled:opacity-40 shrink-0"
+                        title="Previous Student"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+
+                      <CustomStudentDropdown
+                        previewStudentIndex={previewStudentIndex}
+                        setPreviewStudentIndex={setPreviewStudentIndex}
+                        filteredPreviewStudents={filteredPreviewStudents}
+                        schoolClasses={school?.classes || []}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={handleNextStudent}
+                        disabled={filteredPreviewStudents.length === 0}
+                        className="p-2 rounded-xl bg-gray-100 hover:bg-violet-100 text-gray-700 hover:text-violet-700 transition-colors cursor-pointer disabled:opacity-40 shrink-0"
+                        title="Next Student"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Separate Dedicated Layout Background Card */}
+                  {selectedLayout === 0 && (
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-xs select-none">
                       <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Layout Background</h4>
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 border rounded bg-gray-100 bg-cover bg-center shrink-0" style={{ backgroundImage: `url(${idCardLayoutConfig.backgroundUrl})` }} />
-                        <label className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-750 text-xs font-semibold rounded-lg border border-gray-300 transition-colors cursor-pointer select-none">
-                          {bgUploading ? "Replacing..." : "Replace Image"}
-                          <input type="file" accept="image/*" onChange={handleBgUpload} disabled={bgUploading} className="hidden" />
-                        </label>
+
+                      <div className="flex items-center gap-4 p-3 bg-gray-50/80 rounded-xl border border-gray-150">
+                        {idCardLayoutConfig.backgroundUrl ? (
+                          <div className="relative w-16 h-24 border border-gray-300 rounded-lg overflow-hidden bg-white shadow-xs shrink-0 group">
+                            <img
+                              src={idCardLayoutConfig.backgroundUrl}
+                              alt="Layout Background Preview"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[9px] font-bold">
+                              Preview
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-16 h-24 border-2 border-dashed border-gray-300 rounded-lg bg-white flex flex-col items-center justify-center shrink-0 text-center p-1">
+                            <span className="text-base mb-0.5">🖼️</span>
+                            <span className="text-[9px] font-bold text-gray-400 leading-tight">No Image</span>
+                          </div>
+                        )}
+
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div>
+                            <p className="text-xs font-bold text-gray-800 truncate">Custom Layout Background</p>
+                            <p className="text-[10px] text-gray-400 font-medium">
+                              {idCardLayoutConfig.backgroundUrl ? "Background image active" : "Upload custom background image"}
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label className="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer select-none inline-flex items-center gap-1.5 shadow-xs">
+                              <span>{bgUploading ? "Uploading..." : idCardLayoutConfig.backgroundUrl ? "Replace Image" : "Upload Background"}</span>
+                              <input type="file" accept="image/*" onChange={handleBgUpload} disabled={bgUploading} className="hidden" />
+                            </label>
+
+                            {idCardLayoutConfig.backgroundUrl && (
+                              <button
+                                type="button"
+                                onClick={() => setIdCardLayoutConfig((prev: any) => ({ ...prev, backgroundUrl: "" }))}
+                                className="px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1915,15 +2896,43 @@ export default function SchoolPage() {
                       return (
                         <div className="p-4 bg-white border-2 border-violet-150 rounded-xl space-y-4 animate-in fade-in duration-200">
                           <div className="flex justify-between items-center border-b pb-2">
-                            <h4 className="text-xs font-bold text-violet-900 uppercase tracking-widest">
-                              Style: {displayName}
-                            </h4>
-                            <button
-                              onClick={() => setSelectedFieldKey(null)}
-                              className="text-gray-405 hover:text-gray-600 font-bold text-xs bg-transparent border-0 cursor-pointer"
-                            >
-                              Close
-                            </button>
+                            <div>
+                              <h4 className="text-xs font-bold text-violet-900 uppercase tracking-widest">
+                                Style: {displayName}
+                              </h4>
+                              <p className="text-[10px] text-gray-400 font-medium">Configure element properties in {editorUnit.toUpperCase()}</p>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {/* Unit Mode Selector (mm / px) */}
+                              <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200 select-none shadow-2xs">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditorUnit("mm")}
+                                  className={`px-2 py-0.5 text-[10px] font-extrabold rounded-md transition-all cursor-pointer ${
+                                    editorUnit === "mm" ? "bg-violet-600 text-white shadow-2xs" : "text-gray-600 hover:text-gray-900"
+                                  }`}
+                                >
+                                  mm
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditorUnit("px")}
+                                  className={`px-2 py-0.5 text-[10px] font-extrabold rounded-md transition-all cursor-pointer ${
+                                    editorUnit === "px" ? "bg-violet-600 text-white shadow-2xs" : "text-gray-600 hover:text-gray-900"
+                                  }`}
+                                >
+                                  px
+                                </button>
+                              </div>
+
+                              <button
+                                onClick={() => setSelectedFieldKey(null)}
+                                className="text-gray-400 hover:text-gray-600 font-bold text-xs bg-transparent border-0 cursor-pointer pl-1"
+                              >
+                                Close
+                              </button>
+                            </div>
                           </div>
 
                           {!isImage && (
@@ -1958,13 +2967,41 @@ export default function SchoolPage() {
 
                               <div className="flex flex-col gap-1.5">
                                 <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase">
-                                  <span>Font Size</span>
-                                  <span className="text-violet-650 bg-violet-50 px-2 rounded font-bold">{f.fontSize || "20"}px</span>
+                                  <span>Font Size ({editorUnit})</span>
+                                  <div className="flex items-center gap-1">
+                                    {editorUnit === "mm" ? (
+                                      <input
+                                        type="number"
+                                        step="0.1"
+                                        min="0.5"
+                                        max="40"
+                                        value={((f.fontSize || 20) / 12.46).toFixed(1)}
+                                        onChange={(e) => {
+                                          const mmVal = parseFloat(e.target.value || "1");
+                                          const pxVal = Math.max(1, Math.round(mmVal * 12.46));
+                                          handleFieldStyleChange("fontSize", pxVal);
+                                        }}
+                                        className="w-14 px-1 py-0.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        title="Font size in mm"
+                                      />
+                                    ) : (
+                                      <input
+                                        type="number"
+                                        min="6"
+                                        max="500"
+                                        value={f.fontSize || "20"}
+                                        onChange={(e) => handleFieldStyleChange("fontSize", Math.max(1, parseInt(e.target.value || "12", 10)))}
+                                        className="w-16 px-1.5 py-0.5 text-xs font-bold text-violet-700 bg-violet-50 border border-violet-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-violet-500"
+                                        title="Font size in pixels"
+                                      />
+                                    )}
+                                    <span className="text-[10px] text-gray-400 font-bold">{editorUnit}</span>
+                                  </div>
                                 </div>
                                 <input
                                   type="range"
-                                  min="12"
-                                  max="70"
+                                  min="6"
+                                  max="150"
                                   value={f.fontSize || "20"}
                                   onChange={(e) => handleFieldStyleChange("fontSize", parseInt(e.target.value, 10))}
                                   className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
@@ -1991,13 +3028,41 @@ export default function SchoolPage() {
 
                               <div className="flex flex-col gap-1.5">
                                 <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase">
-                                  <span>Stroke Outline Width</span>
-                                  <span className="text-violet-650 bg-violet-50 px-2 rounded font-bold">{f.strokeWidth || 0}px</span>
+                                  <span>Stroke Outline Width ({editorUnit})</span>
+                                  <div className="flex items-center gap-1">
+                                    {editorUnit === "mm" ? (
+                                      <input
+                                        type="number"
+                                        step="0.1"
+                                        min="0"
+                                        max="10"
+                                        value={((f.strokeWidth || 0) / 12.46).toFixed(1)}
+                                        onChange={(e) => {
+                                          const mmVal = parseFloat(e.target.value || "0");
+                                          const pxVal = Math.max(0, Math.round(mmVal * 12.46));
+                                          handleFieldStyleChange("strokeWidth", pxVal);
+                                        }}
+                                        className="w-16 px-1.5 py-0.5 text-xs font-bold text-violet-700 bg-violet-50 border border-violet-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-violet-500"
+                                        title="Stroke outline width in mm"
+                                      />
+                                    ) : (
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={f.strokeWidth || 0}
+                                        onChange={(e) => handleFieldStyleChange("strokeWidth", Math.max(0, parseInt(e.target.value || "0", 10)))}
+                                        className="w-16 px-1.5 py-0.5 text-xs font-bold text-violet-700 bg-violet-50 border border-violet-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-violet-500"
+                                        title="Stroke outline width in pixels"
+                                      />
+                                    )}
+                                    <span className="text-[10px] text-gray-400 font-bold">{editorUnit}</span>
+                                  </div>
                                 </div>
                                 <input
                                   type="range"
                                   min="0"
-                                  max="10"
+                                  max="50"
                                   value={f.strokeWidth || 0}
                                   onChange={(e) => handleFieldStyleChange("strokeWidth", parseInt(e.target.value, 10))}
                                   className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
@@ -2070,26 +3135,58 @@ export default function SchoolPage() {
                           {isImage && (
                             <div className="grid grid-cols-2 gap-4">
                               <div className="flex flex-col gap-1">
-                                <label className="text-[10px] font-bold text-gray-500 uppercase">Width (px)</label>
-                                <input
-                                  type="number"
-                                  min="20"
-                                  max="600"
-                                  value={f.width || "120"}
-                                  onChange={(e) => handleFieldStyleChange("width", parseInt(e.target.value, 10))}
-                                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg"
-                                />
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Width ({editorUnit})</label>
+                                {editorUnit === "mm" ? (
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    min="2"
+                                    max="54"
+                                    value={((f.width || 120) / 673 * 54).toFixed(1)}
+                                    onChange={(e) => {
+                                      const mmVal = parseFloat(e.target.value || "0");
+                                      const pxVal = Math.round((mmVal / 54) * 673);
+                                      handleFieldStyleChange("width", pxVal);
+                                    }}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg font-semibold"
+                                  />
+                                ) : (
+                                  <input
+                                    type="number"
+                                    min="20"
+                                    max="600"
+                                    value={f.width || "120"}
+                                    onChange={(e) => handleFieldStyleChange("width", parseInt(e.target.value, 10))}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg font-semibold"
+                                  />
+                                )}
                               </div>
                               <div className="flex flex-col gap-1">
-                                <label className="text-[10px] font-bold text-gray-500 uppercase">Height (px)</label>
-                                <input
-                                  type="number"
-                                  min="20"
-                                  max="800"
-                                  value={f.height || "120"}
-                                  onChange={(e) => handleFieldStyleChange("height", parseInt(e.target.value, 10))}
-                                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg"
-                                />
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Height ({editorUnit})</label>
+                                {editorUnit === "mm" ? (
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    min="2"
+                                    max="87"
+                                    value={((f.height || 120) / 1087 * 87).toFixed(1)}
+                                    onChange={(e) => {
+                                      const mmVal = parseFloat(e.target.value || "0");
+                                      const pxVal = Math.round((mmVal / 87) * 1087);
+                                      handleFieldStyleChange("height", pxVal);
+                                    }}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg font-semibold"
+                                  />
+                                ) : (
+                                  <input
+                                    type="number"
+                                    min="20"
+                                    max="800"
+                                    value={f.height || "120"}
+                                    onChange={(e) => handleFieldStyleChange("height", parseInt(e.target.value, 10))}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg font-semibold"
+                                  />
+                                )}
                               </div>
                             </div>
                           )}
