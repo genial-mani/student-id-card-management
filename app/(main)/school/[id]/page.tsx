@@ -216,7 +216,9 @@ const DraggableField = ({
           color: f.color || "#000",
           transform: isImage ? 'none' : `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
           transformOrigin: 'top left',
-          whiteSpace: 'nowrap'
+          whiteSpace: 'nowrap',
+          WebkitTextStroke: !isImage && f.strokeWidth ? `${f.strokeWidth}px ${f.strokeColor || "#ffffff"}` : undefined,
+          paintOrder: !isImage && f.strokeWidth ? "stroke fill" : undefined,
         }}
       >
         {displayContent}
@@ -1982,6 +1984,39 @@ export default function SchoolPage() {
                                     type="text"
                                     value={f.color || "#000000"}
                                     onChange={(e) => handleFieldStyleChange("color", e.target.value)}
+                                    className="w-24 px-2 py-1 text-xs border rounded-lg"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase">
+                                  <span>Stroke Outline Width</span>
+                                  <span className="text-violet-650 bg-violet-50 px-2 rounded font-bold">{f.strokeWidth || 0}px</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="10"
+                                  value={f.strokeWidth || 0}
+                                  onChange={(e) => handleFieldStyleChange("strokeWidth", parseInt(e.target.value, 10))}
+                                  className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Stroke Outline Color</label>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="color"
+                                    value={f.strokeColor || "#ffffff"}
+                                    onChange={(e) => handleFieldStyleChange("strokeColor", e.target.value)}
+                                    className="w-8 h-8 rounded-lg cursor-pointer border shadow-xs appearance-none p-0.5 bg-white"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={f.strokeColor || "#ffffff"}
+                                    onChange={(e) => handleFieldStyleChange("strokeColor", e.target.value)}
                                     className="w-24 px-2 py-1 text-xs border rounded-lg"
                                   />
                                 </div>

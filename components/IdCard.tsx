@@ -248,6 +248,11 @@ export default function IdCard({
           whiteSpace: isMultiline ? "normal" : "nowrap",
           transform: transformStr,
           transformOrigin: transformOriginStr,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start",
+          WebkitTextStroke: f.strokeWidth ? `${f.strokeWidth}px ${f.strokeColor || "#ffffff"}` : undefined,
+          paintOrder: f.strokeWidth ? "stroke fill" : undefined,
         };
 
         if (fieldKey === "school_logo") {

@@ -674,6 +674,20 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Stroke (px)</label>
+                      <input type="number" min="0" max="20" value={fields[selectedFieldKey].strokeWidth || 0} onChange={e => updateFieldProperty("strokeWidth", parseInt(e.target.value) || 0)} className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm" placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Stroke Color</label>
+                      <div className="flex gap-1">
+                        <input type="color" value={fields[selectedFieldKey].strokeColor || "#ffffff"} onChange={e => updateFieldProperty("strokeColor", e.target.value)} className="w-8 h-8 rounded cursor-pointer p-0 border-0 shrink-0" />
+                        <input type="text" value={fields[selectedFieldKey].strokeColor || "#ffffff"} onChange={e => updateFieldProperty("strokeColor", e.target.value)} className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs" />
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">Font Family</label>
                     <select value={fields[selectedFieldKey].fontFamily || "Inter"} onChange={e => updateFieldProperty("fontFamily", e.target.value)} className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm">
@@ -848,7 +862,9 @@ function StudioDraggableField({ fieldKey, f, scale, fieldInfo, isSelected, setSe
           background: fieldInfo.isImage ? 'rgba(0,0,0,0.1)' : 'transparent',
           border: fieldInfo.isImage && !isSelected ? '1px dashed #cbd5e1' : 'none',
           transform: fieldInfo.isImage ? 'none' : `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
-          transformOrigin: 'top left'
+          transformOrigin: 'top left',
+          WebkitTextStroke: !fieldInfo.isImage && f.strokeWidth ? `${f.strokeWidth}px ${f.strokeColor || "#ffffff"}` : undefined,
+          paintOrder: !fieldInfo.isImage && f.strokeWidth ? "stroke fill" : undefined,
         }}
       >
         {fieldInfo.isImage ? (
@@ -1157,7 +1173,9 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
                     fontWeight: f.fontWeight || "500",
                     whiteSpace: 'nowrap',
                     transform: isImage ? 'none' : `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
-                    transformOrigin: 'top left'
+                    transformOrigin: 'top left',
+                    WebkitTextStroke: !isImage && f.strokeWidth ? `${f.strokeWidth}px ${f.strokeColor || "#ffffff"}` : undefined,
+                    paintOrder: !isImage && f.strokeWidth ? "stroke fill" : undefined,
                   }}
                 >
                   {content}

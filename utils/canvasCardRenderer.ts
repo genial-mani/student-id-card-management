@@ -449,19 +449,42 @@ function renderText(
   }
 
   const canvasAlign: CanvasTextAlign = align === "center" ? "center" : align === "right" ? "right" : "left";
+  const fieldH = f.height || 0;
+  const strokeW = f.strokeWidth || 0;
+  const strokeC = f.strokeColor || "#ffffff";
+
+  // Helper to draw text with optional outer stroke outline
+  const drawTextWithStroke = (txt: string, tx: number, ty: number) => {
+    if (strokeW > 0) {
+      ctx.save();
+      ctx.strokeStyle = strokeC;
+      ctx.lineWidth = strokeW * 2;
+      ctx.lineJoin = "round";
+      ctx.miterLimit = 2;
+      ctx.strokeText(txt, tx, ty);
+      ctx.restore();
+    }
+    ctx.fillText(txt, tx, ty);
+  };
+
+  // Use middle textBaseline for true flex-style vertical centering (align-items: center)
+  ctx.textBaseline = "middle";
 
   if (!isMultiline) {
+    // Single-line text vertical center
+    const drawY = fieldH > 0 ? y + fieldH / 2 : y + lineH / 2;
+
     // ── Single-line ──
     if (showLabel && canvasAlign === "left") {
       // Label (bold, 85 % opacity) then value
       ctx.font = font("700", fontSize, fontFamily);
       ctx.textAlign = "left";
       ctx.globalAlpha = 0.85;
-      ctx.fillText(label, anchorX, y);
+      drawTextWithStroke(label, anchorX, drawY);
       const lw = ctx.measureText(label).width;
       ctx.globalAlpha = 1;
       ctx.font = font(fontWeight, fontSize, fontFamily);
-      ctx.fillText(text, anchorX + lw + 4, y); // 4 px ≈ mr-1
+      drawTextWithStroke(text, anchorX + lw + 4, drawY); // 4 px ≈ mr-1
     } else if (showLabel) {
       // Centre / right aligned: measure total width, position manually
       ctx.font = font("700", fontSize, fontFamily);
@@ -474,14 +497,14 @@ function renderText(
       ctx.textAlign = "left";
       ctx.font = font("700", fontSize, fontFamily);
       ctx.globalAlpha = 0.85;
-      ctx.fillText(label, startX, y);
+      drawTextWithStroke(label, startX, drawY);
       ctx.globalAlpha = 1;
       ctx.font = font(fontWeight, fontSize, fontFamily);
-      ctx.fillText(text, startX + lw + 4, y);
+      drawTextWithStroke(text, startX + lw + 4, drawY);
     } else {
       ctx.font = font(fontWeight, fontSize, fontFamily);
       ctx.textAlign = canvasAlign;
-      ctx.fillText(text, anchorX, y);
+      drawTextWithStroke(text, anchorX, drawY);
     }
   } else {
     // ── Multiline with word-wrap ──
@@ -490,8 +513,12 @@ function renderText(
     ctx.font = font(fontWeight, fontSize, fontFamily);
     ctx.textAlign = canvasAlign;
     const lines = wrapText(ctx, full, maxW);
+
+    const totalH = lines.length * lineH;
+    const startTopY = fieldH > totalH ? y + (fieldH - totalH) / 2 : y;
+
     for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], anchorX, y + i * lineH);
+      drawTextWithStroke(lines[i], anchorX, startTopY + (i + 0.5) * lineH);
     }
   }
 }
@@ -601,7 +628,6 @@ export function drawCardOnCanvas(
       key === "school_name" || key === "school_caption";
 
     ctx.save();
-    ctx.textBaseline = "top";
     ctx.fillStyle = color;
 
     if (scaleX !== 1 || scaleY !== 1) {
