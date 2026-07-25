@@ -194,17 +194,20 @@ export default function EditStudentModal({
 
     try {
       let finalPictureUrl = student.profilePictureUrl || "";
+      let finalCamSno = formData.camSno.trim() || student.camSno || "";
 
       if (profilePictureFile) {
-        const randomSuffix = typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID().replace(/-/g, "").substring(0, 8)
-          : Math.random().toString(36).substring(2, 10);
-        
-        const cleanCamId = (formData.camSno || student.camSno || student.id || randomSuffix)
-          .trim()
-          .replace(/[^a-zA-Z0-9_-]/g, "_")
-          .substring(0, 12);
+        // Generate a new CAM Serial Number when photo is updated
+        const generatedCamSno = (typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID().replace(/-/g, "").substring(0, 12)
+          : Math.random().toString(36).substring(2, 14));
 
+        // Use user-provided camSno if modified from old value, otherwise use generatedCamSno
+        finalCamSno = (formData.camSno.trim() && formData.camSno.trim() !== (student.camSno || ""))
+          ? formData.camSno.trim()
+          : generatedCamSno;
+
+        const cleanCamId = finalCamSno.replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 12);
         const folderName = schoolName.trim().split(/\s+/)[0];
 
         const rawUrl = await uploadImageToCloudinary(
@@ -212,7 +215,6 @@ export default function EditStudentModal({
           folderName,
           cleanCamId
         );
-        // Append cache-busting timestamp query parameter to URL to ensure immediate refresh on edit
         finalPictureUrl = `${rawUrl.split("?")[0]}?v=${Date.now()}`;
       }
 
@@ -227,7 +229,7 @@ export default function EditStudentModal({
           fatherPhone: formData.fatherPhone.trim(),
           address: formData.address.trim(),
           classId: formData.classId,
-          camSno: formData.camSno.trim(),
+          camSno: finalCamSno,
           profilePictureUrl: finalPictureUrl,
           customValues,
         }),

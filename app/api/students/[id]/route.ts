@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/utils/prismaClient';
-import { deleteImageFromCloudinary } from '@/utils/cloudinaryBackend';
+import { deleteImageFromCloudinary, getPublicIdFromUrl } from '@/utils/cloudinaryBackend';
 
 function getAuth(request: NextRequest) {
   return {
@@ -77,9 +77,15 @@ export async function PUT(
 
     const oldPhotoUrl = student.profilePictureUrl;
     if (profilePictureUrl !== undefined && oldPhotoUrl && profilePictureUrl !== oldPhotoUrl) {
-      deleteImageFromCloudinary(oldPhotoUrl).catch((err) => {
-        console.error("Failed to delete old photo during update:", err);
-      });
+      const oldPublicId = getPublicIdFromUrl(oldPhotoUrl);
+      const newPublicId = profilePictureUrl ? getPublicIdFromUrl(profilePictureUrl) : null;
+
+      // Only delete old photo if the Cloudinary public ID actually changed or photo was removed
+      if (oldPublicId && oldPublicId !== newPublicId) {
+        deleteImageFromCloudinary(oldPhotoUrl).catch((err) => {
+          console.error("Failed to delete old photo during update:", err);
+        });
+      }
     }
 
     const updatedStudent = await prisma.student.update({

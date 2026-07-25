@@ -8,7 +8,8 @@ import axios from 'axios';
  */
 export function getPublicIdFromUrl(url: string): string | null {
   if (!url || !url.includes("res.cloudinary.com")) return null;
-  const parts = url.split("/image/upload/");
+  const cleanUrl = url.split("?")[0];
+  const parts = cleanUrl.split("/image/upload/");
   if (parts.length < 2) return null;
   
   // Remove version segment (starts with 'v' and followed by numbers)
