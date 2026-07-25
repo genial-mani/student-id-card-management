@@ -218,8 +218,8 @@ const DraggableField = ({
         }}
         className="w-full h-full flex items-center justify-center cursor-move select-none"
         style={{
-          width: isImage ? '100%' : 'max-content',
-          height: isImage ? '100%' : 'max-content',
+          width: isImage ? '100%' : (f.width ? `${f.width}px` : 'max-content'),
+          height: isImage ? '100%' : (f.height ? `${f.height}px` : 'max-content'),
           padding: isImage ? "0px" : "4px 8px",
           fontFamily: f.fontFamily ? `'${f.fontFamily}', sans-serif` : undefined,
           fontSize: f.fontSize ? `${f.fontSize}px` : "20px",
@@ -227,7 +227,9 @@ const DraggableField = ({
           color: f.color || "#000",
           transform: `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
           transformOrigin: 'top left',
-          whiteSpace: 'nowrap',
+          whiteSpace: (fieldKey === "school_address" || fieldKey === "student_address") ? 'pre-line' : (["school_name", "school_caption"].includes(fieldKey) ? 'normal' : 'nowrap'),
+          wordBreak: 'break-word',
+          overflowWrap: 'break-word',
           WebkitTextStroke: !isImage && f.strokeWidth ? `${f.strokeWidth}px ${f.strokeColor || "#ffffff"}` : undefined,
           paintOrder: !isImage && f.strokeWidth ? "stroke fill" : undefined,
         }}
@@ -2676,10 +2678,13 @@ export default function SchoolPage() {
                                 label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
                               }
 
+                              const isAddr = fieldKey === "school_address" || fieldKey === "student_address";
+                              const isMulti = isAddr || fieldKey === "school_name" || fieldKey === "school_caption";
+
                               displayContent = (
-                                <div className="leading-tight select-none whitespace-nowrap">
+                                <div className={`leading-tight select-none ${isAddr ? "whitespace-pre-line break-words" : isMulti ? "whitespace-normal break-words" : "whitespace-nowrap"}`}>
                                   {f.labelVisible !== false && label ? <span className="font-bold opacity-80 mr-1">{label}</span> : null}
-                                  <span>{val}</span>
+                                  <span className={isAddr ? "whitespace-pre-line break-words" : ""}>{val}</span>
                                 </div>
                               );
                             }

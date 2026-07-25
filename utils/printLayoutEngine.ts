@@ -7,8 +7,9 @@ export const PAPER_SIZES = {
   "13x19": { label: "13 x 19 inches", widthPx: 3900, heightPx: 5700, widthMm: 330.2, heightMm: 482.6 },
 };
 
-export type PaperSize = keyof typeof PAPER_SIZES;
+export type PaperSize = keyof typeof PAPER_SIZES | "custom";
 export type Orientation = "portrait" | "landscape";
+export type CustomUnit = "mm" | "in";
 
 export interface PrintSettings {
   paperSize: PaperSize;
@@ -16,6 +17,35 @@ export interface PrintSettings {
   documentHorizontal: boolean; 
   gapX?: number;
   gapY?: number;
+  customWidthMm?: number;
+  customHeightMm?: number;
+  customUnit?: CustomUnit;
+}
+
+export function getPaperInfo(settings: PrintSettings) {
+  if (settings.paperSize === "custom") {
+    const unit = settings.customUnit || "mm";
+    const rawW = settings.customWidthMm ?? (unit === "in" ? 8.27 : 210);
+    const rawH = settings.customHeightMm ?? (unit === "in" ? 11.69 : 297);
+
+    // If unit is inches, convert to mm for internal calculations
+    const wMm = unit === "in" ? rawW * 25.4 : rawW;
+    const hMm = unit === "in" ? rawH * 25.4 : rawH;
+
+    const MM_TO_PX = 11.8110236; // 300 DPI print resolution
+    const label = unit === "in"
+      ? `Custom (${rawW} x ${rawH} in)`
+      : `Custom (${Math.round(wMm)} x ${Math.round(hMm)} mm)`;
+
+    return {
+      label,
+      widthPx: Math.round(wMm * MM_TO_PX),
+      heightPx: Math.round(hMm * MM_TO_PX),
+      widthMm: wMm,
+      heightMm: hMm
+    };
+  }
+  return PAPER_SIZES[settings.paperSize as keyof typeof PAPER_SIZES] || PAPER_SIZES.A4;
 }
 
 export function calculatePrintGrid(
@@ -24,7 +54,7 @@ export function calculatePrintGrid(
   docHeightPx: number,
   defaultGapPx: number = 24
 ) {
-  const paper = PAPER_SIZES[settings.paperSize];
+  const paper = getPaperInfo(settings);
   const MM_TO_PX = 3.7795275591;
   const actualGapX = settings.gapX !== undefined ? settings.gapX * MM_TO_PX : defaultGapPx;
   const actualGapY = settings.gapY !== undefined ? settings.gapY * MM_TO_PX : defaultGapPx;
@@ -93,7 +123,7 @@ export function calculatePrintGridMm(
   docHeightMm: number,
   defaultGapMm: number = 2
 ) {
-  const paper = PAPER_SIZES[settings.paperSize];
+  const paper = getPaperInfo(settings);
   const actualGapX = settings.gapX !== undefined ? settings.gapX : defaultGapMm;
   const actualGapY = settings.gapY !== undefined ? settings.gapY : defaultGapMm;
   

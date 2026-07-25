@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { PrintSettingsPanel } from "@/components/PrintSettingsPanel";
-import { PrintSettings, calculatePrintGrid, PAPER_SIZES } from "@/utils/printLayoutEngine";
+import { PrintSettings, calculatePrintGrid, PAPER_SIZES, getPaperInfo } from "@/utils/printLayoutEngine";
 import { prefetchImages, drawCardOnCanvas } from "@/utils/canvasCardRenderer";
 import { jsPDF } from "jspdf";
 
@@ -408,7 +408,7 @@ export default function PrintPage() {
   };
 
   // Dynamic print CSS based on current paper settings
-  const paper = PAPER_SIZES[printSettings.paperSize];
+  const paper = getPaperInfo(printSettings);
   const printPageW = printSettings.paperOrientation === "portrait" ? paper.widthMm : paper.heightMm;
   const printPageH = printSettings.paperOrientation === "portrait" ? paper.heightMm : paper.widthMm;
 

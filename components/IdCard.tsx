@@ -207,9 +207,9 @@ export default function IdCard({
       {!hideFields && Object.entries(fields).map(([fieldKey, f]: [string, any]) => {
         if (!f || !f.visible) return null;
 
+        const isAddress = fieldKey === "school_address" || fieldKey === "student_address";
         const isMultiline =
-          fieldKey === "school_address" ||
-          fieldKey === "student_address" ||
+          isAddress ||
           fieldKey === "school_name" ||
           fieldKey === "school_caption";
 
@@ -245,7 +245,9 @@ export default function IdCard({
           color: f.color || undefined,
           textAlign: align as React.CSSProperties["textAlign"],
           zIndex: 20, // Ensure fields are above background elements
-          whiteSpace: isMultiline ? "normal" : "nowrap",
+          whiteSpace: isAddress ? "pre-line" : isMultiline ? "normal" : "nowrap",
+          wordBreak: "break-word",
+          overflowWrap: "break-word",
           transform: transformStr,
           transformOrigin: transformOriginStr,
           display: "flex",
@@ -372,7 +374,7 @@ export default function IdCard({
             {f.labelVisible !== false && labelPrefix ? (
               <span className="font-bold opacity-85 mr-1">{labelPrefix}</span>
             ) : null}
-            <span>{textContent}</span>
+            <span className={isAddress ? "whitespace-pre-line" : ""}>{textContent}</span>
           </div>
         );
       })}

@@ -361,21 +361,47 @@ function wrapText(
   ctx: CanvasRenderingContext2D,
   text: string,
   maxWidth: number,
+  preserveNewlines: boolean = false,
 ): string[] {
-  if (maxWidth <= 0) return [text];
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  let line = "";
-  for (const w of words) {
-    const test = line ? `${line} ${w}` : w;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      lines.push(line);
-      line = w;
-    } else {
-      line = test;
+  if (!text) return [""];
+  if (!preserveNewlines) {
+    if (maxWidth <= 0) return [text];
+    const words = text.split(/\s+/);
+    const lines: string[] = [];
+    let line = "";
+    for (const w of words) {
+      const test = line ? `${line} ${w}` : w;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
     }
+    if (line) lines.push(line);
+    return lines.length ? lines : [""];
   }
-  if (line) lines.push(line);
+
+  const paragraphs = text.split(/\r?\n/);
+  if (maxWidth <= 0) return paragraphs;
+
+  const lines: string[] = [];
+  for (const para of paragraphs) {
+    const words = para.split(/\s+/);
+    let line = "";
+    for (const w of words) {
+      if (!w) continue;
+      const test = line ? `${line} ${w}` : w;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    else if (words.length === 0 || para === "") lines.push("");
+  }
   return lines.length ? lines : [""];
 }
 
@@ -427,9 +453,11 @@ function renderText(
   align: CanvasTextAlign,
   isMultiline: boolean,
   fieldXInCard: number,
+  fieldKey: string = "",
 ): void {
   const lineH = fontSize * LINE_HEIGHT;
   const showLabel = f.labelVisible !== false && !!label;
+  const isAddress = fieldKey === "school_address" || fieldKey === "student_address";
 
   // Determine anchor position from alignment
   const fieldX = f.x || 0;
@@ -512,7 +540,7 @@ function renderText(
     const full = showLabel ? label + text : text;
     ctx.font = font(fontWeight, fontSize, fontFamily);
     ctx.textAlign = canvasAlign;
-    const lines = wrapText(ctx, full, maxW);
+    const lines = wrapText(ctx, full, maxW, isAddress);
 
     const totalH = lines.length * lineH;
     const startTopY = fieldH > totalH ? y + (fieldH - totalH) / 2 : y;
@@ -633,9 +661,9 @@ export function drawCardOnCanvas(
     if (scaleX !== 1 || scaleY !== 1) {
       ctx.translate(fx, fy);
       ctx.scale(scaleX, scaleY);
-      renderText(ctx, 0, 0, text, label, f, fontSize, fontWeight, fontFamily, fw, align, isMultiline, f.x || 0);
+      renderText(ctx, 0, 0, text, label, f, fontSize, fontWeight, fontFamily, fw, align, isMultiline, f.x || 0, key);
     } else {
-      renderText(ctx, fx, fy, text, label, f, fontSize, fontWeight, fontFamily, fw, align, isMultiline, f.x || 0);
+      renderText(ctx, fx, fy, text, label, f, fontSize, fontWeight, fontFamily, fw, align, isMultiline, f.x || 0, key);
     }
 
     ctx.restore();
