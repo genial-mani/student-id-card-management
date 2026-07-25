@@ -432,15 +432,23 @@ function renderText(
   const showLabel = f.labelVisible !== false && !!label;
 
   // Determine anchor position from alignment
-  let anchorX = x;
-  let canvasAlign: CanvasTextAlign = "left";
+  const fieldX = f.x || 0;
+  let targetXInCard = fieldX;
   if (align === "center") {
-    anchorX = fieldWidth > 0 ? x + fieldWidth / 2 : (x > 0 && x < CARD_W / 2 ? CARD_W / 2 : x);
-    canvasAlign = "center";
+    targetXInCard = fieldWidth > 0 ? fieldX + fieldWidth / 2 : (fieldX >= 0 && fieldX < CARD_W / 2 ? CARD_W / 2 : fieldX);
   } else if (align === "right") {
-    anchorX = fieldWidth > 0 ? x + fieldWidth : x;
-    canvasAlign = "right";
+    targetXInCard = fieldWidth > 0 ? fieldX + fieldWidth : fieldX;
   }
+
+  let anchorX: number;
+  if (x === 0 && (f.scaleX !== 1 || f.scaleY !== 1)) {
+    anchorX = targetXInCard - fieldX;
+  } else {
+    const cardOriginX = x - fieldX;
+    anchorX = cardOriginX + targetXInCard;
+  }
+
+  const canvasAlign: CanvasTextAlign = align === "center" ? "center" : align === "right" ? "right" : "left";
 
   if (!isMultiline) {
     // ── Single-line ──
