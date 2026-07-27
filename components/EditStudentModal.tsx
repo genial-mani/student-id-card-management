@@ -10,6 +10,7 @@ import { Cancel01Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons";
 import uploadImageToCloudinary from "@/utils/cloudService";
 import Cropper from "react-easy-crop";
 import { toast } from "sonner";
+import ImageEnhancerModal from "@/components/ImageEnhancerModal";
 
 interface StudentData {
   id: string;
@@ -103,6 +104,7 @@ export default function EditStudentModal({
 
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(student.profilePictureUrl || null);
+  const [isEnhancerOpen, setIsEnhancerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -328,11 +330,20 @@ export default function EditStudentModal({
               {/* Photo Upload Area */}
               <div className="flex flex-col items-center bg-gray-50 p-3 sm:p-4 border border-gray-200 rounded-2xl mb-4">
                 {previewUrl ? (
-                  <img
-                    src={previewUrl}
-                    alt="Profile Preview"
-                    className="w-28 sm:w-32 h-36 sm:h-40 object-cover mb-3 sm:mb-4 shadow-sm border border-gray-300 rounded-lg sm:rounded-xl"
-                  />
+                  <div className="flex flex-col items-center">
+                    <img
+                      src={previewUrl}
+                      alt="Profile Preview"
+                      className="w-28 sm:w-32 h-36 sm:h-40 object-cover mb-2 shadow-sm border border-gray-300 rounded-lg sm:rounded-xl"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsEnhancerOpen(true)}
+                      className="mb-3 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                    >
+                      <span>☀️</span> Adjust Photo Brightness
+                    </button>
+                  </div>
                 ) : (
                   <div className="w-28 sm:w-32 h-36 sm:h-40 bg-gray-200 mb-3 sm:mb-4 flex items-center justify-center text-gray-500 text-xs sm:text-sm border border-gray-300 rounded-lg sm:rounded-xl">
                     No Image
@@ -507,6 +518,21 @@ export default function EditStudentModal({
           </>
         )}
       </div>
+
+      <ImageEnhancerModal
+        isOpen={isEnhancerOpen}
+        onClose={() => setIsEnhancerOpen(false)}
+        student={{
+          id: student.id,
+          name: formData.name || student.name,
+          profilePictureUrl: previewUrl || student.profilePictureUrl || "",
+        }}
+        onPhotoUpdated={(newPhotoUrl) => {
+          setPreviewUrl(newPhotoUrl);
+          setImgSrc(newPhotoUrl);
+          onSuccess();
+        }}
+      />
     </div>
   );
 }

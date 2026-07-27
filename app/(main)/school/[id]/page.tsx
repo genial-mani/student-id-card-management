@@ -18,6 +18,7 @@ import DocumentStudioTab from "@/components/document-studio/DocumentStudioTab";
 import { Rnd } from "react-rnd";
 import uploadImageToCloudinary from "@/utils/cloudService";
 import { toast } from "sonner";
+import ImageEnhancerModal from "@/components/ImageEnhancerModal";
 
 import AdBanner from "@/components/AdBanner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -604,6 +605,7 @@ export default function SchoolPage() {
   const [previewStudentIndex, setPreviewStudentIndex] = useState<number>(-1);
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>("all");
   const [studentSearchQuery, setStudentSearchQuery] = useState<string>("");
+  const [editingStudentForBrightness, setEditingStudentForBrightness] = useState<any>(null);
 
   // Canvas Alignment Ruler Scale & Grid Overlay State
   const [showRulerScale, setShowRulerScale] = useState<boolean>(true);
@@ -2827,6 +2829,17 @@ export default function SchoolPage() {
                           </svg>
                         </button>
                       </div>
+
+                      {/* Photo Brightness Tool for Current Previewed Student */}
+                      {activePreviewStudent && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingStudentForBrightness(activePreviewStudent)}
+                          className="w-full mt-2.5 py-1.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <span>☀️</span> Adjust Photo Brightness ({activePreviewStudent.name})
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -3119,6 +3132,25 @@ export default function SchoolPage() {
                                 <span>Show Field Label Prefix</span>
                               </label>
                             </>
+                          )}
+
+                          {/* Special Student Photo Brightness Tool */}
+                          {selectedFieldKey === "student_photo" && activePreviewStudent && (
+                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-col gap-2 my-1">
+                              <div className="flex items-center justify-between text-xs font-bold text-amber-900">
+                                <span>☀️ Photo Enhancement Tool</span>
+                              </div>
+                              <p className="text-[11px] text-amber-800 leading-snug">
+                                Dark photo? Adjust brightness & contrast directly on the platform and save to server.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setEditingStudentForBrightness(activePreviewStudent)}
+                                className="w-full py-1.5 px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                <span>☀️</span> Adjust Photo Brightness ({activePreviewStudent.name})
+                              </button>
+                            </div>
                           )}
 
                           {/* Box Dimensions (Width & Height) for ALL elements */}
@@ -3665,6 +3697,15 @@ export default function SchoolPage() {
           </div>
         </div>
       )}
+
+      <ImageEnhancerModal
+        isOpen={!!editingStudentForBrightness}
+        onClose={() => setEditingStudentForBrightness(null)}
+        student={editingStudentForBrightness}
+        onPhotoUpdated={() => {
+          fetchSchool();
+        }}
+      />
     </>
   );
 }

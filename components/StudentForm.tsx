@@ -13,6 +13,7 @@ import Cropper from "react-easy-crop";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { CustomDropdown } from "@/components/CustomDropdown";
+import ImageEnhancerModal from "@/components/ImageEnhancerModal";
 
 interface StudentFormProps {
   schoolId: string;
@@ -54,6 +55,7 @@ export default function StudentForm({
 
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isEnhancerOpen, setIsEnhancerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // ─── CROPPING STATES ────────────────────────────────────────────────────
@@ -281,11 +283,20 @@ export default function StudentForm({
 
               <div className="flex flex-col items-center bg-gray-50 p-3 sm:p-4 border border-gray-200 rounded-2xl">
                 {previewUrl ? (
-                  <img
-                    src={previewUrl}
-                    alt="Profile Preview"
-                    className="w-28 sm:w-32 h-36 sm:h-40 object-cover mb-3 sm:mb-4 shadow-sm border border-gray-300 rounded-lg sm:rounded-xl"
-                  />
+                  <div className="flex flex-col items-center">
+                    <img
+                      src={previewUrl}
+                      alt="Profile Preview"
+                      className="w-28 sm:w-32 h-36 sm:h-40 object-cover mb-2 shadow-sm border border-gray-300 rounded-lg sm:rounded-xl"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsEnhancerOpen(true)}
+                      className="mb-3 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                    >
+                      <span>☀️</span> Adjust Photo Brightness
+                    </button>
+                  </div>
                 ) : (
                   <div className="w-28 sm:w-32 h-36 sm:h-40 bg-gray-200 mb-3 sm:mb-4 flex items-center justify-center text-gray-500 text-xs sm:text-sm border border-gray-300 rounded-lg sm:rounded-xl">
                     No Image
@@ -412,6 +423,20 @@ export default function StudentForm({
           </>
         )}
       </div>
+
+      <ImageEnhancerModal
+        isOpen={isEnhancerOpen}
+        onClose={() => setIsEnhancerOpen(false)}
+        student={{
+          id: "",
+          name: formData.name || "New Student",
+          profilePictureUrl: previewUrl || "",
+        }}
+        onPhotoProcessed={(newPhotoUrl, file) => {
+          setPreviewUrl(newPhotoUrl);
+          setProfilePictureFile(file);
+        }}
+      />
     </div>
   );
 }
