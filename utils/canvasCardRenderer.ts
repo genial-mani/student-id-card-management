@@ -498,9 +498,17 @@ function renderText(
   // Use middle textBaseline for true flex-style vertical centering (align-items: center)
   ctx.textBaseline = "middle";
 
+  const vertAlign = f.verticalAlign || "center";
+
   if (!isMultiline) {
-    // Single-line text vertical center
-    const drawY = fieldH > 0 ? y + fieldH / 2 : y + lineH / 2;
+    // Single-line text vertical position
+    const drawY = vertAlign === "top"
+      ? y + lineH / 2
+      : vertAlign === "bottom" && fieldH > 0
+        ? y + fieldH - lineH / 2
+        : fieldH > 0
+          ? y + fieldH / 2
+          : y + lineH / 2;
 
     // ── Single-line ──
     if (showLabel && canvasAlign === "left") {
@@ -542,12 +550,27 @@ function renderText(
     ctx.textAlign = canvasAlign;
     const lines = wrapText(ctx, full, maxW, isAddress);
 
+    ctx.save();
+    if (fieldH > 0) {
+      ctx.beginPath();
+      const clipX = canvasAlign === "center" ? anchorX - maxW / 2 : canvasAlign === "right" ? anchorX - maxW : anchorX;
+      ctx.rect(clipX, y, maxW, fieldH);
+      ctx.clip();
+    }
+
     const totalH = lines.length * lineH;
-    const startTopY = fieldH > totalH ? y + (fieldH - totalH) / 2 : y;
+    const startTopY = vertAlign === "top" || fieldH <= totalH
+      ? y
+      : vertAlign === "bottom"
+        ? y + fieldH - totalH
+        : y + (fieldH - totalH) / 2;
 
     for (let i = 0; i < lines.length; i++) {
-      drawTextWithStroke(lines[i], anchorX, startTopY + (i + 0.5) * lineH);
+      const lineY = startTopY + (i + 0.5) * lineH;
+      if (fieldH > 0 && (i * lineH) >= fieldH) break;
+      drawTextWithStroke(lines[i], anchorX, lineY);
     }
+    ctx.restore();
   }
 }
 
@@ -571,16 +594,21 @@ export function drawCardOnCanvas(
   layoutConfig: any,
   imageCache: ImageCache,
 ): void {
+  const cardWMm = typeof layoutConfig?.cardWidthMm === "number" ? layoutConfig.cardWidthMm : 57;
+  const cardHMm = typeof layoutConfig?.cardHeightMm === "number" ? layoutConfig.cardHeightMm : 92;
+  const cardWidthPx = Math.round(cardWMm * 11.8110236);
+  const cardHeightPx = Math.round(cardHMm * 11.8110236);
+
   ctx.save();
 
   // Clip to card boundary (overflow: hidden)
   ctx.beginPath();
-  ctx.rect(ox, oy, CARD_W, CARD_H);
+  ctx.rect(ox, oy, cardWidthPx, cardHeightPx);
   ctx.clip();
 
   // 1. Card background fill
   ctx.fillStyle = theme.background;
-  ctx.fillRect(ox, oy, CARD_W, CARD_H);
+  ctx.fillRect(ox, oy, cardWidthPx, cardHeightPx);
 
   // 2. Layout decorative background
   drawLayoutBg(ctx, ox, oy, layout, theme, imageCache, layoutConfig);
@@ -652,6 +680,7 @@ export function drawCardOnCanvas(
     if (!text) continue;
 
     const isMultiline =
+      fw > 0 ||
       key === "school_address" || key === "student_address" ||
       key === "school_name" || key === "school_caption";
 

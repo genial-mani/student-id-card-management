@@ -271,7 +271,7 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
           onClick={logout}
         >
           <HugeiconsIcon icon={Logout01Icon} size={15} color="currentColor" strokeWidth={2.5} className="shrink-0" />
-          <span>Sign Out</span>
+          <span>Log Out</span>
         </button>
       </div>
     </div>

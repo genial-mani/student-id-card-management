@@ -49,13 +49,6 @@ export default function IdCard({
   classCustomValues,
   hideFields = false,
 }: IdCardProps) {
-  const cardContainerStyle = {
-    width: "673px",
-    height: "1087px",
-    backgroundColor: theme.background,
-    border: "0.1px solid black",
-  };
-
   let layoutConfig = school.idCardLayoutConfig;
   if (typeof layoutConfig === "string") {
     try {
@@ -64,6 +57,18 @@ export default function IdCard({
       layoutConfig = null;
     }
   }
+
+  const cardWMm = typeof layoutConfig?.cardWidthMm === "number" ? layoutConfig.cardWidthMm : 57;
+  const cardHMm = typeof layoutConfig?.cardHeightMm === "number" ? layoutConfig.cardHeightMm : 92;
+  const cardWPx = `${Math.round(cardWMm * 11.8110236)}px`;
+  const cardHPx = `${Math.round(cardHMm * 11.8110236)}px`;
+
+  const cardContainerStyle = {
+    width: cardWPx,
+    height: cardHPx,
+    backgroundColor: theme.background,
+    border: "0.1px solid black",
+  };
 
   // --- BACKGROUND RENDERING FOR PRESET LAYOUTS ---
   const renderBackground = () => {
@@ -189,8 +194,8 @@ export default function IdCard({
   const backgroundUrl = layoutConfig?.backgroundUrl;
 
   const customCardStyle = {
-    width: "673px",
-    height: "1087px",
+    width: cardWPx,
+    height: cardHPx,
     backgroundColor: theme.background,
     backgroundImage: isCustomOrShared && backgroundUrl ? `url(${backgroundUrl})` : "none",
     backgroundSize: "cover",
@@ -221,8 +226,10 @@ export default function IdCard({
         let transformStr = `scale(${scaleX}, ${scaleY})`;
         let transformOriginStr = "top left";
 
+        const cardHalfWidth = Math.round(cardWMm * 11.8110236) / 2;
+
         if (align === "center") {
-          const centerX = f.width ? f.x + f.width / 2 : (f.x > 0 && f.x < 336.5 ? 336.5 : f.x);
+          const centerX = f.width ? f.x + f.width / 2 : (f.x > 0 && f.x < cardHalfWidth ? cardHalfWidth : f.x);
           leftPos = `${centerX}px`;
           transformStr = `translate(-50%, 0) scale(${scaleX}, ${scaleY})`;
           transformOriginStr = "top center";
@@ -245,14 +252,16 @@ export default function IdCard({
           color: f.color || undefined,
           textAlign: align as React.CSSProperties["textAlign"],
           zIndex: 20, // Ensure fields are above background elements
-          whiteSpace: isAddress ? "pre-line" : isMultiline ? "normal" : "nowrap",
+          whiteSpace: f.width ? "pre-line" : (isAddress ? "pre-line" : isMultiline ? "normal" : "nowrap"),
           wordBreak: "break-word",
           overflowWrap: "break-word",
+          overflow: "hidden",
           transform: transformStr,
           transformOrigin: transformOriginStr,
           display: "flex",
-          alignItems: "center",
-          justifyContent: align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start",
+          flexDirection: "column",
+          justifyContent: f.verticalAlign === "top" ? "flex-start" : f.verticalAlign === "bottom" ? "flex-end" : "center",
+          alignItems: align === "center" ? "center" : align === "right" ? "flex-end" : align === "justify" ? "stretch" : "flex-start",
           WebkitTextStroke: f.strokeWidth ? `${f.strokeWidth}px ${f.strokeColor || "#ffffff"}` : undefined,
           paintOrder: f.strokeWidth ? "stroke fill" : undefined,
         };
@@ -371,10 +380,15 @@ export default function IdCard({
 
         return (
           <div key={fieldKey} style={fieldStyle} className="leading-tight">
-            {f.labelVisible !== false && labelPrefix ? (
-              <span className="font-bold opacity-85 mr-1">{labelPrefix}</span>
-            ) : null}
-            <span className={isAddress ? "whitespace-pre-line" : ""}>{textContent}</span>
+            <div
+              className={`leading-tight select-none overflow-hidden w-full ${f.width ? "whitespace-pre-line break-words" : isAddress ? "whitespace-pre-line break-words" : isMultiline ? "whitespace-normal break-words" : "whitespace-nowrap"}`}
+              style={{ textAlign: align as React.CSSProperties["textAlign"] }}
+            >
+              {f.labelVisible !== false && labelPrefix ? (
+                <span className="font-bold opacity-80 mr-1">{labelPrefix}</span>
+              ) : null}
+              <span className={isAddress || f.width ? "whitespace-pre-line break-words" : ""}>{textContent}</span>
+            </div>
           </div>
         );
       })}

@@ -54,10 +54,7 @@ interface ClassData {
   customValues?: any;
 }
 
-// ─── Exact Math & Dimensions (NO SCALING) ──────────────────────────────────────
-
-const CARD_W = 673;
-const CARD_H = 1087;
+// Note: Card dimensions (cardW & cardH) are dynamically computed per school from school.idCardLayoutConfig.
 // ─── localStorage ───────────────────────────────────────────────────────────────
 
 const DEFAULT_THEME: CardTheme = {
@@ -103,7 +100,23 @@ export default function PrintPage() {
     documentHorizontal: false, // ID cards are always vertical
   });
 
-  const printGrid = useMemo(() => calculatePrintGrid(printSettings, CARD_W, CARD_H), [printSettings]);
+  const { cardW, cardH } = useMemo(() => {
+    const cfg = classData?.school?.idCardLayoutConfig;
+    let parsed: any = null;
+    if (typeof cfg === "string") {
+      try { parsed = JSON.parse(cfg); } catch {}
+    } else {
+      parsed = cfg;
+    }
+    const wMm = typeof parsed?.cardWidthMm === "number" ? parsed.cardWidthMm : 57;
+    const hMm = typeof parsed?.cardHeightMm === "number" ? parsed.cardHeightMm : 92;
+    return {
+      cardW: Math.round(wMm * 11.8110236),
+      cardH: Math.round(hMm * 11.8110236),
+    };
+  }, [classData]);
+
+  const printGrid = useMemo(() => calculatePrintGrid(printSettings, cardW, cardH), [printSettings, cardW, cardH]);
 
   function getSlotPos(idx: number) {
     if (!printGrid.fits || printGrid.itemsPerPage === 0) return { x: 0, y: 0 };
@@ -113,8 +126,8 @@ export default function PrintPage() {
     const actualGapX = printSettings.gapX !== undefined ? printSettings.gapX * MM_TO_PX : 24;
     const actualGapY = printSettings.gapY !== undefined ? printSettings.gapY * MM_TO_PX : 24;
     return {
-      x: printGrid.offsetX + col * (CARD_W + actualGapX),
-      y: printGrid.offsetY + row * (CARD_H + actualGapY),
+      x: printGrid.offsetX + col * (cardW + actualGapX),
+      y: printGrid.offsetY + row * (cardH + actualGapY),
     };
   }
 
@@ -639,8 +652,8 @@ export default function PrintPage() {
                                 position: "absolute",
                                 left: `${x}px`,
                                 top: `${y}px`,
-                                width: `${CARD_W}px`,
-                                height: `${CARD_H}px`,
+                                width: `${cardW}px`,
+                                height: `${cardH}px`,
                                 pointerEvents: "none",
                               }}
                             >
@@ -666,8 +679,8 @@ export default function PrintPage() {
                                 position: "absolute",
                                 left: `${x}px`,
                                 top: `${y}px`,
-                                width: `${CARD_W}px`,
-                                height: `${CARD_H}px`,
+                                width: `${cardW}px`,
+                                height: `${cardH}px`,
                                 border: "4px dashed #e2e8f0",
                                 borderRadius: "24px",
                                 display: "flex",
