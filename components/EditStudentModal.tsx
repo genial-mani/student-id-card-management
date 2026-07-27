@@ -527,10 +527,9 @@ export default function EditStudentModal({
           name: formData.name || student.name,
           profilePictureUrl: previewUrl || student.profilePictureUrl || "",
         }}
-        onPhotoUpdated={(newPhotoUrl) => {
+        onPhotoProcessed={(newPhotoUrl, file) => {
           setPreviewUrl(newPhotoUrl);
-          setImgSrc(newPhotoUrl);
-          onSuccess();
+          setProfilePictureFile(file);
         }}
       />
     </div>
