@@ -145,11 +145,27 @@ export default function PrintPage() {
         }
         if (res.ok) {
           const schoolObj = await res.json();
-          const classMap = new Map((schoolObj.classes || []).map((c: any) => [c.id, c.name]));
-          const studentsWithClass = (schoolObj.students || []).map((s: any) => ({
-            ...s,
-            className: classMap.get(s.classId) || "N/A",
-          }));
+          const schoolClasses = schoolObj.classes || [];
+          const classMap = new Map(schoolClasses.map((c: any) => [c.id, c.name]));
+          const classOrderMap = new Map(schoolClasses.map((c: any, index: number) => [c.id, index]));
+
+          const studentsWithClass = (schoolObj.students || [])
+            .map((s: any) => ({
+              ...s,
+              className: classMap.get(s.classId) || "N/A",
+            }))
+            .sort((a: any, b: any) => {
+              // Primary sort: Class order in school (e.g. Nursery, LKG, Class 1, Class 2...)
+              const orderA = Number(classOrderMap.get(a.classId) ?? 9999);
+              const orderB = Number(classOrderMap.get(b.classId) ?? 9999);
+              if (orderA !== orderB) return orderA - orderB;
+
+              // Secondary sort: Student Name / ID / Roll Number
+              const idA = (a.idNo || a.camSno || a.name || "").toString();
+              const idB = (b.idNo || b.camSno || b.name || "").toString();
+              return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: "base" });
+            });
+
           setClassData({
             id: "all",
             name: "All Students",
@@ -163,7 +179,17 @@ export default function PrintPage() {
           setForbidden(true);
           return;
         }
-        if (res.ok) setClassData(await res.json());
+        if (res.ok) {
+          const cData = await res.json();
+          if (cData && Array.isArray(cData.students)) {
+            cData.students.sort((a: any, b: any) => {
+              const idA = (a.idNo || a.camSno || a.name || "").toString();
+              const idB = (b.idNo || b.camSno || b.name || "").toString();
+              return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: "base" });
+            });
+          }
+          setClassData(cData);
+        }
       }
     } catch {
       /**/

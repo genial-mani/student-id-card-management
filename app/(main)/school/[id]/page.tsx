@@ -836,8 +836,17 @@ export default function SchoolPage() {
       });
     }
 
-    return list;
-  }, [schoolStudents, selectedClassFilter, studentSearchQuery]);
+    const classOrderMap = new Map((school?.classes || []).map((c: any, index: number) => [c.id, index]));
+    return [...list].sort((a: any, b: any) => {
+      const orderA = Number(classOrderMap.get(a.classId) ?? 9999);
+      const orderB = Number(classOrderMap.get(b.classId) ?? 9999);
+      if (orderA !== orderB) return orderA - orderB;
+
+      const idA = (a.idNo || a.camSno || a.name || "").toString();
+      const idB = (b.idNo || b.camSno || b.name || "").toString();
+      return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: "base" });
+    });
+  }, [schoolStudents, selectedClassFilter, studentSearchQuery, school]);
 
   useEffect(() => {
     if (filteredPreviewStudents.length > 0) {
@@ -3115,78 +3124,127 @@ export default function SchoolPage() {
                           {/* Box Dimensions (Width & Height) for ALL elements */}
                           <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
                             <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-gray-500 uppercase">Box Width ({editorUnit})</label>
-                              {editorUnit === "mm" ? (
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  min="2"
-                                  max={cardWidthMm}
-                                  value={f.width ? ((f.width / cardWidthPx) * cardWidthMm).toFixed(1) : ""}
-                                  placeholder="Auto"
-                                  onChange={(e) => {
-                                    const valStr = e.target.value;
-                                    if (!valStr) {
-                                      handleFieldStyleChange("width", undefined);
-                                    } else {
-                                      const mmVal = parseFloat(valStr || "0");
-                                      const pxVal = Math.round((mmVal / cardWidthMm) * cardWidthPx);
-                                      handleFieldStyleChange("width", pxVal);
-                                    }
-                                  }}
-                                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg font-semibold"
-                                />
-                              ) : (
-                                <input
-                                  type="number"
-                                  min="20"
-                                  max={cardWidthPx}
-                                  value={f.width || ""}
-                                  placeholder="Auto"
-                                  onChange={(e) => {
-                                    const valStr = e.target.value;
-                                    handleFieldStyleChange("width", valStr ? parseInt(valStr, 10) : undefined);
-                                  }}
-                                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg font-semibold"
-                                />
-                              )}
+                              <div className="flex justify-between items-center">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Box Width ({editorUnit})</label>
+                                {f.width !== undefined && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFieldStyleChange("width", undefined)}
+                                    className="text-[10px] font-bold text-violet-600 hover:text-violet-800 underline cursor-pointer"
+                                    title="Reset box width back to auto content width"
+                                  >
+                                    Reset Auto
+                                  </button>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {editorUnit === "mm" ? (
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    min="2"
+                                    max={cardWidthMm}
+                                    value={f.width ? ((f.width / cardWidthPx) * cardWidthMm).toFixed(1) : ""}
+                                    placeholder="Auto"
+                                    onChange={(e) => {
+                                      const valStr = e.target.value;
+                                      if (!valStr) {
+                                        handleFieldStyleChange("width", undefined);
+                                      } else {
+                                        const mmVal = parseFloat(valStr || "0");
+                                        const pxVal = Math.round((mmVal / cardWidthMm) * cardWidthPx);
+                                        handleFieldStyleChange("width", pxVal);
+                                      }
+                                    }}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg font-semibold"
+                                  />
+                                ) : (
+                                  <input
+                                    type="number"
+                                    min="20"
+                                    max={cardWidthPx}
+                                    value={f.width || ""}
+                                    placeholder="Auto"
+                                    onChange={(e) => {
+                                      const valStr = e.target.value;
+                                      handleFieldStyleChange("width", valStr ? parseInt(valStr, 10) : undefined);
+                                    }}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg font-semibold"
+                                  />
+                                )}
+                                {f.width !== undefined && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFieldStyleChange("width", undefined)}
+                                    className="px-1.5 py-1 text-xs text-gray-400 hover:text-red-600 font-bold bg-gray-100 hover:bg-red-50 border border-gray-200 rounded-md transition-colors"
+                                    title="Clear custom width and set to Auto"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
                             </div>
+
                             <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-gray-500 uppercase">Box Height ({editorUnit})</label>
-                              {editorUnit === "mm" ? (
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  min="2"
-                                  max={cardHeightMm}
-                                  value={f.height ? ((f.height / cardHeightPx) * cardHeightMm).toFixed(1) : ""}
-                                  placeholder="Auto"
-                                  onChange={(e) => {
-                                    const valStr = e.target.value;
-                                    if (!valStr) {
-                                      handleFieldStyleChange("height", undefined);
-                                    } else {
-                                      const mmVal = parseFloat(valStr || "0");
-                                      const pxVal = Math.round((mmVal / cardHeightMm) * cardHeightPx);
-                                      handleFieldStyleChange("height", pxVal);
-                                    }
-                                  }}
-                                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg font-semibold"
-                                />
-                              ) : (
-                                <input
-                                  type="number"
-                                  min="20"
-                                  max={cardHeightPx}
-                                  value={f.height || ""}
-                                  placeholder="Auto"
-                                  onChange={(e) => {
-                                    const valStr = e.target.value;
-                                    handleFieldStyleChange("height", valStr ? parseInt(valStr, 10) : undefined);
-                                  }}
-                                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg font-semibold"
-                                />
-                              )}
+                              <div className="flex justify-between items-center">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Box Height ({editorUnit})</label>
+                                {f.height !== undefined && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFieldStyleChange("height", undefined)}
+                                    className="text-[10px] font-bold text-violet-600 hover:text-violet-800 underline cursor-pointer"
+                                    title="Reset box height back to auto content height"
+                                  >
+                                    Reset Auto
+                                  </button>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {editorUnit === "mm" ? (
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    min="2"
+                                    max={cardHeightMm}
+                                    value={f.height ? ((f.height / cardHeightPx) * cardHeightMm).toFixed(1) : ""}
+                                    placeholder="Auto"
+                                    onChange={(e) => {
+                                      const valStr = e.target.value;
+                                      if (!valStr) {
+                                        handleFieldStyleChange("height", undefined);
+                                      } else {
+                                        const mmVal = parseFloat(valStr || "0");
+                                        const pxVal = Math.round((mmVal / cardHeightMm) * cardHeightPx);
+                                        handleFieldStyleChange("height", pxVal);
+                                      }
+                                    }}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg font-semibold"
+                                  />
+                                ) : (
+                                  <input
+                                    type="number"
+                                    min="20"
+                                    max={cardHeightPx}
+                                    value={f.height || ""}
+                                    placeholder="Auto"
+                                    onChange={(e) => {
+                                      const valStr = e.target.value;
+                                      handleFieldStyleChange("height", valStr ? parseInt(valStr, 10) : undefined);
+                                    }}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg font-semibold"
+                                  />
+                                )}
+                                {f.height !== undefined && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFieldStyleChange("height", undefined)}
+                                    className="px-1.5 py-1 text-xs text-gray-400 hover:text-red-600 font-bold bg-gray-100 hover:bg-red-50 border border-gray-200 rounded-md transition-colors"
+                                    title="Clear custom height and set to Auto"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
 
