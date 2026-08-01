@@ -154,12 +154,6 @@ export default function StudentForm({
     e.preventDefault();
     setLoading(true);
 
-    if (!profilePictureFile) {
-      toast.error("Please take a photo or select one from the gallery.");
-      setLoading(false);
-      return;
-    }
-
     try {
       let profilePictureUrl = "";
       
