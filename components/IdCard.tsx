@@ -212,7 +212,7 @@ export default function IdCard({
       {!hideFields && Object.entries(fields).map(([fieldKey, f]: [string, any]) => {
         if (!f || !f.visible) return null;
 
-        const isAddress = fieldKey === "school_address" || fieldKey === "student_address";
+        const isAddress = (fieldKey === "school_address" || fieldKey === "student_address") && f.addressFormat !== "singleline";
         const isMultiline =
           isAddress ||
           fieldKey === "school_name" ||
@@ -252,18 +252,12 @@ export default function IdCard({
           color: f.color || undefined,
           textAlign: align as React.CSSProperties["textAlign"],
           zIndex: 20, // Ensure fields are above background elements
-          whiteSpace: f.width ? "pre-line" : (isAddress ? "pre-line" : isMultiline ? "normal" : "nowrap"),
+          whiteSpace: f.width ? (f.addressFormat === "singleline" ? "normal" : "pre-line") : (isAddress ? "pre-line" : isMultiline ? "normal" : "nowrap"),
           wordBreak: "break-word",
           overflowWrap: "break-word",
           overflow: "hidden",
           transform: transformStr,
           transformOrigin: transformOriginStr,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: f.verticalAlign === "top" ? "flex-start" : f.verticalAlign === "bottom" ? "flex-end" : "center",
-          alignItems: align === "center" ? "center" : align === "right" ? "flex-end" : align === "justify" ? "stretch" : "flex-start",
-          WebkitTextStroke: f.strokeWidth ? `${f.strokeWidth}px ${f.strokeColor || "#ffffff"}` : undefined,
-          paintOrder: f.strokeWidth ? "stroke fill" : undefined,
         };
 
         if (fieldKey === "school_logo") {
@@ -376,18 +370,27 @@ export default function IdCard({
           labelPrefix = `${k.charAt(0).toUpperCase() + k.slice(1)}: `;
         }
 
+        const isSingleLine = f.addressFormat === "singleline_space" || f.addressFormat === "singleline_comma" || f.addressFormat === "singleline";
+        if (isSingleLine && typeof textContent === "string") {
+          if (f.addressFormat === "singleline_comma") {
+            textContent = textContent.replace(/[\r\n]+/g, ", ").replace(/,\s*,/g, ",").trim();
+          } else {
+            textContent = textContent.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
+          }
+        }
+
         if (!textContent) return null;
 
         return (
           <div key={fieldKey} style={fieldStyle} className="leading-tight">
             <div
-              className={`leading-tight select-none overflow-hidden w-full ${f.width ? "whitespace-pre-line break-words" : isAddress ? "whitespace-pre-line break-words" : isMultiline ? "whitespace-normal break-words" : "whitespace-nowrap"}`}
+              className={`leading-tight select-none overflow-hidden w-full ${f.width ? (f.addressFormat === "singleline" ? "whitespace-normal break-words" : "whitespace-pre-line break-words") : isAddress ? "whitespace-pre-line break-words" : isMultiline ? "whitespace-normal break-words" : "whitespace-nowrap"}`}
               style={{ textAlign: align as React.CSSProperties["textAlign"] }}
             >
               {f.labelVisible !== false && labelPrefix ? (
                 <span className="font-bold opacity-80 mr-1">{labelPrefix}</span>
               ) : null}
-              <span className={isAddress || f.width ? "whitespace-pre-line break-words" : ""}>{textContent}</span>
+              <span className={isAddress || (f.width && f.addressFormat !== "singleline") ? "whitespace-pre-line break-words" : ""}>{textContent}</span>
             </div>
           </div>
         );

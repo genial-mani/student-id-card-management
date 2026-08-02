@@ -90,7 +90,7 @@ export default function EditStudentModal({
               ? JSON.parse(data.customFieldsConfig)
               : data.customFieldsConfig;
             if (parsed && parsed.student) {
-              parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone" && f.key !== "idNo" && f.key !== "camSno");
+              parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone" && f.key !== "idNo" && f.key !== "camSno" && f.key !== "designation");
             }
             setCustomFieldsConfig(parsed);
           }

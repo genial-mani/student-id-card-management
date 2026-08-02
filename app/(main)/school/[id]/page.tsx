@@ -63,7 +63,11 @@ const DUMMY_STUDENT = {
 };
 
 const GOOGLE_FONTS = [
-  // Elegant Serifs
+  // Standard Fonts
+  "Arial",
+
+  // Elegant Serifs & Display
+  "Belleza",
   "Cinzel",
   "Cinzel Decorative",
   "Playfair Display",
@@ -81,8 +85,11 @@ const GOOGLE_FONTS = [
   "Outfit",
   "Cabin",
   "Josefin Sans",
+  "Franklin Gothic",
+  "Franklin Gothic Medium",
 
   // Decorative Display
+  "Revue",
   "Berkshire Swash",
   "Righteous",
   "Alfa Slab One",
@@ -925,7 +932,7 @@ export default function SchoolPage() {
             ? JSON.parse(school.customFieldsConfig)
             : school.customFieldsConfig;
           if (parsed && parsed.student) {
-            parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone" && f.key !== "camSno");
+            parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone" && f.key !== "camSno" && f.key !== "designation");
           }
           setCustomFieldsConfig(parsed);
         } catch (e) {
@@ -2718,16 +2725,25 @@ export default function SchoolPage() {
                                 label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
                               }
 
-                              const isAddr = fieldKey === "school_address" || fieldKey === "student_address";
+                              const isSingleLine = f.addressFormat === "singleline_space" || f.addressFormat === "singleline_comma" || f.addressFormat === "singleline";
+                              if (isSingleLine && typeof val === "string") {
+                                if (f.addressFormat === "singleline_comma") {
+                                  val = val.replace(/[\r\n]+/g, ", ").replace(/,\s*,/g, ",").trim();
+                                } else {
+                                  val = val.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
+                                }
+                              }
+
+                              const isAddr = (fieldKey === "school_address" || fieldKey === "student_address") && !isSingleLine;
                               const isMulti = isAddr || fieldKey === "school_name" || fieldKey === "school_caption";
 
                               displayContent = (
                                 <div
-                                  className={`leading-tight select-none overflow-hidden w-full ${f.width ? "whitespace-pre-line break-words" : isAddr ? "whitespace-pre-line break-words" : isMulti ? "whitespace-normal break-words" : "whitespace-nowrap"}`}
+                                  className={`leading-tight select-none overflow-hidden w-full ${f.width ? (isSingleLine ? "whitespace-normal break-words" : "whitespace-pre-line break-words") : isAddr ? "whitespace-pre-line break-words" : isMulti ? "whitespace-normal break-words" : "whitespace-nowrap"}`}
                                   style={{ textAlign: (f.align || "left") as React.CSSProperties["textAlign"] }}
                                 >
                                   {f.labelVisible !== false && label ? <span className="font-bold opacity-80 mr-1">{label}</span> : null}
-                                  <span className={isAddr || f.width ? "whitespace-pre-line break-words" : ""}>{val}</span>
+                                  <span className={isAddr || (f.width && !isSingleLine) ? "whitespace-pre-line break-words" : ""}>{val}</span>
                                 </div>
                               );
                             }
@@ -3118,6 +3134,39 @@ export default function SchoolPage() {
                                     }`}
                                   >
                                     Bottom
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Text / Address Line Format</label>
+                                <div className="grid grid-cols-3 gap-1 bg-gray-100 p-1 rounded-lg">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFieldStyleChange("addressFormat", "submitted")}
+                                    className={`py-1 px-1 text-[10px] font-semibold rounded-md transition-colors text-center ${
+                                      !f.addressFormat || f.addressFormat === "submitted" ? "bg-white text-violet-600 shadow-xs font-bold" : "text-gray-600 hover:text-gray-900"
+                                    }`}
+                                  >
+                                    Multiline
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFieldStyleChange("addressFormat", "singleline_space")}
+                                    className={`py-1 px-1 text-[10px] font-semibold rounded-md transition-colors text-center ${
+                                      f.addressFormat === "singleline_space" || f.addressFormat === "singleline" ? "bg-white text-violet-600 shadow-xs font-bold" : "text-gray-600 hover:text-gray-900"
+                                    }`}
+                                  >
+                                    Single (No Comma)
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFieldStyleChange("addressFormat", "singleline_comma")}
+                                    className={`py-1 px-1 text-[10px] font-semibold rounded-md transition-colors text-center ${
+                                      f.addressFormat === "singleline_comma" ? "bg-white text-violet-600 shadow-xs font-bold" : "text-gray-600 hover:text-gray-900"
+                                    }`}
+                                  >
+                                    Single (With Comma)
                                   </button>
                                 </div>
                               </div>
@@ -3595,9 +3644,13 @@ export default function SchoolPage() {
             <DocumentStudioTab
               schoolId={schoolId}
               schoolName={school.name}
+              schoolClasses={school.classes || []}
+              school={school}
               students={school.classes.flatMap(c =>
-                (c.students || []).map(s => ({
+                (c.students || []).map((s: any) => ({
                   ...s,
+                  classId: s.classId || c.id,
+                  className: s.className || c.name,
                   class: { id: c.id, name: c.name, customValues: (c as any).customValues },
                   school: school
                 }))

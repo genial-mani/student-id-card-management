@@ -676,13 +676,23 @@ export function drawCardOnCanvas(
     }
 
     // ── Text fields ───────────────────────────────────────────────────────────
-    const { text, label } = resolveField(key, school, student, classNameStr, classCustomValues);
+    let { text, label } = resolveField(key, school, student, classNameStr, classCustomValues);
     if (!text) continue;
 
-    const isMultiline =
+    const isSingleLine = f.addressFormat === "singleline_space" || f.addressFormat === "singleline_comma" || f.addressFormat === "singleline";
+    if (isSingleLine && typeof text === "string") {
+      if (f.addressFormat === "singleline_comma") {
+        text = text.replace(/[\r\n]+/g, ", ").replace(/,\s*,/g, ",").trim();
+      } else {
+        text = text.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
+      }
+    }
+
+    const isMultiline = !isSingleLine && (
       fw > 0 ||
       key === "school_address" || key === "student_address" ||
-      key === "school_name" || key === "school_caption";
+      key === "school_name" || key === "school_caption"
+    );
 
     ctx.save();
     ctx.fillStyle = color;
