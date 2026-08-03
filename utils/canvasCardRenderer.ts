@@ -62,16 +62,70 @@ export interface StudentLike {
 
 // ─── Image pre-fetching ─────────────────────────────────────────────────────────
 
-function loadImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
+async function loadImage(url: string): Promise<HTMLImageElement> {
+  if (!url || typeof url !== "string") throw new Error("Invalid URL");
+
+  // Normalize protocol-relative URL
+  let targetUrl = url.trim();
+  if (targetUrl.startsWith("//")) {
+    targetUrl = `https:${targetUrl}`;
+  }
+
+  // 1. Try fetching as Blob first (bypasses Chrome CORS disk cache poisoning)
+  try {
+    const res = await fetch(targetUrl, { mode: "cors" });
+    if (res.ok) {
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      return await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = (e) => reject(e);
+        img.src = objectUrl;
+      });
+    }
+  } catch (err) {
+    console.warn("Fetch blob failed for image, trying cache-buster Image load:", targetUrl, err);
+  }
+
+  // 2. Try direct Image load with crossOrigin = "anonymous" and cache buster
+  try {
+    return await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      const cacheBustUrl = targetUrl.includes("?")
+        ? `${targetUrl}&_cb=${Date.now()}`
+        : `${targetUrl}?_cb=${Date.now()}`;
+      img.src = cacheBustUrl;
+    });
+  } catch (err) {
+    console.warn("Cache-buster Image load failed, trying direct anonymous Image load:", targetUrl, err);
+  }
+
+  // 3. Try direct Image load with crossOrigin = "anonymous"
+  try {
+    return await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = targetUrl;
+    });
+  } catch (err) {
+    console.warn("Anonymous Image load failed, trying non-CORS fallback:", targetUrl, err);
+  }
+
+  // 4. Fallback: direct Image load without crossOrigin
+  return new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = (e) => {
-      console.warn("Image load failed:", url, e);
+      console.error("All image load attempts failed for:", targetUrl, e);
       reject(e);
     };
-    img.src = url;
+    img.src = targetUrl;
   });
 }
 
@@ -89,8 +143,16 @@ export async function prefetchImages(
 
   if (school.logoUrl) urls.add(school.logoUrl);
   if (school.signatureUrl) urls.add(school.signatureUrl);
+
   for (const s of students) {
-    if (s.profilePictureUrl) urls.add(s.profilePictureUrl);
+    let photoUrl = s.profilePictureUrl;
+    if (!photoUrl && (s as any).photoUrl) photoUrl = (s as any).photoUrl;
+    if (!photoUrl && (s as any).profilePic) photoUrl = (s as any).profilePic;
+    if (!photoUrl && s.customValues) {
+      const cv = parseCV(s.customValues);
+      photoUrl = cv?.profilePictureUrl || cv?.photoUrl || cv?.profilePic;
+    }
+    if (photoUrl) urls.add(photoUrl);
   }
 
   // Preset layout background images (10-12)
@@ -107,12 +169,33 @@ export async function prefetchImages(
   }
 
   const cache: ImageCache = new Map();
+  const urlList = Array.from(urls);
+
   const results = await Promise.allSettled(
-    Array.from(urls).map(async (url) => ({ url, img: await loadImage(url) })),
+    urlList.map(async (url) => {
+      const img = await loadImage(url);
+      return { url, img };
+    }),
   );
-  for (const r of results) {
-    if (r.status === "fulfilled") cache.set(r.value.url, r.value.img);
+
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    const originalUrl = urlList[i];
+    if (r.status === "fulfilled") {
+      const img = r.value.img;
+      cache.set(originalUrl, img);
+      if (originalUrl.startsWith("//")) {
+        cache.set(`https:${originalUrl}`, img);
+      }
+      const cleanUrl = originalUrl.split("?")[0];
+      if (!cache.has(cleanUrl)) {
+        cache.set(cleanUrl, img);
+      }
+    } else {
+      console.warn("Could not prefetch image for PDF rendering:", originalUrl, r.reason);
+    }
   }
+
   return cache;
 }
 
@@ -355,6 +438,43 @@ function drawLayoutBg(
   }
 }
 
+// ─── Image object-fit cover helper ─────────────────────────────────────────────
+
+function drawCoverImage(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  const imgW = img.naturalWidth || img.width;
+  const imgH = img.naturalHeight || img.height;
+
+  if (!imgW || !imgH || !w || !h) {
+    ctx.drawImage(img, x, y, w, h);
+    return;
+  }
+
+  const imgRatio = imgW / imgH;
+  const targetRatio = w / h;
+
+  let sx = 0;
+  let sy = 0;
+  let sw = imgW;
+  let sh = imgH;
+
+  if (imgRatio > targetRatio) {
+    sw = imgH * targetRatio;
+    sx = (imgW - sw) / 2;
+  } else {
+    sh = imgW / targetRatio;
+    sy = (imgH - sh) / 2;
+  }
+
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+
 // ─── Text helpers ───────────────────────────────────────────────────────────────
 
 function wrapText(
@@ -480,13 +600,14 @@ function renderText(
   const fieldH = f.height || 0;
   const strokeW = f.strokeWidth || 0;
   const strokeC = f.strokeColor || "#ffffff";
+  const textFillColor = f.color || "#000000";
 
   // Helper to draw text with optional outer stroke outline
   const drawTextWithStroke = (txt: string, tx: number, ty: number) => {
-    if (strokeW > 0) {
+    if (strokeW > 0 && strokeC.toLowerCase() !== textFillColor.toLowerCase() && strokeC !== "transparent") {
       ctx.save();
       ctx.strokeStyle = strokeC;
-      ctx.lineWidth = strokeW * 2;
+      ctx.lineWidth = strokeW;
       ctx.lineJoin = "round";
       ctx.miterLimit = 2;
       ctx.strokeText(txt, tx, ty);
@@ -594,8 +715,16 @@ export function drawCardOnCanvas(
   layoutConfig: any,
   imageCache: ImageCache,
 ): void {
-  const cardWMm = typeof layoutConfig?.cardWidthMm === "number" ? layoutConfig.cardWidthMm : 57;
-  const cardHMm = typeof layoutConfig?.cardHeightMm === "number" ? layoutConfig.cardHeightMm : 92;
+  const cardWMm = typeof layoutConfig?.cardWidthMm === "number"
+    ? layoutConfig.cardWidthMm
+    : typeof layoutConfig?.width === "number"
+    ? layoutConfig.width
+    : 57;
+  const cardHMm = typeof layoutConfig?.cardHeightMm === "number"
+    ? layoutConfig.cardHeightMm
+    : typeof layoutConfig?.height === "number"
+    ? layoutConfig.height
+    : 92;
   const cardWidthPx = Math.round(cardWMm * 11.8110236);
   const cardHeightPx = Math.round(cardHMm * 11.8110236);
 
@@ -648,26 +777,103 @@ export function drawCardOnCanvas(
     // ── Image fields ──────────────────────────────────────────────────────────
     if (key === "school_logo" || key === "principal_signature" || key === "student_photo") {
       let url: string | undefined;
-      if (key === "school_logo") url = school.logoUrl;
-      else if (key === "principal_signature") url = school.signatureUrl;
-      else url = student.profilePictureUrl;
+      if (key === "school_logo") {
+        url = school.logoUrl;
+      } else if (key === "principal_signature") {
+        url = school.signatureUrl;
+      } else {
+        url = student.profilePictureUrl || (student as any).photoUrl || (student as any).profilePic;
+        if (!url && student.customValues) {
+          const cv = parseCV(student.customValues);
+          url = cv?.profilePictureUrl || cv?.photoUrl || cv?.profilePic;
+        }
+      }
 
-      if (url && fw && fh) {
-        const img = imageCache.get(url);
+      const presetField = PRESET_LAYOUT_CONFIGS[layout]?.fields?.[key];
+
+      let rawW = f.width !== undefined && f.width !== null ? (typeof f.width === "number" ? f.width : parseFloat(f.width)) : NaN;
+      let rawH = f.height !== undefined && f.height !== null ? (typeof f.height === "number" ? f.height : parseFloat(f.height)) : NaN;
+
+      let presetW = presetField?.width !== undefined ? presetField.width : NaN;
+      let presetH = presetField?.height !== undefined ? presetField.height : NaN;
+
+      let targetUrl = url ? (url.startsWith("//") ? `https:${url}` : url) : "";
+      let img = targetUrl ? (imageCache.get(targetUrl) || imageCache.get(url!) || imageCache.get(url!.split("?")[0])) : undefined;
+
+      if (!img && targetUrl) {
+        const cleanUrl = targetUrl.split("?")[0];
+        for (const [cacheKey, cacheImg] of imageCache.entries()) {
+          if (cacheKey.split("?")[0] === cleanUrl) {
+            img = cacheImg;
+            break;
+          }
+        }
+      }
+
+      // Calculate natural image aspect ratio if image is loaded
+      const naturalW = img ? (img.naturalWidth || img.width || 0) : 0;
+      const naturalH = img ? (img.naturalHeight || img.height || 0) : 0;
+      const imgAspect = naturalW > 0 && naturalH > 0 ? naturalW / naturalH : 1;
+
+      let imageW: number;
+      let imageH: number;
+
+      if (!isNaN(rawW) && rawW > 0 && !isNaN(rawH) && rawH > 0) {
+        imageW = rawW;
+        imageH = rawH;
+      } else if (!isNaN(rawW) && rawW > 0) {
+        imageW = rawW;
+        imageH = !isNaN(presetH) && presetH > 0 ? presetH : (imgAspect > 0 ? Math.round(rawW / imgAspect) : rawW);
+      } else if (!isNaN(rawH) && rawH > 0) {
+        imageH = rawH;
+        imageW = !isNaN(presetW) && presetW > 0 ? presetW : (imgAspect > 0 ? Math.round(rawH * imgAspect) : rawH);
+      } else if (!isNaN(presetW) && presetW > 0 && !isNaN(presetH) && presetH > 0) {
+        imageW = presetW;
+        imageH = presetH;
+      } else {
+        // Full auto state: fallback to default size or natural dimensions
+        if (key === "student_photo") {
+          imageW = naturalW > 0 ? naturalW : 288;
+          imageH = naturalH > 0 ? naturalH : 288;
+        } else if (key === "school_logo") {
+          imageW = naturalW > 0 ? naturalW : 96;
+          imageH = naturalH > 0 ? naturalH : 96;
+        } else if (key === "principal_signature") {
+          imageW = naturalW > 0 ? naturalW : 150;
+          imageH = naturalH > 0 ? naturalH : 80;
+        } else {
+          imageW = 0;
+          imageH = 0;
+        }
+      }
+
+      // Calculate horizontal positioning according to align setting
+      let imageX = f.x || 0;
+      if (align === "center") {
+        const centerX = f.width ? f.x + f.width / 2 : (f.x > 0 && f.x < CARD_W / 2 ? CARD_W / 2 : f.x);
+        imageX = centerX - imageW / 2;
+      } else if (align === "right") {
+        const rightX = f.width ? f.x + f.width : f.x;
+        imageX = rightX - imageW;
+      }
+
+      const imgFx = ox + imageX;
+
+      if (url && imageW > 0 && imageH > 0) {
         if (img) {
           ctx.save();
           if (scaleX !== 1 || scaleY !== 1) {
-            ctx.translate(fx, fy);
+            ctx.translate(imgFx, fy);
             ctx.scale(scaleX, scaleY);
             if (key === "student_photo" && f.borderRadius && f.borderRadius !== "0") {
-              clipRoundedRect(ctx, 0, 0, fw, fh, f.borderRadius);
+              clipRoundedRect(ctx, 0, 0, imageW, imageH, f.borderRadius);
             }
-            ctx.drawImage(img, 0, 0, fw, fh);
+            drawCoverImage(ctx, img, 0, 0, imageW, imageH);
           } else {
             if (key === "student_photo" && f.borderRadius && f.borderRadius !== "0") {
-              clipRoundedRect(ctx, fx, fy, fw, fh, f.borderRadius);
+              clipRoundedRect(ctx, imgFx, fy, imageW, imageH, f.borderRadius);
             }
-            ctx.drawImage(img, fx, fy, fw, fh);
+            drawCoverImage(ctx, img, imgFx, fy, imageW, imageH);
           }
           ctx.restore();
         }

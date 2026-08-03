@@ -1,5 +1,13 @@
 import React from "react";
 import { PRESET_LAYOUT_CONFIGS } from "@/utils/presetLayouts";
+import layout10Bg from "@/assets/idcard-layout-10.jpeg";
+import layout11Bg from "@/assets/id-card-layout-11.jpeg";
+import layout12Bg from "@/assets/id-card-layout-12.jpeg";
+
+function srcOf(imported: any): string {
+  if (typeof imported === "string") return imported;
+  return imported?.src ?? imported?.default?.src ?? imported?.default ?? "";
+}
 
 export interface CardTheme {
   primary: string;
@@ -58,8 +66,16 @@ export default function IdCard({
     }
   }
 
-  const cardWMm = typeof layoutConfig?.cardWidthMm === "number" ? layoutConfig.cardWidthMm : 57;
-  const cardHMm = typeof layoutConfig?.cardHeightMm === "number" ? layoutConfig.cardHeightMm : 92;
+  const cardWMm = typeof layoutConfig?.cardWidthMm === "number"
+    ? layoutConfig.cardWidthMm
+    : typeof layoutConfig?.width === "number"
+    ? layoutConfig.width
+    : 57;
+  const cardHMm = typeof layoutConfig?.cardHeightMm === "number"
+    ? layoutConfig.cardHeightMm
+    : typeof layoutConfig?.height === "number"
+    ? layoutConfig.height
+    : 92;
   const cardWPx = `${Math.round(cardWMm * 11.8110236)}px`;
   const cardHPx = `${Math.round(cardHMm * 11.8110236)}px`;
 
@@ -168,15 +184,27 @@ export default function IdCard({
         );
       case 10:
         return (
-          <div className="absolute inset-0 z-0 bg-[url('@/assets/idcard-layout-10.jpeg')] bg-cover bg-center bg-no-repeat" />
+          <img
+            src={srcOf(layout10Bg)}
+            alt="Bg"
+            className="absolute inset-0 w-full h-full object-cover z-0"
+          />
         );
       case 11:
         return (
-          <div className="absolute inset-0 z-0 bg-[url('@/assets/id-card-layout-11.jpeg')] bg-cover bg-center bg-no-repeat" />
+          <img
+            src={srcOf(layout11Bg)}
+            alt="Bg"
+            className="absolute inset-0 w-full h-full object-cover z-0"
+          />
         );
       case 12:
         return (
-          <div className="absolute inset-0 z-0 bg-[url('@/assets/id-card-layout-12.jpeg')] bg-cover bg-center bg-no-repeat" />
+          <img
+            src={srcOf(layout12Bg)}
+            alt="Bg"
+            className="absolute inset-0 w-full h-full object-cover z-0"
+          />
         );
       default:
         return null;
@@ -184,9 +212,9 @@ export default function IdCard({
   };
 
   let fields = layoutConfig?.fields;
-  if ((!fields || Object.keys(fields).length === 0) && layout >= 1 && layout <= 12) {
+  if (!fields && layout >= 1 && layout <= 12) {
     fields = PRESET_LAYOUT_CONFIGS[layout]?.fields || {};
-  } else {
+  } else if (!fields) {
     fields = fields || {};
   }
 
@@ -197,7 +225,7 @@ export default function IdCard({
     width: cardWPx,
     height: cardHPx,
     backgroundColor: theme.background,
-    backgroundImage: isCustomOrShared && backgroundUrl ? `url(${backgroundUrl})` : "none",
+    backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : "none",
     backgroundSize: "cover",
     backgroundPosition: "center",
     position: "relative" as const,
@@ -207,7 +235,7 @@ export default function IdCard({
 
   return (
     <div className="relative box-border overflow-hidden mx-auto shadow-2xl" style={customCardStyle}>
-      {!isCustomOrShared && renderBackground()}
+      {!isCustomOrShared && !backgroundUrl && renderBackground()}
 
       {!hideFields && Object.entries(fields).map(([fieldKey, f]: [string, any]) => {
         if (!f || !f.visible) return null;
@@ -219,6 +247,9 @@ export default function IdCard({
           fieldKey === "school_caption";
 
         const align = f.align || "left";
+        const vertAlign = f.verticalAlign || "center";
+        const strokeWidth = f.strokeWidth || 0;
+        const strokeColor = f.strokeColor || "#ffffff";
         const scaleX = f.scaleX || 1;
         const scaleY = f.scaleY || 1;
 
@@ -240,6 +271,8 @@ export default function IdCard({
           transformOriginStr = "top right";
         }
 
+        const isImageField = fieldKey === "school_logo" || fieldKey === "student_photo" || fieldKey === "principal_signature";
+
         const fieldStyle: React.CSSProperties = {
           position: "absolute",
           left: leftPos,
@@ -251,7 +284,13 @@ export default function IdCard({
           fontWeight: f.fontWeight || undefined,
           color: f.color || undefined,
           textAlign: align as React.CSSProperties["textAlign"],
-          zIndex: 20, // Ensure fields are above background elements
+          lineHeight: 1.25,
+          WebkitTextStroke: strokeWidth > 0 ? `${strokeWidth}px ${strokeColor}` : undefined,
+          paintOrder: strokeWidth > 0 ? "stroke fill" : undefined,
+          display: !isImageField && f.height ? "flex" : undefined,
+          flexDirection: !isImageField && f.height ? "column" : undefined,
+          justifyContent: !isImageField && f.height ? (vertAlign === "top" ? "flex-start" : vertAlign === "bottom" ? "flex-end" : "center") : undefined,
+          zIndex: 20,
           whiteSpace: f.width ? (f.addressFormat === "singleline" ? "normal" : "pre-line") : (isAddress ? "pre-line" : isMultiline ? "normal" : "nowrap"),
           wordBreak: "break-word",
           overflowWrap: "break-word",
@@ -268,20 +307,29 @@ export default function IdCard({
               alt="Logo"
               crossOrigin="anonymous"
               style={fieldStyle}
-              className="object-fit"
+              className="object-cover"
             />
           ) : null;
         }
 
         if (fieldKey === "student_photo") {
-          return student.profilePictureUrl ? (
+          let photoUrl = student.profilePictureUrl || (student as any).photoUrl || (student as any).profilePic;
+          if (!photoUrl && student.customValues) {
+            let customVals = student.customValues;
+            if (typeof customVals === "string") {
+              try { customVals = JSON.parse(customVals); } catch { customVals = null; }
+            }
+            photoUrl = customVals?.profilePictureUrl || customVals?.photoUrl || customVals?.profilePic;
+          }
+
+          return photoUrl ? (
             <img
               key={fieldKey}
-              src={student.profilePictureUrl}
+              src={photoUrl}
               alt="Student"
               crossOrigin="anonymous"
               style={{ ...fieldStyle, borderRadius: f.borderRadius || "0" }}
-              className="object-fit"
+              className="object-cover"
             />
           ) : null;
         }
@@ -294,7 +342,7 @@ export default function IdCard({
               alt="Sign"
               crossOrigin="anonymous"
               style={fieldStyle}
-              className="object-fit"
+              className="object-cover"
             />
           ) : null;
         }
