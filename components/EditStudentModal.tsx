@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, PencilEdit01Icon, ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import uploadImageToCloudinary from "@/utils/cloudService";
 import Cropper from "react-easy-crop";
 import { toast } from "sonner";
@@ -37,6 +37,12 @@ interface EditStudentModalProps {
   schoolId: string;
   onClose: () => void;
   onSuccess: () => void;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  hasPrevious?: boolean;
+  hasNext?: boolean;
+  currentIndex?: number;
+  totalCount?: number;
 }
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -55,6 +61,12 @@ export default function EditStudentModal({
   schoolId,
   onClose,
   onSuccess,
+  onPrevious,
+  onNext,
+  hasPrevious = false,
+  hasNext = false,
+  currentIndex,
+  totalCount,
 }: EditStudentModalProps) {
   const [formData, setFormData] = useState({
     name: student.name || "",
@@ -79,6 +91,68 @@ export default function EditStudentModal({
     return {};
   });
 
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(student.profilePictureUrl || null);
+  const [isEnhancerOpen, setIsEnhancerOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // ─── CROPPING STATES ────────────────────────────────────────────────────
+  const [isCropping, setIsCropping] = useState(false);
+  const [imgSrc, setImgSrc] = useState("");
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  // ────────────────────────────────────────────────────────────────────────
+
+  // Re-populate state whenever student prop changes
+  useEffect(() => {
+    setFormData({
+      name: student.name || "",
+      fatherName: student.fatherName || "",
+      fatherPhone: student.fatherPhone || "",
+      address: student.address || "",
+      classId: student.classId || "",
+      camSno: student.camSno || "",
+    });
+    let parsedCustom = {};
+    if (student.customValues) {
+      try {
+        parsedCustom = typeof student.customValues === "string"
+          ? JSON.parse(student.customValues)
+          : student.customValues;
+      } catch {
+        parsedCustom = {};
+      }
+    }
+    setCustomValues(parsedCustom);
+    setProfilePictureFile(null);
+    setPreviewUrl(student.profilePictureUrl || null);
+    setIsCropping(false);
+    setError(null);
+  }, [student.id, student]);
+
+  // Keyboard navigation shortcuts (when not typing in form inputs)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = document.activeElement?.tagName.toLowerCase();
+      if (activeTag === "input" || activeTag === "textarea" || activeTag === "select") {
+        return;
+      }
+
+      if (e.key === "ArrowLeft" && hasPrevious && onPrevious) {
+        e.preventDefault();
+        onPrevious();
+      } else if (e.key === "ArrowRight" && hasNext && onNext) {
+        e.preventDefault();
+        onNext();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [hasPrevious, hasNext, onPrevious, onNext]);
+
   useEffect(() => {
     async function fetchSchoolConfig() {
       try {
@@ -101,20 +175,6 @@ export default function EditStudentModal({
     }
     fetchSchoolConfig();
   }, [schoolId]);
-
-  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(student.profilePictureUrl || null);
-  const [isEnhancerOpen, setIsEnhancerOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // ─── CROPPING STATES ────────────────────────────────────────────────────
-  const [isCropping, setIsCropping] = useState(false);
-  const [imgSrc, setImgSrc] = useState("");
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
-  // ────────────────────────────────────────────────────────────────────────
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -309,16 +369,47 @@ export default function EditStudentModal({
           <>
             <button
               onClick={onClose}
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors  rounded-full bg-gray-100 hover:bg-gray-200 flex items-center p-1.5 justify-center cursor-pointer"
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors rounded-full bg-gray-100 hover:bg-gray-200 flex items-center p-1.5 justify-center cursor-pointer z-10"
               aria-label="Close modal"
             >
-              <HugeiconsIcon icon={Cancel01Icon} size={20} color="currentColor" strokeWidth={2} />
+              <HugeiconsIcon icon={Cancel01Icon} size={18} color="currentColor" strokeWidth={2} />
             </button>
 
-            <h2 id="edit-student-title" className="text-xl font-bold text-gray-900 mb-5 flex items-center pl-5 gap-2">
-               
-              Edit Student Details
-            </h2>
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 pr-10">
+              <div className="flex items-center gap-2">
+                <h2 id="edit-student-title" className="text-lg font-bold text-gray-900">
+                  Edit Student Details
+                </h2>
+                {typeof currentIndex === "number" && typeof totalCount === "number" && (
+                  <span className="text-xs font-semibold px-2.5 py-0.5 bg-violet-50 text-violet-700 rounded-full border border-violet-200">
+                    {currentIndex + 1} of {totalCount}
+                  </span>
+                )}
+              </div>
+
+              {(onPrevious || onNext) && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={onPrevious}
+                    disabled={!hasPrevious}
+                    className="p-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 disabled:opacity-30 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs"
+                    title="Previous Student"
+                  >
+                    <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={2} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onNext}
+                    disabled={!hasNext}
+                    className="p-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 disabled:opacity-30 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs"
+                    title="Next Student"
+                  >
+                    <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2} />
+                  </button>
+                </div>
+              )}
+            </div>
 
             {error && (
               <div className="mb-4 p-3 bg-rose-50 border border-rose-100 text-rose-700 text-xs sm:text-sm rounded-xl font-medium">

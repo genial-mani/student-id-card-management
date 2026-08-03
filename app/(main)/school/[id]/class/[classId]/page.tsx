@@ -294,10 +294,41 @@ export default function ClassPage() {
     return result;
   }, [allStudents, searchQuery, sortBy]);
 
-  // Reset page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, sortBy]);
+  // Edit Student Navigation
+  const editIndex = useMemo(() => {
+    if (!editingStudent) return -1;
+    return filteredStudents.findIndex((s) => s.id === editingStudent.id);
+  }, [editingStudent, filteredStudents]);
+
+  const handlePreviousEdit = useCallback(() => {
+    if (editIndex > 0) {
+      setEditingStudent(filteredStudents[editIndex - 1]);
+    }
+  }, [editIndex, filteredStudents]);
+
+  const handleNextEdit = useCallback(() => {
+    if (editIndex >= 0 && editIndex < filteredStudents.length - 1) {
+      setEditingStudent(filteredStudents[editIndex + 1]);
+    }
+  }, [editIndex, filteredStudents]);
+
+  // Preview Student Navigation
+  const previewIndex = useMemo(() => {
+    if (!selectedPreviewStudent) return -1;
+    return filteredStudents.findIndex((s) => s.id === selectedPreviewStudent.id);
+  }, [selectedPreviewStudent, filteredStudents]);
+
+  const handlePreviousPreview = useCallback(() => {
+    if (previewIndex > 0) {
+      setSelectedPreviewStudent(filteredStudents[previewIndex - 1]);
+    }
+  }, [previewIndex, filteredStudents]);
+
+  const handleNextPreview = useCallback(() => {
+    if (previewIndex >= 0 && previewIndex < filteredStudents.length - 1) {
+      setSelectedPreviewStudent(filteredStudents[previewIndex + 1]);
+    }
+  }, [previewIndex, filteredStudents]);
 
   const ITEMS_PER_PAGE = 12;
   const totalPages = Math.max(1, Math.ceil(filteredStudents.length / ITEMS_PER_PAGE));
@@ -854,6 +885,12 @@ export default function ClassPage() {
               schoolId={classData.school.id}
               onClose={() => setEditingStudent(null)}
               onSuccess={fetchClass}
+              onPrevious={handlePreviousEdit}
+              onNext={handleNextEdit}
+              hasPrevious={editIndex > 0}
+              hasNext={editIndex >= 0 && editIndex < filteredStudents.length - 1}
+              currentIndex={editIndex}
+              totalCount={filteredStudents.length}
             />
           )}
 
@@ -863,6 +900,12 @@ export default function ClassPage() {
               school={classData.school}
               student={selectedPreviewStudent}
               onClose={() => setSelectedPreviewStudent(null)}
+              onPrevious={handlePreviousPreview}
+              onNext={handleNextPreview}
+              hasPrevious={previewIndex > 0}
+              hasNext={previewIndex >= 0 && previewIndex < filteredStudents.length - 1}
+              currentIndex={previewIndex}
+              totalCount={filteredStudents.length}
             />
           )}
 

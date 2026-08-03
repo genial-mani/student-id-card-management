@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyTokenWithVersion } from './lib/auth';
-
-// Routes that don't require authentication
-const PUBLIC_ROUTES = ['/login', '/api/auth/login'];
+import { verifyToken } from './lib/auth';
 
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Allow public routes
-  if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
-    return NextResponse.next();
-  }
+  const { pathname, searchParams } = request.nextUrl;
 
   // Allow static files and Next internals
   if (
@@ -23,13 +15,39 @@ export async function proxy(request: NextRequest) {
 
   const token = request.cookies.get('auth_token')?.value;
 
+  // Handle /login page auto-redirection for logged-in users
+  if (pathname === '/login') {
+    if (searchParams.get('loggedOut') === 'true') {
+      return NextResponse.next();
+    }
+
+    if (token) {
+      const payload = await verifyToken(token);
+      if (payload) {
+        if (payload.role === 'admin') {
+          return NextResponse.redirect(new URL('/', request.url));
+        } else if (payload.schoolId) {
+          return NextResponse.redirect(new URL(`/school/${payload.schoolId}`, request.url));
+        } else {
+          return NextResponse.redirect(new URL('/', request.url));
+        }
+      }
+    }
+    return NextResponse.next();
+  }
+
+  // Allow public API auth endpoints
+  if (pathname.startsWith('/api/auth/login')) {
+    return NextResponse.next();
+  }
+
   if (!token) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  const payload = await verifyTokenWithVersion(token);
+  const payload = await verifyToken(token);
 
   if (!payload) {
     const loginUrl = new URL('/login', request.url);
@@ -52,3 +70,4 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
+

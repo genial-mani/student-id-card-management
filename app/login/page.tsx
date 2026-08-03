@@ -15,7 +15,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
-  const { refreshUser } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -27,8 +27,19 @@ function LoginForm() {
     if (searchParams.get("loggedOut") === "true") {
       toast.success("Successfully logged out!");
       router.replace("/login");
+      return;
     }
-  }, [searchParams, router]);
+
+    if (!authLoading && user) {
+      if (user.role === "admin") {
+        router.replace(redirect === "/login" ? "/" : redirect);
+      } else if (user.schoolId) {
+        router.replace(`/school/${user.schoolId}`);
+      } else {
+        router.replace("/");
+      }
+    }
+  }, [user, authLoading, searchParams, router, redirect]);
 
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
