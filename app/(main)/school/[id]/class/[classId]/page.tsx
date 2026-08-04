@@ -114,7 +114,7 @@ function saveDesign(classId: string, layout: number, theme: CardTheme) {
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-const CustomDropdown = ({ value, onChange, options, placeholder, searchable = false }: { value: string, onChange: (val: string) => void, options: { label: string, value: string }[], placeholder: string, searchable?: boolean }) => {
+const CustomDropdown = ({ value, onChange, options, placeholder, searchable = false }: { value: string, onChange: (val: string) => void, options: { label: string, value: string, count?: number }[], placeholder: string, searchable?: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -143,8 +143,17 @@ const CustomDropdown = ({ value, onChange, options, placeholder, searchable = fa
           if (!isOpen) setSearch("");
         }}
       >
-        <span className={selectedOption ? "text-gray-900 truncate pr-2" : "text-gray-500 truncate pr-2"}>
-          {selectedOption ? selectedOption.label : placeholder}
+        <span className={selectedOption ? "text-gray-900 truncate pr-2 flex items-center gap-1.5" : "text-gray-500 truncate pr-2"}>
+          {selectedOption ? (
+            <>
+              <span className="truncate">{selectedOption.label}</span>
+              {selectedOption.count !== undefined && (
+                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 shrink-0">
+                  {selectedOption.count}
+                </span>
+              )}
+            </>
+          ) : placeholder}
         </span>
         <svg className={`w-4 h-4 text-gray-500 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -167,13 +176,22 @@ const CustomDropdown = ({ value, onChange, options, placeholder, searchable = fa
           {filteredOptions.length > 0 ? filteredOptions.map((opt: any) => (
             <div
               key={opt.value}
-              className={`px-3 py-2 text-xs sm:text-sm cursor-pointer hover:bg-violet-50 hover:text-violet-700 transition-colors ${value === opt.value ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-700'}`}
+              className={`px-3 py-2 text-xs sm:text-sm cursor-pointer hover:bg-violet-50 hover:text-violet-700 transition-colors flex items-center justify-between gap-2 ${value === opt.value ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-700'}`}
               onClick={() => {
                 onChange(opt.value);
                 setIsOpen(false);
               }}
             >
-              {opt.label}
+              <span className="truncate">{opt.label}</span>
+              {opt.count !== undefined && (
+                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full shrink-0 ${
+                  opt.count > 0 
+                    ? value === opt.value ? "bg-violet-200 text-violet-800" : "bg-gray-100 text-gray-600"
+                    : "bg-gray-50 text-gray-400"
+                }`}>
+                  {opt.count}
+                </span>
+              )}
             </div>
           )) : (
             <div className="px-3 py-2 text-xs sm:text-sm text-gray-500 text-center">No results</div>
@@ -204,6 +222,8 @@ export default function ClassPage() {
   const [sortBy, setSortBy] = useState("name-asc");
   const [viewMode, setViewMode] = useState<"card" | "list">("list");
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(12);
+  const [missingFieldFilter, setMissingFieldFilter] = useState("");
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [selectedPreviewStudent, setSelectedPreviewStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -258,6 +278,66 @@ export default function ClassPage() {
     }));
   }, [classData]);
 
+  const isFieldMissing = useCallback((student: any, fieldKey: string) => {
+    if (!fieldKey) return false;
+    if (fieldKey === "profilePictureUrl") {
+      return !student.profilePictureUrl || student.profilePictureUrl.trim() === "";
+    }
+    let val = student[fieldKey];
+    
+    let customVals = student.customValues;
+    if (typeof customVals === "string") {
+      try { customVals = JSON.parse(customVals); } catch { customVals = {}; }
+    }
+    
+    if ((val === undefined || val === null || String(val).trim() === "") && customVals && typeof customVals === 'object') {
+      const cv = (customVals as any)[fieldKey];
+      if (cv !== undefined && cv !== null) {
+        val = cv;
+      }
+    }
+    
+    return val === undefined || val === null || String(val).trim() === "";
+  }, []);
+
+  const missingFieldOptions = useMemo(() => {
+    const options: { label: string; value: string; count?: number }[] = [
+      { label: "All Students", value: "", count: allStudents.length }
+    ];
+
+    let studentFields = [
+      { key: "name", label: "Student Name", enabled: true },
+      { key: "profilePictureUrl", label: "Profile Picture", enabled: true },
+      { key: "fatherName", label: "Father Name", enabled: true },
+      { key: "fatherPhone", label: "Father Phone", enabled: true },
+      { key: "address", label: "Address", enabled: true },
+    ];
+
+    if (classData?.school?.customFieldsConfig) {
+      let parsed = classData.school.customFieldsConfig;
+      if (typeof parsed === "string") {
+        try { parsed = JSON.parse(parsed); } catch { parsed = {}; }
+      }
+      if (parsed && parsed.student && Array.isArray(parsed.student)) {
+        studentFields = parsed.student;
+      }
+    }
+
+    studentFields
+      .filter((f: any) => f.enabled !== false && f.isActive !== false)
+      .forEach((f: any) => {
+        const cleanLabel = (f.label || f.key).replace(/\s*\*$/, '');
+        const count = allStudents.filter(s => isFieldMissing(s, f.key)).length;
+        options.push({
+          label: f.key === "profilePictureUrl" ? "Missing Photo" : `Missing ${cleanLabel}`,
+          value: f.key,
+          count: count
+        });
+      });
+
+    return options;
+  }, [allStudents, classData, isFieldMissing]);
+
   const filteredStudents = useMemo(() => {
     let result = [...allStudents];
 
@@ -271,6 +351,30 @@ export default function ClassPage() {
           (s.fatherPhone && s.fatherPhone.toLowerCase().includes(query)) ||
           (s.address && s.address.toLowerCase().includes(query))
       );
+    }
+
+    // Missing Field Filter
+    if (missingFieldFilter) {
+      result = result.filter((s) => {
+        if (missingFieldFilter === "profilePictureUrl") {
+          return !s.profilePictureUrl || s.profilePictureUrl.trim() === "";
+        }
+        let val = (s as any)[missingFieldFilter];
+        
+        let customVals = s.customValues;
+        if (typeof customVals === "string") {
+          try { customVals = JSON.parse(customVals); } catch { customVals = {}; }
+        }
+        
+        if ((val === undefined || val === null || String(val).trim() === "") && customVals && typeof customVals === 'object') {
+          const cv = (customVals as any)[missingFieldFilter];
+          if (cv !== undefined && cv !== null) {
+            val = cv;
+          }
+        }
+        
+        return val === undefined || val === null || String(val).trim() === "";
+      });
     }
 
     // Sorting
@@ -292,7 +396,12 @@ export default function ClassPage() {
     });
 
     return result;
-  }, [allStudents, searchQuery, sortBy]);
+  }, [allStudents, searchQuery, sortBy, missingFieldFilter]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortBy, itemsPerPage, missingFieldFilter]);
 
   // Edit Student Navigation
   const editIndex = useMemo(() => {
@@ -330,14 +439,14 @@ export default function ClassPage() {
     }
   }, [previewIndex, filteredStudents]);
 
-  const ITEMS_PER_PAGE = 12;
-  const totalPages = Math.max(1, Math.ceil(filteredStudents.length / ITEMS_PER_PAGE));
+  const effectiveItemsPerPage = Math.max(1, itemsPerPage || 12);
+  const totalPages = Math.max(1, Math.ceil(filteredStudents.length / effectiveItemsPerPage));
 
   const paginatedStudents = useMemo(() => {
     const activePage = Math.min(currentPage, totalPages);
-    const start = (activePage - 1) * ITEMS_PER_PAGE;
-    return filteredStudents.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredStudents, currentPage, totalPages]);
+    const start = (activePage - 1) * effectiveItemsPerPage;
+    return filteredStudents.slice(start, start + effectiveItemsPerPage);
+  }, [filteredStudents, currentPage, totalPages, effectiveItemsPerPage]);
 
   const handleDeleteClick = async (studentId: string, studentName: string) => {
     setStudentToDelete({ id: studentId, name: studentName });
@@ -680,45 +789,26 @@ export default function ClassPage() {
               </div>
             </div>
 
-            {/* Bottom row: Search & Filter Controls (fully responsive flex layout) */}
-            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-              {/* Search input */}
-              <div className="flex-1 relative flex items-center min-w-0">
-                <span className="absolute left-3 text-gray-400 flex items-center">
-                  <HugeiconsIcon icon={Search01Icon} size={16} color="currentColor" strokeWidth={2} />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Search name, father, cell..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all h-10"
-                />
-              </div>
-
-              {/* Filters */}
-              <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0 w-full lg:w-auto">
-                {/* Sort Dropdown */}
-                {viewMode === "card" && (
-                  <div className="w-full sm:w-44 shrink-0">
-                    <CustomDropdown
-                      value={sortBy}
-                      onChange={setSortBy}
-                      placeholder="Sort By"
-                      options={[
-                        { value: "name-asc", label: "Sort: Name (A-Z)" },
-                        { value: "name-desc", label: "Sort: Name (Z-A)" },
-                        { value: "camSno-asc", label: "Sort: CAM S.No (Asc)" },
-                        { value: "camSno-desc", label: "Sort: CAM S.No (Desc)" },
-                        { value: "fatherName-asc", label: "Sort: Father Name (A-Z)" },
-                        { value: "fatherName-desc", label: "Sort: Father Name (Z-A)" },
-                      ]}
-                    />
-                  </div>
-                )}
+            {/* Bottom row: Search & Filter Controls */}
+            <div className="flex flex-col gap-3 w-full">
+              {/* Primary Controls Row */}
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+                {/* Search input */}
+                <div className="w-full sm:flex-1 relative flex items-center shrink-0">
+                  <span className="absolute left-3 text-gray-400 flex items-center">
+                    <HugeiconsIcon icon={Search01Icon} size={16} color="currentColor" strokeWidth={2} />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search name, father, cell..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all h-10"
+                  />
+                </div>
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200 shrink-0 h-10 overflow-hidden w-auto max-w-full">
+                <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200 shrink-0 h-10 overflow-hidden w-full sm:w-auto">
                   <button
                     onClick={() => setViewMode("card")}
                     type="button"
@@ -742,6 +832,39 @@ export default function ClassPage() {
                     <span className="hidden sm:inline">List</span>
                   </button>
                 </div>
+              </div>
+
+              {/* Secondary Controls Row */}
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+                {/* Missing Field Dropdown */}
+                <div className="w-full sm:w-48 shrink-0">
+                  <CustomDropdown
+                    value={missingFieldFilter}
+                    onChange={setMissingFieldFilter}
+                    placeholder="Filter Missing..."
+                    options={missingFieldOptions}
+                  />
+                </div>
+
+                {/* Sort Dropdown */}
+                {viewMode === "card" && (
+                  <div className="w-full sm:w-44 shrink-0">
+                    <CustomDropdown
+                      value={sortBy}
+                      onChange={setSortBy}
+                      placeholder="Sort By"
+                      options={[
+                        { value: "name-asc", label: "Sort: Name (A-Z)" },
+                        { value: "name-desc", label: "Sort: Name (Z-A)" },
+                        { value: "camSno-asc", label: "Sort: CAM S.No (Asc)" },
+                        { value: "camSno-desc", label: "Sort: CAM S.No (Desc)" },
+                        { value: "fatherName-asc", label: "Sort: Father Name (A-Z)" },
+                        { value: "fatherName-desc", label: "Sort: Father Name (Z-A)" },
+                      ]}
+                    />
+                  </div>
+                )}
+
               </div>
             </div>
           </div>
@@ -787,13 +910,16 @@ export default function ClassPage() {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No students found</h3>
               <p className="text-gray-500 text-sm">
-                {searchQuery
+                {searchQuery || missingFieldFilter
                   ? "No results matching your filter. Try adjusting it."
                   : "There are no students in this class yet."}
               </p>
-              {searchQuery && (
+              {(searchQuery || missingFieldFilter) && (
                 <Button
-                  onClick={() => setSearchQuery("")}
+                  onClick={() => {
+                    setSearchQuery("");
+                    setMissingFieldFilter("");
+                  }}
                   variant="outline"
                   className="mt-4"
                 >
@@ -804,64 +930,105 @@ export default function ClassPage() {
           )}
 
           {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white rounded-xl border border-gray-150 p-4 shadow-xs animate-in fade-in duration-200">
-              <div className="text-xs sm:text-sm text-gray-500 font-medium">
-                Showing <span className="font-semibold text-gray-900">{Math.min(filteredStudents.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)}</span> to{" "}
-                <span className="font-semibold text-gray-900">{Math.min(filteredStudents.length, currentPage * ITEMS_PER_PAGE)}</span> of{" "}
-                <span className="font-semibold text-gray-900">{filteredStudents.length}</span> students
+          {filteredStudents.length > 0 && (
+            <div className="mt-8 flex flex-col md:flex-row items-center justify-between gap-4 bg-white rounded-xl border border-gray-150 p-4 shadow-xs animate-in fade-in duration-200">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="text-xs sm:text-sm text-gray-500 font-medium">
+                  Showing <span className="font-semibold text-gray-900">{Math.min(filteredStudents.length, (currentPage - 1) * effectiveItemsPerPage + 1)}</span> to{" "}
+                  <span className="font-semibold text-gray-900">{Math.min(filteredStudents.length, currentPage * effectiveItemsPerPage)}</span> of{" "}
+                  <span className="font-semibold text-gray-900">{filteredStudents.length}</span> students
+                </div>
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium border-l border-gray-200 pl-4">
+                  <span>Per page:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val) && val > 0) {
+                        setItemsPerPage(val);
+                      } else if (e.target.value === "") {
+                        setItemsPerPage(12);
+                      }
+                    }}
+                    className="w-16 h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs sm:text-sm font-bold text-gray-900 text-center focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all"
+                  />
+                  <select
+                    value={[10, 12, 25, 50, 100].includes(itemsPerPage) ? itemsPerPage : "custom"}
+                    onChange={(e) => {
+                      if (e.target.value !== "custom") {
+                        setItemsPerPage(Number(e.target.value));
+                      }
+                    }}
+                    className="h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+                  >
+                    <option value="10">10</option>
+                    <option value="12">12</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    {![10, 12, 25, 50, 100].includes(itemsPerPage) && (
+                      <option value="custom">Custom ({itemsPerPage})</option>
+                    )}
+                  </select>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 font-sans">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-55 disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <HugeiconsIcon icon={ArrowLeft01Icon} size={14} color="currentColor" strokeWidth={2.5} />
-                  Prev
-                </button>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                  const isVisible =
-                    totalPages <= 5 ||
-                    page === 1 ||
-                    page === totalPages ||
-                    Math.abs(page - currentPage) <= 1;
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1.5 font-sans">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-55 disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <HugeiconsIcon icon={ArrowLeft01Icon} size={14} color="currentColor" strokeWidth={2.5} />
+                    Prev
+                  </button>
 
-                  if (!isVisible) {
-                    if (page === 2 || page === totalPages - 1) {
-                      return (
-                        <span key={`ellipsis-${page}`} className="px-2 text-gray-400 text-xs sm:text-sm select-none">
-                          ...
-                        </span>
-                      );
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    const isVisible =
+                      totalPages <= 5 ||
+                      page === 1 ||
+                      page === totalPages ||
+                      Math.abs(page - currentPage) <= 1;
+
+                    if (!isVisible) {
+                      if (page === 2 || page === totalPages - 1) {
+                        return (
+                          <span key={`ellipsis-${page}`} className="px-2 text-gray-400 text-xs sm:text-sm select-none">
+                            ...
+                          </span>
+                        );
+                      }
+                      return null;
                     }
-                    return null;
-                  }
 
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`w-8 h-8 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${currentPage === page
-                        ? "bg-violet-600 text-white shadow-xs"
-                        : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-                        }`}
-                    >
-                      {page}
-                    </button>
-                  );
-                })}
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-8 h-8 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${currentPage === page
+                          ? "bg-violet-600 text-white shadow-xs"
+                          : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                          }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
 
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-55 disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  Next
-                  <HugeiconsIcon icon={ArrowRight01Icon} size={14} color="currentColor" strokeWidth={2.5} />
-                </button>
-              </div>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-55 disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    Next
+                    <HugeiconsIcon icon={ArrowRight01Icon} size={14} color="currentColor" strokeWidth={2.5} />
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

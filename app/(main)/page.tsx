@@ -428,14 +428,14 @@ export default function Home() {
                 <div className="bg-white rounded-2xl border border-slate-150 p-6 shadow-xs space-y-4">
                   <div>
                     <h3 className="text-sm font-bold text-slate-800 tracking-tight">School Enrollment Volumes</h3>
-                    <p className="text-slate-550 text-[10px] mt-0.5">Top schools ranked by total student ID count.</p>
+                    <p className="text-slate-550 text-[10px] mt-0.5">Schools ranked by total student ID count ({leaderboardSchools.length}).</p>
                   </div>
 
                   {leaderboardSchools.length === 0 ? (
                     <p className="text-[11px] text-slate-450 italic">No schools registered</p>
                   ) : (
-                    <div className="space-y-3.5 pt-1">
-                      {leaderboardSchools.slice(0, 5).map((school, idx) => {
+                    <div className="space-y-3.5 pt-1 max-h-80 overflow-y-auto pr-1.5 scrollbar-thin">
+                      {leaderboardSchools.map((school, idx) => {
                         const count = school.students?.length || 0;
                         const percent = maxLeaderboardStudents ? Math.round((count / maxLeaderboardStudents) * 100) : 0;
 
