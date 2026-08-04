@@ -22,6 +22,24 @@ export interface PrintSettings {
   customUnit?: CustomUnit;
 }
 
+export function getCardDimensionsMm(layoutConfig: any): { widthMm: number; heightMm: number; widthPx: number; heightPx: number } {
+  let cfg = layoutConfig;
+  if (typeof cfg === "string") {
+    try { cfg = JSON.parse(cfg); } catch { cfg = null; }
+  }
+  const rawW = cfg?.cardWidthMm ?? cfg?.width;
+  const rawH = cfg?.cardHeightMm ?? cfg?.height;
+  const widthMm = typeof rawW === "number" ? rawW : typeof rawW === "string" ? (parseFloat(rawW) || 57) : 57;
+  const heightMm = typeof rawH === "number" ? rawH : typeof rawH === "string" ? (parseFloat(rawH) || 92) : 92;
+  const MM_TO_PX = 11.8110236; // 300 DPI
+  return {
+    widthMm,
+    heightMm,
+    widthPx: Math.round(widthMm * MM_TO_PX),
+    heightPx: Math.round(heightMm * MM_TO_PX),
+  };
+}
+
 export function getPaperInfo(settings: PrintSettings) {
   if (settings.paperSize === "custom") {
     const unit = settings.customUnit || "mm";
@@ -55,7 +73,7 @@ export function calculatePrintGrid(
   defaultGapPx: number = 24
 ) {
   const paper = getPaperInfo(settings);
-  const MM_TO_PX = 3.7795275591;
+  const MM_TO_PX = 11.8110236; // 300 DPI print resolution (matches paper and card pixel dimensions)
   const actualGapX = settings.gapX !== undefined ? settings.gapX * MM_TO_PX : defaultGapPx;
   const actualGapY = settings.gapY !== undefined ? settings.gapY * MM_TO_PX : defaultGapPx;
   

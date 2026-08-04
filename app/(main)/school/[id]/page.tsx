@@ -188,6 +188,10 @@ const DraggableField = ({
     right: { ...handleStyle, width: '8px', height: '16px', top: '50%', right: '-4px', transform: 'translateY(-50%)', cursor: 'e-resize' },
   };
 
+  const imgBorderW = typeof f.borderWidth === "number" ? f.borderWidth : (parseInt(f.borderWidth || "0", 10) || 0);
+  const imgBorderC = f.borderColor || "#000000";
+  const imgRadius = f.borderRadius ? (typeof f.borderRadius === "number" ? `${f.borderRadius}px` : f.borderRadius) : "0";
+
   return (
     <Rnd
       bounds="parent"
@@ -231,6 +235,9 @@ const DraggableField = ({
           fontWeight: f.fontWeight || "500",
           color: f.color || "#000",
           textAlign: (f.align || "left") as React.CSSProperties["textAlign"],
+          border: isImage && imgBorderW > 0 ? `${imgBorderW}px solid ${imgBorderC}` : undefined,
+          borderRadius: isImage ? imgRadius : undefined,
+          boxSizing: "border-box",
           transform: `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
           transformOrigin: 'top left',
           whiteSpace: f.width ? "pre-line" : ((fieldKey === "school_address" || fieldKey === "student_address") ? 'pre-line' : (["school_name", "school_caption"].includes(fieldKey) ? 'normal' : 'nowrap')),
@@ -2674,21 +2681,31 @@ export default function SchoolPage() {
                             if (!f || !f.visible) return null;
 
                             let displayContent: React.ReactNode = "";
+                            const imgBorderW = typeof f.borderWidth === "number" ? f.borderWidth : (parseInt(f.borderWidth || "0", 10) || 0);
+                            const imgBorderC = f.borderColor || "#000000";
+                            const imgRadius = f.borderRadius ? (typeof f.borderRadius === "number" ? `${f.borderRadius}px` : f.borderRadius) : "0";
+
+                            const imgStyle: React.CSSProperties = {
+                              borderRadius: imgRadius,
+                              border: imgBorderW > 0 ? `${imgBorderW}px solid ${imgBorderC}` : undefined,
+                              boxSizing: "border-box",
+                            };
+
                             if (fieldKey === "school_logo") {
                               displayContent = school.logoUrl ? (
-                                <img src={school.logoUrl} alt="Logo" className="w-full h-full object-contain pointer-events-none" />
+                                <img src={school.logoUrl} alt="Logo" style={imgStyle} className="w-full h-full object-contain pointer-events-none" />
                               ) : (
-                                <div className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Logo</div>
+                                <div style={imgStyle} className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Logo</div>
                               );
                             } else if (fieldKey === "student_photo") {
                               displayContent = (
-                                <img src={activePreviewStudent.profilePictureUrl || DUMMY_STUDENT.profilePictureUrl} alt="Photo" className="w-full h-full object-cover pointer-events-none" />
+                                <img src={activePreviewStudent.profilePictureUrl || DUMMY_STUDENT.profilePictureUrl} alt="Photo" style={imgStyle} className="w-full h-full object-cover pointer-events-none" />
                               );
                             } else if (fieldKey === "principal_signature") {
                               displayContent = school.signatureUrl ? (
-                                <img src={school.signatureUrl} alt="Sign" className="w-full h-full object-contain pointer-events-none" />
+                                <img src={school.signatureUrl} alt="Sign" style={imgStyle} className="w-full h-full object-contain pointer-events-none" />
                               ) : (
-                                <div className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Signature</div>
+                                <div style={imgStyle} className="w-full h-full border flex items-center justify-center text-[10px] font-bold text-slate-400">Signature</div>
                               );
                             } else {
                               let label = "";
@@ -3183,22 +3200,108 @@ export default function SchoolPage() {
                             </>
                           )}
 
-                          {/* Special Student Photo Brightness Tool */}
-                          {selectedFieldKey === "student_photo" && activePreviewStudent && (
-                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-col gap-2 my-1">
-                              <div className="flex items-center justify-between text-xs font-bold text-amber-900">
-                                <span>☀️ Photo Enhancement Tool</span>
+                          {/* Image Border & Radius Controls (for school_logo, student_photo, principal_signature) */}
+                          {isImage && (
+                            <div className="space-y-4 pt-2 border-t border-gray-100">
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase">
+                                  <span>Border Width ({editorUnit})</span>
+                                  <div className="flex items-center gap-1">
+                                    {editorUnit === "mm" ? (
+                                      <input
+                                        type="number"
+                                        step="0.1"
+                                        min="0"
+                                        max="10"
+                                        value={((f.borderWidth || 0) / 12.46).toFixed(1)}
+                                        onChange={(e) => {
+                                          const mmVal = parseFloat(e.target.value || "0");
+                                          const pxVal = Math.max(0, Math.round(mmVal * 12.46));
+                                          handleFieldStyleChange("borderWidth", pxVal);
+                                        }}
+                                        className="w-16 px-1.5 py-0.5 text-xs font-bold text-violet-700 bg-violet-50 border border-violet-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-violet-500"
+                                      />
+                                    ) : (
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="30"
+                                        value={f.borderWidth || 0}
+                                        onChange={(e) => handleFieldStyleChange("borderWidth", Math.max(0, parseInt(e.target.value || "0", 10)))}
+                                        className="w-16 px-1.5 py-0.5 text-xs font-bold text-violet-700 bg-violet-50 border border-violet-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-violet-500"
+                                      />
+                                    )}
+                                    <span className="text-[10px] text-gray-400 font-bold">{editorUnit}</span>
+                                  </div>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="20"
+                                  value={f.borderWidth || 0}
+                                  onChange={(e) => handleFieldStyleChange("borderWidth", parseInt(e.target.value, 10))}
+                                  className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
+                                />
                               </div>
-                              <p className="text-[11px] text-amber-800 leading-snug">
-                                Dark photo? Adjust brightness & contrast directly on the platform and save to server.
-                              </p>
-                              <button
-                                type="button"
-                                onClick={() => setEditingStudentForBrightness(activePreviewStudent)}
-                                className="w-full py-1.5 px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                              >
-                                <span>☀️</span> Adjust Photo Brightness ({activePreviewStudent.name})
-                              </button>
+
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Border Color</label>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="color"
+                                    value={f.borderColor || "#000000"}
+                                    onChange={(e) => handleFieldStyleChange("borderColor", e.target.value)}
+                                    className="w-8 h-8 rounded-lg cursor-pointer border shadow-xs appearance-none p-0.5 bg-white"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={f.borderColor || "#000000"}
+                                    onChange={(e) => handleFieldStyleChange("borderColor", e.target.value)}
+                                    className="w-24 px-2 py-1 text-xs border rounded-lg"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase">
+                                  <span>Corner Radius ({editorUnit})</span>
+                                  <div className="flex items-center gap-1">
+                                    {editorUnit === "mm" ? (
+                                      <input
+                                        type="number"
+                                        step="0.1"
+                                        min="0"
+                                        max="50"
+                                        value={((typeof f.borderRadius === "number" ? f.borderRadius : parseFloat(f.borderRadius || "0")) / 12.46).toFixed(1)}
+                                        onChange={(e) => {
+                                          const mmVal = parseFloat(e.target.value || "0");
+                                          const pxVal = Math.max(0, Math.round(mmVal * 12.46));
+                                          handleFieldStyleChange("borderRadius", pxVal);
+                                        }}
+                                        className="w-16 px-1.5 py-0.5 text-xs font-bold text-violet-700 bg-violet-50 border border-violet-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-violet-500"
+                                      />
+                                    ) : (
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={typeof f.borderRadius === "number" ? f.borderRadius : parseInt(f.borderRadius || "0", 10)}
+                                        onChange={(e) => handleFieldStyleChange("borderRadius", Math.max(0, parseInt(e.target.value || "0", 10)))}
+                                        className="w-16 px-1.5 py-0.5 text-xs font-bold text-violet-700 bg-violet-50 border border-violet-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-violet-500"
+                                      />
+                                    )}
+                                    <span className="text-[10px] text-gray-400 font-bold">{editorUnit}</span>
+                                  </div>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="50"
+                                  value={typeof f.borderRadius === "number" ? f.borderRadius : parseInt(f.borderRadius || "0", 10)}
+                                  onChange={(e) => handleFieldStyleChange("borderRadius", parseInt(e.target.value, 10))}
+                                  className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
+                                />
+                              </div>
                             </div>
                           )}
 

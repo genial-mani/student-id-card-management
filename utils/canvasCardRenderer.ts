@@ -10,6 +10,7 @@
 
 import { PRESET_LAYOUT_CONFIGS } from "@/utils/presetLayouts";
 import type { CardTheme } from "@/components/IdCard";
+import { getCardDimensionsMm } from "@/utils/printLayoutEngine";
 import layout10Bg from "@/assets/idcard-layout-10.jpeg";
 import layout11Bg from "@/assets/id-card-layout-11.jpeg";
 import layout12Bg from "@/assets/id-card-layout-12.jpeg";
@@ -286,9 +287,11 @@ function drawLayoutBg(
   theme: CardTheme,
   imageCache: ImageCache,
   layoutConfig: any,
+  cardWidthPx: number = CARD_W,
+  cardHeightPx: number = CARD_H,
 ): void {
-  const W = CARD_W;
-  const H = CARD_H;
+  const W = cardWidthPx;
+  const H = cardHeightPx;
 
   // Custom / shared layouts – draw background image if available
   if (layout === 0 || layout >= 13) {
@@ -557,6 +560,39 @@ function clipRoundedRect(
   ctx.clip();
 }
 
+function strokeRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number,
+  radius: string | number,
+  lineWidth: number
+): void {
+  let r: number;
+  if (typeof radius === "string") {
+    r = radius.endsWith("%")
+      ? (Math.min(w, h) * parseFloat(radius)) / 100
+      : parseFloat(radius) || 0;
+  } else {
+    r = radius || 0;
+  }
+  r = Math.min(r, w / 2, h / 2);
+
+  ctx.save();
+  ctx.beginPath();
+  if (r <= 0) {
+    ctx.rect(x, y, w, h);
+  } else {
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  ctx.lineWidth = lineWidth;
+  ctx.stroke();
+  ctx.restore();
+}
+
 // ─── Inner text rendering ───────────────────────────────────────────────────────
 
 function renderText(
@@ -715,18 +751,7 @@ export function drawCardOnCanvas(
   layoutConfig: any,
   imageCache: ImageCache,
 ): void {
-  const cardWMm = typeof layoutConfig?.cardWidthMm === "number"
-    ? layoutConfig.cardWidthMm
-    : typeof layoutConfig?.width === "number"
-    ? layoutConfig.width
-    : 57;
-  const cardHMm = typeof layoutConfig?.cardHeightMm === "number"
-    ? layoutConfig.cardHeightMm
-    : typeof layoutConfig?.height === "number"
-    ? layoutConfig.height
-    : 92;
-  const cardWidthPx = Math.round(cardWMm * 11.8110236);
-  const cardHeightPx = Math.round(cardHMm * 11.8110236);
+  const { widthMm: cardWMm, heightMm: cardHMm, widthPx: cardWidthPx, heightPx: cardHeightPx } = getCardDimensionsMm(layoutConfig);
 
   ctx.save();
 
@@ -740,12 +765,12 @@ export function drawCardOnCanvas(
   ctx.fillRect(ox, oy, cardWidthPx, cardHeightPx);
 
   // 2. Layout decorative background
-  drawLayoutBg(ctx, ox, oy, layout, theme, imageCache, layoutConfig);
+  drawLayoutBg(ctx, ox, oy, layout, theme, imageCache, layoutConfig, cardWidthPx, cardHeightPx);
 
   // 3. Thin black border (matches CSS border: 0.1px solid black)
   ctx.strokeStyle = "#000000";
   ctx.lineWidth = 0.5;
-  ctx.strokeRect(ox + 0.25, oy + 0.25, CARD_W - 0.5, CARD_H - 0.5);
+  ctx.strokeRect(ox + 0.25, oy + 0.25, cardWidthPx - 0.5, cardHeightPx - 0.5);
 
   // 4. Resolve fields config (same logic as IdCard.tsx)
   let parsedConfig = layoutConfig;
@@ -859,21 +884,35 @@ export function drawCardOnCanvas(
 
       const imgFx = ox + imageX;
 
+      const imgBorderWidth = typeof f.borderWidth === "number" ? f.borderWidth : (parseFloat(f.borderWidth) || 0);
+      const imgBorderColor = f.borderColor || "#000000";
+      const imgRadius = f.borderRadius || "0";
+
       if (url && imageW > 0 && imageH > 0) {
         if (img) {
           ctx.save();
           if (scaleX !== 1 || scaleY !== 1) {
             ctx.translate(imgFx, fy);
             ctx.scale(scaleX, scaleY);
-            if (key === "student_photo" && f.borderRadius && f.borderRadius !== "0") {
-              clipRoundedRect(ctx, 0, 0, imageW, imageH, f.borderRadius);
+            if (imgRadius && imgRadius !== "0") {
+              clipRoundedRect(ctx, 0, 0, imageW, imageH, imgRadius);
             }
             drawCoverImage(ctx, img, 0, 0, imageW, imageH);
+
+            if (imgBorderWidth > 0) {
+              ctx.strokeStyle = imgBorderColor;
+              strokeRoundedRect(ctx, 0, 0, imageW, imageH, imgRadius, imgBorderWidth);
+            }
           } else {
-            if (key === "student_photo" && f.borderRadius && f.borderRadius !== "0") {
-              clipRoundedRect(ctx, imgFx, fy, imageW, imageH, f.borderRadius);
+            if (imgRadius && imgRadius !== "0") {
+              clipRoundedRect(ctx, imgFx, fy, imageW, imageH, imgRadius);
             }
             drawCoverImage(ctx, img, imgFx, fy, imageW, imageH);
+
+            if (imgBorderWidth > 0) {
+              ctx.strokeStyle = imgBorderColor;
+              strokeRoundedRect(ctx, imgFx, fy, imageW, imageH, imgRadius, imgBorderWidth);
+            }
           }
           ctx.restore();
         }

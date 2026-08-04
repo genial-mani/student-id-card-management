@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { PrintSettingsPanel } from "@/components/PrintSettingsPanel";
-import { PrintSettings, calculatePrintGrid, PAPER_SIZES, getPaperInfo } from "@/utils/printLayoutEngine";
+import { PrintSettings, calculatePrintGrid, PAPER_SIZES, getPaperInfo, getCardDimensionsMm } from "@/utils/printLayoutEngine";
 import { prefetchImages, drawCardOnCanvas } from "@/utils/canvasCardRenderer";
 import { jsPDF } from "jspdf";
 
@@ -98,21 +98,15 @@ export default function PrintPage() {
     paperSize: "A4",
     paperOrientation: "landscape",
     documentHorizontal: false, // ID cards are always vertical
+    gapX: 2,
+    gapY: 2,
   });
 
   const { cardW, cardH } = useMemo(() => {
-    const cfg = classData?.school?.idCardLayoutConfig;
-    let parsed: any = null;
-    if (typeof cfg === "string") {
-      try { parsed = JSON.parse(cfg); } catch {}
-    } else {
-      parsed = cfg;
-    }
-    const wMm = typeof parsed?.cardWidthMm === "number" ? parsed.cardWidthMm : 57;
-    const hMm = typeof parsed?.cardHeightMm === "number" ? parsed.cardHeightMm : 92;
+    const { widthPx, heightPx } = getCardDimensionsMm(classData?.school?.idCardLayoutConfig);
     return {
-      cardW: Math.round(wMm * 11.8110236),
-      cardH: Math.round(hMm * 11.8110236),
+      cardW: widthPx,
+      cardH: heightPx,
     };
   }, [classData]);
 
@@ -122,9 +116,9 @@ export default function PrintPage() {
     if (!printGrid.fits || printGrid.itemsPerPage === 0) return { x: 0, y: 0 };
     const col = idx % printGrid.cols;
     const row = Math.floor(idx / printGrid.cols);
-    const MM_TO_PX = 3.7795275591;
-    const actualGapX = printSettings.gapX !== undefined ? printSettings.gapX * MM_TO_PX : 24;
-    const actualGapY = printSettings.gapY !== undefined ? printSettings.gapY * MM_TO_PX : 24;
+    const MM_TO_PX = 11.8110236; // 300 DPI print resolution
+    const actualGapX = (printSettings.gapX !== undefined ? printSettings.gapX : 2) * MM_TO_PX;
+    const actualGapY = (printSettings.gapY !== undefined ? printSettings.gapY : 2) * MM_TO_PX;
     return {
       x: printGrid.offsetX + col * (cardW + actualGapX),
       y: printGrid.offsetY + row * (cardH + actualGapY),
@@ -291,13 +285,13 @@ export default function PrintPage() {
         indices.map(async (sheetIdx) => {
           const sheetStudents = sheets[sheetIdx];
           const canvas = document.createElement("canvas");
-          
+
           // Scale canvas physical pixels up for higher quality
           canvas.width = printGrid.paperW * QUALITY_MULTIPLIER;
           canvas.height = printGrid.paperH * QUALITY_MULTIPLIER;
-          
+
           const ctx = canvas.getContext("2d")!;
-          
+
           // Scale the drawing context so coordinates remain the same
           ctx.scale(QUALITY_MULTIPLIER, QUALITY_MULTIPLIER);
 
@@ -328,6 +322,10 @@ export default function PrintPage() {
 
       // 5. Build PDF
       setDlProgress("Building PDF…");
+      // The canvas is already rendered at the correct orientation dimensions
+      // (printGrid.paperW × printGrid.paperH). We do NOT pass an orientation
+      // parameter to jsPDF because it would cause jsPDF to swap the dimensions
+      // when width > height (landscape), reversing H-gap and V-gap on the PDF.
       const pdf = new jsPDF({
         orientation: printSettings.paperOrientation,
         unit: "px",
@@ -336,8 +334,8 @@ export default function PrintPage() {
 
       let pageCount = 0;
       for (const imgData of sheetImages) {
-        if (pageCount > 0) pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, 0, printGrid.paperW, printGrid.paperH);
+        if (pageCount > 0) pdf.addPage([printGrid.paperW, printGrid.paperH], printSettings.paperOrientation);
+        pdf.addImage(imgData, "JPEG", 0, 0, printGrid.paperW, printGrid.paperH, undefined, "FAST", 0);
         pageCount++;
       }
 
@@ -612,8 +610,8 @@ export default function PrintPage() {
                   onClick={() => downloadSheets([i])}
                   disabled={isBusy}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border shadow-sm transition-colors disabled:opacity-40 ${downloading === i
-                      ? "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-700"
-                      : "border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+                    ? "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-700"
+                    : "border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
                     }`}
                 >
                   {downloading === i ? "…" : `Sheet ${i + 1}`}

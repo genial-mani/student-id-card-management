@@ -4,6 +4,8 @@ import layout10Bg from "@/assets/idcard-layout-10.jpeg";
 import layout11Bg from "@/assets/id-card-layout-11.jpeg";
 import layout12Bg from "@/assets/id-card-layout-12.jpeg";
 
+import { getCardDimensionsMm } from "@/utils/printLayoutEngine";
+
 function srcOf(imported: any): string {
   if (typeof imported === "string") return imported;
   return imported?.src ?? imported?.default?.src ?? imported?.default ?? "";
@@ -66,18 +68,9 @@ export default function IdCard({
     }
   }
 
-  const cardWMm = typeof layoutConfig?.cardWidthMm === "number"
-    ? layoutConfig.cardWidthMm
-    : typeof layoutConfig?.width === "number"
-    ? layoutConfig.width
-    : 57;
-  const cardHMm = typeof layoutConfig?.cardHeightMm === "number"
-    ? layoutConfig.cardHeightMm
-    : typeof layoutConfig?.height === "number"
-    ? layoutConfig.height
-    : 92;
-  const cardWPx = `${Math.round(cardWMm * 11.8110236)}px`;
-  const cardHPx = `${Math.round(cardHMm * 11.8110236)}px`;
+  const { widthMm: cardWMm, heightMm: cardHMm, widthPx, heightPx } = getCardDimensionsMm(layoutConfig);
+  const cardWPx = `${widthPx}px`;
+  const cardHPx = `${heightPx}px`;
 
   const cardContainerStyle = {
     width: cardWPx,
@@ -299,6 +292,17 @@ export default function IdCard({
           transformOrigin: transformOriginStr,
         };
 
+        const imageBorderWidth = typeof f.borderWidth === "number" ? f.borderWidth : (parseInt(f.borderWidth || "0", 10) || 0);
+        const imageBorderColor = f.borderColor || "#000000";
+        const imageBorderRadius = f.borderRadius ? (typeof f.borderRadius === "number" ? `${f.borderRadius}px` : f.borderRadius) : "0";
+
+        const imageStyle: React.CSSProperties = {
+          ...fieldStyle,
+          borderRadius: imageBorderRadius,
+          border: imageBorderWidth > 0 ? `${imageBorderWidth}px solid ${imageBorderColor}` : undefined,
+          boxSizing: "border-box",
+        };
+
         if (fieldKey === "school_logo") {
           return school.logoUrl ? (
             <img
@@ -306,7 +310,7 @@ export default function IdCard({
               src={school.logoUrl}
               alt="Logo"
               crossOrigin="anonymous"
-              style={fieldStyle}
+              style={imageStyle}
               className="object-cover"
             />
           ) : null;
@@ -328,7 +332,7 @@ export default function IdCard({
               src={photoUrl}
               alt="Student"
               crossOrigin="anonymous"
-              style={{ ...fieldStyle, borderRadius: f.borderRadius || "0" }}
+              style={imageStyle}
               className="object-cover"
             />
           ) : null;
@@ -341,7 +345,7 @@ export default function IdCard({
               src={school.signatureUrl}
               alt="Sign"
               crossOrigin="anonymous"
-              style={fieldStyle}
+              style={imageStyle}
               className="object-cover"
             />
           ) : null;

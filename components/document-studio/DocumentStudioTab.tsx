@@ -10,14 +10,14 @@ import { Button } from "@/components/ui/button";
 import uploadImageToCloudinary from "@/utils/cloudService";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { 
-  Add01Icon, 
-  Delete01Icon, 
-  PencilEdit02Icon, 
-  PrinterIcon 
+import {
+  Add01Icon,
+  Delete01Icon,
+  PencilEdit02Icon,
+  PrinterIcon
 } from "@hugeicons/core-free-icons";
 import { PrintSettingsPanel } from "@/components/PrintSettingsPanel";
-import { PrintSettings, calculatePrintGridMm } from "@/utils/printLayoutEngine";
+import { PrintSettings, calculatePrintGridMm, getPaperInfo } from "@/utils/printLayoutEngine";
 import ImageEnhancerModal from "@/components/ImageEnhancerModal";
 
 // Conversion factor for display: 1 mm ≈ 3.7795 px
@@ -175,14 +175,12 @@ function CustomClassDropdown({
               setSelectedClassFilter("all");
               setIsOpen(false);
             }}
-            className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left text-xs font-bold transition-colors ${
-              selectedClassFilter === "all" ? "bg-violet-600 text-white" : "hover:bg-violet-50 text-gray-700"
-            }`}
+            className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left text-xs font-bold transition-colors ${selectedClassFilter === "all" ? "bg-violet-600 text-white" : "hover:bg-violet-50 text-gray-700"
+              }`}
           >
             <span className="truncate">All Classes</span>
-            <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md shrink-0 ${
-              selectedClassFilter === "all" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
-            }`}>
+            <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md shrink-0 ${selectedClassFilter === "all" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
+              }`}>
               ({totalStudentsCount})
             </span>
           </button>
@@ -201,14 +199,12 @@ function CustomClassDropdown({
                   setSelectedClassFilter(cls.id);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left text-xs transition-colors ${
-                  isSelected ? "bg-violet-600 text-white font-bold" : "hover:bg-violet-50 text-gray-800 font-semibold"
-                }`}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left text-xs transition-colors ${isSelected ? "bg-violet-600 text-white font-bold" : "hover:bg-violet-50 text-gray-800 font-semibold"
+                  }`}
               >
                 <span className="truncate">{cls.name}</span>
-                <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md shrink-0 ${
-                  isSelected ? "bg-white/20 text-white" : "bg-violet-100 text-violet-800"
-                }`}>
+                <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md shrink-0 ${isSelected ? "bg-white/20 text-white" : "bg-violet-100 text-violet-800"
+                  }`}>
                   ({count})
                 </span>
               </button>
@@ -307,13 +303,11 @@ function CustomStudentDropdown({
               setPreviewStudentIndex(-1);
               setIsOpen(false);
             }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold transition-colors ${
-              previewStudentIndex === -1 ? "bg-violet-600 text-white" : "hover:bg-violet-50 text-gray-700"
-            }`}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold transition-colors ${previewStudentIndex === -1 ? "bg-violet-600 text-white" : "hover:bg-violet-50 text-gray-700"
+              }`}
           >
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-              previewStudentIndex === -1 ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
-            }`}>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${previewStudentIndex === -1 ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
+              }`}>
               ★
             </div>
             <div className="flex-1 min-w-0">
@@ -343,9 +337,8 @@ function CustomStudentDropdown({
                     setPreviewStudentIndex(idx);
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors ${
-                    isSelected ? "bg-violet-600 text-white font-bold" : "hover:bg-violet-50 text-gray-800 font-semibold"
-                  }`}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors ${isSelected ? "bg-violet-600 text-white font-bold" : "hover:bg-violet-50 text-gray-800 font-semibold"
+                    }`}
                 >
                   {st.profilePictureUrl ? (
                     <img
@@ -354,9 +347,8 @@ function CustomStudentDropdown({
                       className="w-7 h-7 rounded-full object-cover shrink-0 border border-black/10"
                     />
                   ) : (
-                    <div className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
-                      isSelected ? "bg-white/20 text-white" : "bg-violet-100 text-violet-700"
-                    }`}>
+                    <div className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${isSelected ? "bg-white/20 text-white" : "bg-violet-100 text-violet-700"
+                      }`}>
                       {st.name.charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -367,17 +359,15 @@ function CustomStudentDropdown({
                         {idx + 1}. {st.name}
                       </span>
                       {clsName && (
-                        <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md shrink-0 uppercase ${
-                          isSelected ? "bg-white/20 text-white" : "bg-violet-100 text-violet-800"
-                        }`}>
+                        <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md shrink-0 uppercase ${isSelected ? "bg-white/20 text-white" : "bg-violet-100 text-violet-800"
+                          }`}>
                           {clsName}
                         </span>
                       )}
                     </div>
                     {st.camSno && (
-                      <span className={`text-[10px] font-medium block truncate ${
-                        isSelected ? "text-violet-200" : "text-gray-400"
-                      }`}>
+                      <span className={`text-[10px] font-medium block truncate ${isSelected ? "text-violet-200" : "text-gray-400"
+                        }`}>
                         S.No: {st.camSno}
                       </span>
                     )}
@@ -473,8 +463,8 @@ export default function DocumentStudioTab({ schoolId, schoolName, students, cust
 
   if (selectedDoc) {
     return (
-      <DocumentDesigner 
-        doc={selectedDoc} 
+      <DocumentDesigner
+        doc={selectedDoc}
         onBack={() => { setSelectedDoc(null); fetchDocuments(); }}
         schoolName={schoolName}
         students={students}
@@ -613,11 +603,11 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
   const [fields, setFields] = useState<any>(() => {
     let config = doc.layoutConfig;
     if (typeof config === 'string') {
-      try { config = JSON.parse(config); } catch(e) {}
+      try { config = JSON.parse(config); } catch (e) { }
     }
     return config?.fields || {};
   });
-  
+
   const [selectedFieldKey, setSelectedFieldKey] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -647,17 +637,17 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
   const topRulerRef = useRef<HTMLDivElement>(null);
   const leftRulerRef = useRef<HTMLDivElement>(null);
   const fieldBoundsRef = useRef<Record<string, { w: number; h: number }>>({});
-  
+
   const handleBoundsUpdate = (key: string, w: number, h: number) => {
     fieldBoundsRef.current[key] = { w, h };
   };
 
   const availableFields = useMemo(() => {
-    const baseFields = [ ...AVAILABLE_FIELDS ];
-    
+    const baseFields = [...AVAILABLE_FIELDS];
+
     if (customFieldsConfig) {
       const { school = [], class: classFields = [], student = [] } = customFieldsConfig;
-      
+
       school.filter((f: any) => !f.default && f.enabled).forEach((f: any) => {
         baseFields.push({ key: `school_custom_${f.key}`, label: `(School) ${f.label}`, defaultLabel: `[${f.label}]`, isImage: false });
       });
@@ -668,7 +658,7 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
         baseFields.push({ key: `student_custom_${f.key}`, label: `(Student) ${f.label}`, defaultLabel: `[${f.label}]`, isImage: false });
       });
     }
-    
+
     return baseFields;
   }, [customFieldsConfig]);
 
@@ -999,7 +989,7 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
   const handleAddField = (fieldKey: string) => {
     if ((fields || {})[fieldKey]) return; // Already exists
     const isImage = availableFields.find((f: any) => f.key === fieldKey)?.isImage;
-    
+
     setFields((prev: any) => ({
       ...(prev || {}),
       [fieldKey]: {
@@ -1037,14 +1027,14 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
         ...currentFields[selectedFieldKey],
         [key]: value
       };
-      
+
       if (key === 'fontSize') {
         delete updatedField.width;
         delete updatedField.height;
         delete updatedField.scaleX;
         delete updatedField.scaleY;
       }
-      
+
       return {
         ...currentFields,
         [selectedFieldKey]: updatedField
@@ -1124,7 +1114,7 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
 
   if (showPrintView) {
     return (
-      <DocumentPrintView 
+      <DocumentPrintView
         students={students}
         widthMm={widthMm}
         heightMm={heightMm}
@@ -1149,11 +1139,11 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
             </svg>
           </button>
           <div className="min-w-0 flex-1">
-            <input 
-              type="text" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)} 
-              className="font-bold text-gray-900 bg-transparent border-none p-0 focus:ring-0 w-full truncate text-base" 
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="font-bold text-gray-900 bg-transparent border-none p-0 focus:ring-0 w-full truncate text-base"
               placeholder="Document Name"
             />
           </div>
@@ -1252,9 +1242,9 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
             <div className="flex gap-3">
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block uppercase font-bold">Width</label>
-                <input 
-                  type="number" 
-                  value={widthMm} 
+                <input
+                  type="number"
+                  value={widthMm}
                   onChange={(e) => {
                     const val = e.target.value;
                     setWidthMm(val === "" ? 0 : parseFloat(val));
@@ -1264,9 +1254,9 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block uppercase font-bold">Height</label>
-                <input 
-                  type="number" 
-                  value={heightMm} 
+                <input
+                  type="number"
+                  value={heightMm}
                   onChange={(e) => {
                     const val = e.target.value;
                     setHeightMm(val === "" ? 0 : parseFloat(val));
@@ -1288,9 +1278,8 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                 disabled={isUploading}
               />
-              <div className={`w-full px-4 py-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 transition-colors ${
-                isUploading ? 'bg-gray-50 border-gray-200 text-gray-400' : 'bg-violet-50/50 border-violet-200 hover:bg-violet-50 text-violet-600'
-              }`}>
+              <div className={`w-full px-4 py-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 transition-colors ${isUploading ? 'bg-gray-50 border-gray-200 text-gray-400' : 'bg-violet-50/50 border-violet-200 hover:bg-violet-50 text-violet-600'
+                }`}>
                 {isUploading ? (
                   <LoadingSpinner />
                 ) : (
@@ -1304,7 +1293,7 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
               </div>
             </div>
             {backgroundUrl && (
-              <button 
+              <button
                 onClick={() => setBackgroundUrl("")}
                 className="text-xs text-rose-500 font-semibold mt-2 hover:underline cursor-pointer"
               >
@@ -1321,11 +1310,10 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                 <button
                   key={f.key}
                   onClick={() => fields[f.key] ? handleRemoveField(f.key) : handleAddField(f.key)}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
-                    fields[f.key] 
-                      ? 'bg-violet-600 text-white border-violet-600 shadow-xs' 
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${fields[f.key]
+                      ? 'bg-violet-600 text-white border-violet-600 shadow-xs'
                       : 'bg-white text-gray-700 border-gray-200 hover:border-violet-300 hover:bg-violet-50'
-                  }`}
+                    }`}
                 >
                   {f.label}
                 </button>
@@ -1349,11 +1337,11 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
               </div>
 
               <div className="mb-2">
-                <Button 
-                  type="button" 
-                  variant="destructive" 
-                  size="sm" 
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveField(selectedFieldKey); }} 
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveField(selectedFieldKey); }}
                   className="w-full text-xs h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 border-0 shadow-none font-bold"
                 >
                   <HugeiconsIcon icon={Delete01Icon} size={14} color="currentColor" />
@@ -1370,20 +1358,20 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                         <span>Width ({editorUnit})</span>
                       </div>
                       {editorUnit === "mm" ? (
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           step="0.1"
                           min="1"
-                          value={((selectedField.width || 100) / MM_TO_PX).toFixed(1)} 
-                          onChange={e => updateFieldProperty("width", Math.round((parseFloat(e.target.value) || 1) * MM_TO_PX))} 
-                          className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold" 
+                          value={((selectedField.width || 100) / MM_TO_PX).toFixed(1)}
+                          onChange={e => updateFieldProperty("width", Math.round((parseFloat(e.target.value) || 1) * MM_TO_PX))}
+                          className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold"
                         />
                       ) : (
-                        <input 
-                          type="number" 
-                          value={selectedField.width || 100} 
-                          onChange={e => updateFieldProperty("width", parseInt(e.target.value) || 100)} 
-                          className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold" 
+                        <input
+                          type="number"
+                          value={selectedField.width || 100}
+                          onChange={e => updateFieldProperty("width", parseInt(e.target.value) || 100)}
+                          className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold"
                         />
                       )}
                     </div>
@@ -1393,22 +1381,117 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                         <span>Height ({editorUnit})</span>
                       </div>
                       {editorUnit === "mm" ? (
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           step="0.1"
                           min="1"
-                          value={((selectedField.height || 100) / MM_TO_PX).toFixed(1)} 
-                          onChange={e => updateFieldProperty("height", Math.round((parseFloat(e.target.value) || 1) * MM_TO_PX))} 
-                          className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold" 
+                          value={((selectedField.height || 100) / MM_TO_PX).toFixed(1)}
+                          onChange={e => updateFieldProperty("height", Math.round((parseFloat(e.target.value) || 1) * MM_TO_PX))}
+                          className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold"
                         />
                       ) : (
-                        <input 
-                          type="number" 
-                          value={selectedField.height || 100} 
-                          onChange={e => updateFieldProperty("height", parseInt(e.target.value) || 100)} 
-                          className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold" 
+                        <input
+                          type="number"
+                          value={selectedField.height || 100}
+                          onChange={e => updateFieldProperty("height", parseInt(e.target.value) || 100)}
+                          className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold"
                         />
                       )}
+                    </div>
+                  </div>
+
+                  {/* Photo Border & Corner Radius Controls */}
+                  <div className="space-y-3 pt-2 border-t border-gray-100">
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase">
+                        <span>Photo Border Width ({editorUnit})</span>
+                        <div className="flex items-center gap-1">
+                          {editorUnit === "mm" ? (
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="10"
+                              value={((selectedField.borderWidth || 0) / MM_TO_PX).toFixed(1)}
+                              onChange={e => updateFieldProperty("borderWidth", Math.max(0, Math.round((parseFloat(e.target.value) || 0) * MM_TO_PX)))}
+                              className="w-14 px-1 py-0.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500"
+                            />
+                          ) : (
+                            <input
+                              type="number"
+                              min="0"
+                              max="30"
+                              value={selectedField.borderWidth || 0}
+                              onChange={e => updateFieldProperty("borderWidth", parseInt(e.target.value) || 0)}
+                              className="w-14 px-1 py-0.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500"
+                            />
+                          )}
+                          <span className="text-[9px] text-gray-400">{editorUnit}</span>
+                        </div>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="20"
+                        value={selectedField.borderWidth || 0}
+                        onChange={e => updateFieldProperty("borderWidth", parseInt(e.target.value) || 0)}
+                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Photo Border Color</label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="color"
+                          value={selectedField.borderColor || "#000000"}
+                          onChange={e => updateFieldProperty("borderColor", e.target.value)}
+                          className="w-8 h-8 rounded-lg cursor-pointer p-0.5 border shadow-2xs bg-white"
+                        />
+                        <input
+                          type="text"
+                          value={selectedField.borderColor || "#000000"}
+                          onChange={e => updateFieldProperty("borderColor", e.target.value)}
+                          className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase">
+                        <span>Photo Corner Radius ({editorUnit})</span>
+                        <div className="flex items-center gap-1">
+                          {editorUnit === "mm" ? (
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="50"
+                              value={((typeof selectedField.borderRadius === "number" ? selectedField.borderRadius : parseFloat(selectedField.borderRadius || "0")) / MM_TO_PX).toFixed(1)}
+                              onChange={e => updateFieldProperty("borderRadius", Math.max(0, Math.round((parseFloat(e.target.value) || 0) * MM_TO_PX)))}
+                              className="w-14 px-1 py-0.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500"
+                            />
+                          ) : (
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={typeof selectedField.borderRadius === "number" ? selectedField.borderRadius : parseInt(selectedField.borderRadius || "0")}
+                              onChange={e => updateFieldProperty("borderRadius", parseInt(e.target.value) || 0)}
+                              className="w-14 px-1 py-0.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500"
+                            />
+                          )}
+                          <span className="text-[9px] text-gray-400">{editorUnit}</span>
+                        </div>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="50"
+                        value={typeof selectedField.borderRadius === "number" ? selectedField.borderRadius : parseInt(selectedField.borderRadius || "0")}
+                        onChange={e => updateFieldProperty("borderRadius", parseInt(e.target.value) || 0)}
+                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
+                      />
                     </div>
                   </div>
 
@@ -1435,9 +1518,9 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                 <div className="space-y-3">
                   <div>
                     <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Font Family</label>
-                    <select 
-                      value={selectedField.fontFamily || "Inter"} 
-                      onChange={e => updateFieldProperty("fontFamily", e.target.value)} 
+                    <select
+                      value={selectedField.fontFamily || "Inter"}
+                      onChange={e => updateFieldProperty("fontFamily", e.target.value)}
                       className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium"
                     >
                       {GOOGLE_FONTS.map(font => (
@@ -1448,9 +1531,9 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
 
                   <div>
                     <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Font Weight</label>
-                    <select 
-                      value={selectedField.fontWeight || "500"} 
-                      onChange={e => updateFieldProperty("fontWeight", e.target.value)} 
+                    <select
+                      value={selectedField.fontWeight || "500"}
+                      onChange={e => updateFieldProperty("fontWeight", e.target.value)}
                       className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium"
                     >
                       {FONT_WEIGHTS.map(fw => (
@@ -1464,34 +1547,34 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                       <span>Font Size ({editorUnit})</span>
                       <div className="flex items-center gap-1">
                         {editorUnit === "mm" ? (
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             step="0.1"
                             min="0.5"
                             max="40"
-                            value={((selectedField.fontSize || 16) / MM_TO_PX).toFixed(1)} 
-                            onChange={e => updateFieldProperty("fontSize", Math.max(1, Math.round((parseFloat(e.target.value) || 1) * MM_TO_PX)))} 
-                            className="w-14 px-1 py-0.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500" 
+                            value={((selectedField.fontSize || 16) / MM_TO_PX).toFixed(1)}
+                            onChange={e => updateFieldProperty("fontSize", Math.max(1, Math.round((parseFloat(e.target.value) || 1) * MM_TO_PX)))}
+                            className="w-14 px-1 py-0.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500"
                           />
                         ) : (
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             min="6"
                             max="300"
-                            value={selectedField.fontSize || 16} 
-                            onChange={e => updateFieldProperty("fontSize", parseInt(e.target.value) || 16)} 
-                            className="w-14 px-1 py-0.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500" 
+                            value={selectedField.fontSize || 16}
+                            onChange={e => updateFieldProperty("fontSize", parseInt(e.target.value) || 16)}
+                            className="w-14 px-1 py-0.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500"
                           />
                         )}
                         <span className="text-[9px] text-gray-400">{editorUnit}</span>
                       </div>
                     </div>
-                    <input 
-                      type="range" 
+                    <input
+                      type="range"
                       min="6"
                       max="120"
-                      value={selectedField.fontSize || 16} 
-                      onChange={e => updateFieldProperty("fontSize", parseInt(e.target.value) || 16)} 
+                      value={selectedField.fontSize || 16}
+                      onChange={e => updateFieldProperty("fontSize", parseInt(e.target.value) || 16)}
                       className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
                     />
                   </div>
@@ -1499,17 +1582,17 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                   <div>
                     <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Text Color</label>
                     <div className="flex gap-2 items-center">
-                      <input 
-                        type="color" 
-                        value={selectedField.color || "#000000"} 
-                        onChange={e => updateFieldProperty("color", e.target.value)} 
-                        className="w-8 h-8 rounded-lg cursor-pointer p-0.5 border shadow-2xs bg-white" 
+                      <input
+                        type="color"
+                        value={selectedField.color || "#000000"}
+                        onChange={e => updateFieldProperty("color", e.target.value)}
+                        className="w-8 h-8 rounded-lg cursor-pointer p-0.5 border shadow-2xs bg-white"
                       />
-                      <input 
-                        type="text" 
-                        value={selectedField.color || "#000000"} 
-                        onChange={e => updateFieldProperty("color", e.target.value)} 
-                        className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold" 
+                      <input
+                        type="text"
+                        value={selectedField.color || "#000000"}
+                        onChange={e => updateFieldProperty("color", e.target.value)}
+                        className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold"
                       />
                     </div>
                   </div>
@@ -1519,34 +1602,34 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                       <span>Stroke Outline Width ({editorUnit})</span>
                       <div className="flex items-center gap-1">
                         {editorUnit === "mm" ? (
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             step="0.1"
                             min="0"
                             max="10"
-                            value={((selectedField.strokeWidth || 0) / MM_TO_PX).toFixed(1)} 
-                            onChange={e => updateFieldProperty("strokeWidth", Math.max(0, Math.round((parseFloat(e.target.value) || 0) * MM_TO_PX)))} 
-                            className="w-14 px-1 py-0.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500" 
+                            value={((selectedField.strokeWidth || 0) / MM_TO_PX).toFixed(1)}
+                            onChange={e => updateFieldProperty("strokeWidth", Math.max(0, Math.round((parseFloat(e.target.value) || 0) * MM_TO_PX)))}
+                            className="w-14 px-1 py-0.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500"
                           />
                         ) : (
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             min="0"
                             max="30"
-                            value={selectedField.strokeWidth || 0} 
-                            onChange={e => updateFieldProperty("strokeWidth", parseInt(e.target.value) || 0)} 
-                            className="w-14 px-1 py-0.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500" 
+                            value={selectedField.strokeWidth || 0}
+                            onChange={e => updateFieldProperty("strokeWidth", parseInt(e.target.value) || 0)}
+                            className="w-14 px-1 py-0.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 rounded text-center focus:outline-none focus:ring-1 focus:ring-violet-500"
                           />
                         )}
                         <span className="text-[9px] text-gray-400">{editorUnit}</span>
                       </div>
                     </div>
-                    <input 
-                      type="range" 
+                    <input
+                      type="range"
                       min="0"
                       max="20"
-                      value={selectedField.strokeWidth || 0} 
-                      onChange={e => updateFieldProperty("strokeWidth", parseInt(e.target.value) || 0)} 
+                      value={selectedField.strokeWidth || 0}
+                      onChange={e => updateFieldProperty("strokeWidth", parseInt(e.target.value) || 0)}
                       className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-600"
                     />
                   </div>
@@ -1554,17 +1637,17 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                   <div>
                     <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Stroke Outline Color</label>
                     <div className="flex gap-2 items-center">
-                      <input 
-                        type="color" 
-                        value={selectedField.strokeColor || "#ffffff"} 
-                        onChange={e => updateFieldProperty("strokeColor", e.target.value)} 
-                        className="w-8 h-8 rounded-lg cursor-pointer p-0.5 border shadow-2xs bg-white" 
+                      <input
+                        type="color"
+                        value={selectedField.strokeColor || "#ffffff"}
+                        onChange={e => updateFieldProperty("strokeColor", e.target.value)}
+                        className="w-8 h-8 rounded-lg cursor-pointer p-0.5 border shadow-2xs bg-white"
                       />
-                      <input 
-                        type="text" 
-                        value={selectedField.strokeColor || "#ffffff"} 
-                        onChange={e => updateFieldProperty("strokeColor", e.target.value)} 
-                        className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold" 
+                      <input
+                        type="text"
+                        value={selectedField.strokeColor || "#ffffff"}
+                        onChange={e => updateFieldProperty("strokeColor", e.target.value)}
+                        className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold"
                       />
                     </div>
                   </div>
@@ -1577,9 +1660,8 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                           key={align}
                           type="button"
                           onClick={() => updateFieldProperty("align", align)}
-                          className={`flex-1 py-1 text-xs font-semibold rounded-md capitalize transition-colors ${
-                            (selectedField.align || "left") === align ? "bg-white text-violet-600 shadow-2xs" : "text-gray-600 hover:text-gray-900"
-                          }`}
+                          className={`flex-1 py-1 text-xs font-semibold rounded-md capitalize transition-colors ${(selectedField.align || "left") === align ? "bg-white text-violet-600 shadow-2xs" : "text-gray-600 hover:text-gray-900"
+                            }`}
                         >
                           {align}
                         </button>
@@ -1595,9 +1677,8 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                           key={vAlign}
                           type="button"
                           onClick={() => updateFieldProperty("verticalAlign", vAlign)}
-                          className={`flex-1 py-1 text-xs font-semibold rounded-md capitalize transition-colors ${
-                            (selectedField.verticalAlign || "center") === vAlign ? "bg-white text-violet-600 shadow-2xs" : "text-gray-600 hover:text-gray-900"
-                          }`}
+                          className={`flex-1 py-1 text-xs font-semibold rounded-md capitalize transition-colors ${(selectedField.verticalAlign || "center") === vAlign ? "bg-white text-violet-600 shadow-2xs" : "text-gray-600 hover:text-gray-900"
+                            }`}
                         >
                           {vAlign}
                         </button>
@@ -1611,27 +1692,24 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                       <button
                         type="button"
                         onClick={() => updateFieldProperty("addressFormat", "submitted")}
-                        className={`py-1 px-1 text-[10px] font-semibold rounded-md transition-colors text-center ${
-                          !selectedField.addressFormat || selectedField.addressFormat === "submitted" ? "bg-white text-violet-600 shadow-2xs font-bold" : "text-gray-600 hover:text-gray-900"
-                        }`}
+                        className={`py-1 px-1 text-[10px] font-semibold rounded-md transition-colors text-center ${!selectedField.addressFormat || selectedField.addressFormat === "submitted" ? "bg-white text-violet-600 shadow-2xs font-bold" : "text-gray-600 hover:text-gray-900"
+                          }`}
                       >
                         Multiline
                       </button>
                       <button
                         type="button"
                         onClick={() => updateFieldProperty("addressFormat", "singleline_space")}
-                        className={`py-1 px-1 text-[10px] font-semibold rounded-md transition-colors text-center ${
-                          selectedField.addressFormat === "singleline_space" || selectedField.addressFormat === "singleline" ? "bg-white text-violet-600 shadow-2xs font-bold" : "text-gray-600 hover:text-gray-900"
-                        }`}
+                        className={`py-1 px-1 text-[10px] font-semibold rounded-md transition-colors text-center ${selectedField.addressFormat === "singleline_space" || selectedField.addressFormat === "singleline" ? "bg-white text-violet-600 shadow-2xs font-bold" : "text-gray-600 hover:text-gray-900"
+                          }`}
                       >
                         Single (No Comma)
                       </button>
                       <button
                         type="button"
                         onClick={() => updateFieldProperty("addressFormat", "singleline_comma")}
-                        className={`py-1 px-1 text-[10px] font-semibold rounded-md transition-colors text-center ${
-                          selectedField.addressFormat === "singleline_comma" ? "bg-white text-violet-600 shadow-2xs font-bold" : "text-gray-600 hover:text-gray-900"
-                        }`}
+                        className={`py-1 px-1 text-[10px] font-semibold rounded-md transition-colors text-center ${selectedField.addressFormat === "singleline_comma" ? "bg-white text-violet-600 shadow-2xs font-bold" : "text-gray-600 hover:text-gray-900"
+                          }`}
                       >
                         Single (With Comma)
                       </button>
@@ -1790,11 +1868,10 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
             <button
               type="button"
               onClick={() => setShowRulerScale(!showRulerScale)}
-              className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                showRulerScale
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${showRulerScale
                   ? "bg-violet-600 text-white border-violet-600 shadow-2xs"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-              }`}
+                }`}
               title="Toggle Alignment Scale Ruler in mm/px"
             >
               📏 Scale ({editorUnit})
@@ -1803,11 +1880,10 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
             <button
               type="button"
               onClick={() => setShowGridOverlay(!showGridOverlay)}
-              className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                showGridOverlay
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${showGridOverlay
                   ? "bg-violet-600 text-white border-violet-600 shadow-2xs"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-              }`}
+                }`}
               title="Toggle Grid Overlay"
             >
               🌐 Grid
@@ -1818,18 +1894,16 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
               <button
                 type="button"
                 onClick={() => setEditorUnit("mm")}
-                className={`px-2 py-0.5 text-xs font-extrabold rounded-md transition-all cursor-pointer ${
-                  editorUnit === "mm" ? "bg-violet-600 text-white shadow-2xs" : "text-gray-600 hover:text-gray-900"
-                }`}
+                className={`px-2 py-0.5 text-xs font-extrabold rounded-md transition-all cursor-pointer ${editorUnit === "mm" ? "bg-violet-600 text-white shadow-2xs" : "text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 mm
               </button>
               <button
                 type="button"
                 onClick={() => setEditorUnit("px")}
-                className={`px-2 py-0.5 text-xs font-extrabold rounded-md transition-all cursor-pointer ${
-                  editorUnit === "px" ? "bg-violet-600 text-white shadow-2xs" : "text-gray-600 hover:text-gray-900"
-                }`}
+                className={`px-2 py-0.5 text-xs font-extrabold rounded-md transition-all cursor-pointer ${editorUnit === "px" ? "bg-violet-600 text-white shadow-2xs" : "text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 px
               </button>
@@ -1925,15 +1999,13 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                           <div
                             key={`top-tick-${mmVal}`}
                             onMouseDown={(e) => handleStartDragXGuide(e, hasGuide ? pxVal : -1)}
-                            className={`absolute top-0 bottom-0 border-l transition-colors hover:bg-violet-200/60 cursor-col-resize ${
-                              hasGuide ? "border-rose-500 border-l-2" : "border-slate-350"
-                            }`}
+                            className={`absolute top-0 bottom-0 border-l transition-colors hover:bg-violet-200/60 cursor-col-resize ${hasGuide ? "border-rose-500 border-l-2" : "border-slate-350"
+                              }`}
                             style={{ left: `${pct}%` }}
                             title={`Drag to move or place ${editorUnit === "mm" ? `${mmVal}mm` : `${pxVal}px`} vertical guide line`}
                           >
-                            <span className={`absolute top-0 left-0.5 text-[7.5px] font-bold leading-none ${
-                              hasGuide ? "text-rose-600 font-extrabold" : "text-slate-600"
-                            }`}>
+                            <span className={`absolute top-0 left-0.5 text-[7.5px] font-bold leading-none ${hasGuide ? "text-rose-600 font-extrabold" : "text-slate-600"
+                              }`}>
                               {editorUnit === "mm" ? mmVal : pxVal}
                             </span>
                           </div>
@@ -1971,15 +2043,13 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                           <div
                             key={`left-tick-${mmVal}`}
                             onMouseDown={(e) => handleStartDragYGuide(e, hasGuide ? pxVal : -1)}
-                            className={`absolute left-0 right-0 border-t transition-colors hover:bg-violet-200/60 cursor-row-resize ${
-                              hasGuide ? "border-rose-500 border-t-2" : "border-slate-350"
-                            }`}
+                            className={`absolute left-0 right-0 border-t transition-colors hover:bg-violet-200/60 cursor-row-resize ${hasGuide ? "border-rose-500 border-t-2" : "border-slate-350"
+                              }`}
                             style={{ top: `${pct}%` }}
                             title={`Drag to move or place ${editorUnit === "mm" ? `${mmVal}mm` : `${pxVal}px`} horizontal guide line`}
                           >
-                            <span className={`absolute left-0.5 top-0.5 text-[7px] font-bold leading-none ${
-                              hasGuide ? "text-rose-600 font-extrabold" : "text-slate-600"
-                            }`}>
+                            <span className={`absolute left-0.5 top-0.5 text-[7px] font-bold leading-none ${hasGuide ? "text-rose-600 font-extrabold" : "text-slate-600"
+                              }`}>
                               {editorUnit === "mm" ? mmVal : pxVal}
                             </span>
                           </div>
@@ -1996,10 +2066,10 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                 )}
 
                 {/* Main Canvas Node */}
-                <div 
+                <div
                   className="relative bg-white shadow-2xl transition-transform origin-top-left border border-gray-300"
-                  style={{ 
-                    width: `${canvasWidthPx}px`, 
+                  style={{
+                    width: `${canvasWidthPx}px`,
                     height: `${canvasHeightPx}px`,
                     transform: `scale(${scale})`,
                     marginBottom: `${Math.max(0, canvasHeightPx * scale - canvasHeightPx)}px`,
@@ -2028,11 +2098,10 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                   {/* Live Dragging Guide Line Indicator */}
                   {activeGuideDrag && (
                     <div
-                      className={`absolute border-rose-500 z-50 pointer-events-none ${
-                        activeGuideDrag.type === "x"
+                      className={`absolute border-rose-500 z-50 pointer-events-none ${activeGuideDrag.type === "x"
                           ? "top-0 bottom-0 border-l-2 border-dashed w-0 h-full"
                           : "left-0 right-0 border-t-2 border-dashed h-0 w-full"
-                      }`}
+                        }`}
                       style={{
                         left: activeGuideDrag.type === "x" ? `${activeGuideDrag.currentPx}px` : 0,
                         top: activeGuideDrag.type === "y" ? `${activeGuideDrag.currentPx}px` : 0,
@@ -2170,16 +2239,16 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
 // DRAGGABLE FIELD COMPONENT
 // ----------------------------------------------------------------------
 
-function StudioDraggableField({ 
-  fieldKey, 
-  f, 
-  scale, 
-  fieldInfo, 
-  isSelected, 
-  setSelectedFieldKey, 
-  handleDragStop, 
-  onDragStart, 
-  onDragMove, 
+function StudioDraggableField({
+  fieldKey,
+  f,
+  scale,
+  fieldInfo,
+  isSelected,
+  setSelectedFieldKey,
+  handleDragStop,
+  onDragStart,
+  onDragMove,
   handleFieldResize,
   activePreviewStudent,
   schoolName,
@@ -2201,7 +2270,7 @@ function StudioDraggableField({
     border: '1px solid white',
     boxShadow: '0 0 2px rgba(0,0,0,0.3)'
   };
-  
+
   const resizeHandleStyles = {
     bottomRight: { ...handleStyle, width: '10px', height: '10px', right: '-5px', bottom: '-5px', cursor: 'se-resize' },
     bottomLeft: { ...handleStyle, width: '10px', height: '10px', left: '-5px', bottom: '-5px', cursor: 'sw-resize' },
@@ -2213,13 +2282,23 @@ function StudioDraggableField({
     right: { ...handleStyle, width: '8px', height: '16px', top: '50%', right: '-4px', transform: 'translateY(-50%)', cursor: 'e-resize' },
   };
 
+  const imgBorderW = typeof f.borderWidth === "number" ? f.borderWidth : (parseInt(f.borderWidth || "0", 10) || 0);
+  const imgBorderC = f.borderColor || "#000000";
+  const imgRadius = f.borderRadius ? (typeof f.borderRadius === "number" ? `${f.borderRadius}px` : f.borderRadius) : "0";
+
+  const imgStyle: React.CSSProperties = {
+    borderRadius: imgRadius,
+    border: imgBorderW > 0 ? `${imgBorderW}px solid ${imgBorderC}` : undefined,
+    boxSizing: "border-box",
+  };
+
   let displayContent: React.ReactNode = "";
   if (fieldKey === "school_logo") {
     const logoUrl = school?.logoUrl;
     displayContent = logoUrl ? (
-      <img src={logoUrl} alt="Logo" className="w-full h-full object-contain pointer-events-none" />
+      <img src={logoUrl} alt="Logo" style={imgStyle} className="w-full h-full object-contain pointer-events-none" />
     ) : (
-      <div className="w-full h-full border flex flex-col items-center justify-center text-[10px] font-bold text-slate-400">
+      <div style={imgStyle} className="w-full h-full border flex flex-col items-center justify-center text-[10px] font-bold text-slate-400">
         <svg className="w-6 h-6 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
         <span>School Logo</span>
       </div>
@@ -2227,14 +2306,14 @@ function StudioDraggableField({
   } else if (fieldKey === "student_photo") {
     const photoUrl = activePreviewStudent?.profilePictureUrl || DUMMY_STUDENT.profilePictureUrl;
     displayContent = (
-      <img src={photoUrl} alt="Photo" className="w-full h-full object-cover pointer-events-none" />
+      <img src={photoUrl} alt="Photo" style={imgStyle} className="w-full h-full object-cover pointer-events-none" />
     );
   } else if (fieldKey === "school_signature") {
     const sigUrl = school?.signatureUrl;
     displayContent = sigUrl ? (
-      <img src={sigUrl} alt="Signature" className="w-full h-full object-contain pointer-events-none" />
+      <img src={sigUrl} alt="Signature" style={imgStyle} className="w-full h-full object-contain pointer-events-none" />
     ) : (
-      <div className="w-full h-full border flex flex-col items-center justify-center text-[10px] font-bold text-slate-400">
+      <div style={imgStyle} className="w-full h-full border flex flex-col items-center justify-center text-[10px] font-bold text-slate-400">
         <span>Principal Signature</span>
       </div>
     );
@@ -2315,7 +2394,7 @@ function StudioDraggableField({
       enableResizing={isSelected}
       style={{ padding: 0 }}
     >
-      <div 
+      <div
         ref={innerRef}
         onClick={(e) => {
           e.stopPropagation();
@@ -2333,7 +2412,10 @@ function StudioDraggableField({
           fontWeight: f.fontWeight || "500",
           textAlign: (f.align || "left") as React.CSSProperties["textAlign"],
           background: fieldInfo.isImage ? 'rgba(0,0,0,0.05)' : 'transparent',
-          border: fieldInfo.isImage && !isSelected ? '1px dashed #cbd5e1' : 'none',
+          border: fieldInfo.isImage && imgBorderW > 0 ? `${imgBorderW}px solid ${imgBorderC}` : (fieldInfo.isImage && !isSelected ? '1px dashed #cbd5e1' : 'none'),
+          borderRadius: fieldInfo.isImage ? imgRadius : undefined,
+          boxSizing: "border-box",
+          overflow: "hidden",
           transform: fieldInfo.isImage ? 'none' : `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
           transformOrigin: 'top left',
           WebkitTextStroke: !fieldInfo.isImage && f.strokeWidth ? `${f.strokeWidth}px ${f.strokeColor || "#ffffff"}` : undefined,
@@ -2355,6 +2437,8 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
     paperSize: "A4",
     paperOrientation: "portrait",
     documentHorizontal: false,
+    gapX: 2,
+    gapY: 2,
   });
 
   const printGrid = useMemo(() => {
@@ -2397,33 +2481,37 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
     try {
       const h2iMod = await import("html-to-image");
       const jsPDFMod = await import("jspdf");
-      
+
       const { toPng } = h2iMod;
       const jsPDF = jsPDFMod.default || (jsPDFMod as any).jsPDF;
-      
+
+      // The sheet DOM element is captured at the correct orientation dimensions
+      // (printGrid.paperWMm × printGrid.paperHMm). We do NOT pass an orientation
+      // parameter to jsPDF because it would cause jsPDF to swap the dimensions
+      // when width > height (landscape), reversing H-gap and V-gap on the PDF.
       const pdf = new jsPDF({
         orientation: printSettings.paperOrientation,
         unit: "mm",
         format: [printGrid.paperWMm, printGrid.paperHMm],
       });
-      
+
       const sheets = document.querySelectorAll('.sheet');
-      
+
       for (let i = 0; i < sheets.length; i++) {
         const el = sheets[i] as HTMLElement;
         const dataUrl = await toPng(el, {
           pixelRatio: 2,
           backgroundColor: "#ffffff",
         });
-        
-        if (i > 0) pdf.addPage();
-        pdf.addImage(dataUrl, "PNG", 0, 0, printGrid.paperWMm, printGrid.paperHMm);
+
+        if (i > 0) pdf.addPage([printGrid.paperWMm, printGrid.paperHMm], printSettings.paperOrientation);
+        pdf.addImage(dataUrl, "PNG", 0, 0, printGrid.paperWMm, printGrid.paperHMm, undefined, "FAST", 0);
       }
-      
+
       const { PDFDocument, PDFName } = await import("pdf-lib");
       const pdfBytes = pdf.output("arraybuffer");
       const pdfDoc = await PDFDocument.load(pdfBytes);
-      
+
       try {
         const iccRes = await fetch("/icc/default_cmyk.icc");
         if (iccRes.ok) {
@@ -2432,14 +2520,14 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
             Length: iccProfile.byteLength,
           });
           const iccRef = pdfDoc.context.register(iccStream);
-          
+
           const outputIntent = pdfDoc.context.obj({
             Type: PDFName.of("OutputIntent"),
             S: PDFName.of("GTS_PDFX"),
             OutputConditionIdentifier: "Fogra39",
             DestOutputProfile: iccRef,
           });
-          
+
           pdfDoc.catalog.set(
             PDFName.of("OutputIntents"),
             pdfDoc.context.obj([outputIntent])
@@ -2448,9 +2536,9 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
       } catch (e) {
         console.warn("Could not inject ICC profile, continuing without it.");
       }
-      
+
       const finalPdfBytes = await pdfDoc.save();
-      
+
       if (typeof window !== 'undefined' && (window as any).electronAPI) {
         toast.loading("Sending to local printer...");
         try {
@@ -2507,9 +2595,9 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
         </div>
       </div>
 
-      <PrintSettingsPanel 
-        settings={printSettings} 
-        onChange={setPrintSettings} 
+      <PrintSettingsPanel
+        settings={printSettings}
+        onChange={setPrintSettings}
         showDocumentOrientation={true}
         showPaperOrientation={false}
       />
@@ -2524,8 +2612,8 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
         {printGrid.fits && Array.from({ length: Math.ceil(students.length / Math.max(1, printGrid.itemsPerPage)) }).map((_, sheetIdx) => {
           const sheetStudents = students.slice(sheetIdx * printGrid.itemsPerPage, (sheetIdx + 1) * printGrid.itemsPerPage);
           return (
-            <div 
-              key={`sheet-${sheetIdx}`} 
+            <div
+              key={`sheet-${sheetIdx}`}
               className="sheet bg-white shadow-2xl relative"
               style={{
                 width: `${printGrid.paperWMm}mm`,
@@ -2543,7 +2631,7 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
                 const isRotated = printSettings.documentHorizontal;
                 const docWrapperWidth = isRotated ? printGrid.docH : printGrid.docW;
                 const docWrapperHeight = isRotated ? printGrid.docW : printGrid.docH;
-                const transform = isRotated ? `translate(${(printGrid.docW - docWrapperWidth)/2}mm, ${(printGrid.docH - docWrapperHeight)/2}mm) rotate(-90deg)` : 'none';
+                const transform = isRotated ? `translate(${(printGrid.docW - docWrapperWidth) / 2}mm, ${(printGrid.docH - docWrapperHeight) / 2}mm) rotate(-90deg)` : 'none';
 
                 return (
                   <div
@@ -2557,106 +2645,106 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
                       overflow: "hidden",
                     }}
                   >
-                    <div 
+                    <div
                       className="relative bg-white border-[0.5px] border-gray-300 box-border"
-                      style={{ 
-                        width: `${docWrapperWidth}mm`, 
+                      style={{
+                        width: `${docWrapperWidth}mm`,
                         height: `${docWrapperHeight}mm`,
                         transform: transform,
                         transformOrigin: "center center",
                       }}
                     >
-                        {backgroundUrl && (
-                          <Image src={backgroundUrl} alt="Background" fill className="object-fill" unoptimized priority />
-                        )}
+                      {backgroundUrl && (
+                        <Image src={backgroundUrl} alt="Background" fill className="object-fill" unoptimized priority />
+                      )}
 
-                        {Object.entries(fields).map(([key, f]: [string, any]) => {
-                          if (!f || !f.visible) return null;
-                          
-                          let content: React.ReactNode = null;
-                          let labelStr = "";
+                      {Object.entries(fields).map(([key, f]: [string, any]) => {
+                        if (!f || !f.visible) return null;
 
-                          if (key === "student_name") content = student.name;
-                          else if (key === "student_class") { content = student.classNameStr || student.className || student.class?.name || "-"; labelStr = "Class: "; }
-                          else if (key === "student_camSno") { content = student.camSno || "-"; labelStr = "CAM S.No: "; }
-                          else if (key === "student_idNo") { content = student.idNo || "-"; labelStr = "ID No: "; }
-                          else if (key === "student_fatherName") { content = student.fatherName || "-"; labelStr = "Father: "; }
-                          else if (key === "student_motherName") { content = student.motherName || "-"; labelStr = "Mother: "; }
-                          else if (key === "student_fatherPhone") { content = student.fatherPhone || "-"; labelStr = "Cell: "; }
-                          else if (key === "student_motherPhone") { content = student.motherPhone || "-"; labelStr = "Cell: "; }
-                          else if (key === "student_address") { content = student.address || "-"; labelStr = "Address: "; }
-                          else if (key === "school_name") content = student.school?.name || "-";
-                          else if (key === "school_caption") content = student.school?.caption || "-";
-                          else if (key === "school_address") content = student.school?.address || "-";
-                          else if (key === "school_phone") content = student.school?.phone || "-";
-                          else if (key === "school_logo" && student.school?.logoUrl) {
-                            content = <Image src={student.school.logoUrl} alt="Logo" fill className="object-contain" unoptimized />;
-                          } else if (key === "school_signature" && student.school?.signatureUrl) {
-                            content = <Image src={student.school.signatureUrl} alt="Signature" fill className="object-contain" unoptimized />;
-                          } else if (key === "student_photo" && student.profilePictureUrl) {
-                            content = <Image src={student.profilePictureUrl} alt="Photo" fill className="object-cover" unoptimized />;
-                          } else if (key.startsWith("student_custom_")) {
-                            const customKey = key.replace("student_custom_", "");
-                            const values = typeof student.customValues === 'string' ? JSON.parse(student.customValues || '{}') : (student.customValues || {});
-                            content = values[customKey] || "-";
-                            labelStr = `${customKey.charAt(0).toUpperCase() + customKey.slice(1)}: `;
-                          } else if (key.startsWith("school_custom_")) {
-                            const customKey = key.replace("school_custom_", "");
-                            const values = typeof student.school?.customValues === 'string' ? JSON.parse(student.school.customValues || '{}') : (student.school?.customValues || {});
-                            content = values[customKey] || "-";
-                            labelStr = `${customKey.charAt(0).toUpperCase() + customKey.slice(1)}: `;
-                          } else if (key.startsWith("class_custom_")) {
-                            const customKey = key.replace("class_custom_", "");
-                            const values = typeof student.class?.customValues === 'string' ? JSON.parse(student.class.customValues || '{}') : (student.class?.customValues || {});
-                            content = values[customKey] || "-";
-                            labelStr = `${customKey.charAt(0).toUpperCase() + customKey.slice(1)}: `;
+                        let content: React.ReactNode = null;
+                        let labelStr = "";
+
+                        if (key === "student_name") content = student.name;
+                        else if (key === "student_class") { content = student.classNameStr || student.className || student.class?.name || "-"; labelStr = "Class: "; }
+                        else if (key === "student_camSno") { content = student.camSno || "-"; labelStr = "CAM S.No: "; }
+                        else if (key === "student_idNo") { content = student.idNo || "-"; labelStr = "ID No: "; }
+                        else if (key === "student_fatherName") { content = student.fatherName || "-"; labelStr = "Father: "; }
+                        else if (key === "student_motherName") { content = student.motherName || "-"; labelStr = "Mother: "; }
+                        else if (key === "student_fatherPhone") { content = student.fatherPhone || "-"; labelStr = "Cell: "; }
+                        else if (key === "student_motherPhone") { content = student.motherPhone || "-"; labelStr = "Cell: "; }
+                        else if (key === "student_address") { content = student.address || "-"; labelStr = "Address: "; }
+                        else if (key === "school_name") content = student.school?.name || "-";
+                        else if (key === "school_caption") content = student.school?.caption || "-";
+                        else if (key === "school_address") content = student.school?.address || "-";
+                        else if (key === "school_phone") content = student.school?.phone || "-";
+                        else if (key === "school_logo" && student.school?.logoUrl) {
+                          content = <Image src={student.school.logoUrl} alt="Logo" fill className="object-contain" unoptimized />;
+                        } else if (key === "school_signature" && student.school?.signatureUrl) {
+                          content = <Image src={student.school.signatureUrl} alt="Signature" fill className="object-contain" unoptimized />;
+                        } else if (key === "student_photo" && student.profilePictureUrl) {
+                          content = <Image src={student.profilePictureUrl} alt="Photo" fill className="object-cover" unoptimized />;
+                        } else if (key.startsWith("student_custom_")) {
+                          const customKey = key.replace("student_custom_", "");
+                          const values = typeof student.customValues === 'string' ? JSON.parse(student.customValues || '{}') : (student.customValues || {});
+                          content = values[customKey] || "-";
+                          labelStr = `${customKey.charAt(0).toUpperCase() + customKey.slice(1)}: `;
+                        } else if (key.startsWith("school_custom_")) {
+                          const customKey = key.replace("school_custom_", "");
+                          const values = typeof student.school?.customValues === 'string' ? JSON.parse(student.school.customValues || '{}') : (student.school?.customValues || {});
+                          content = values[customKey] || "-";
+                          labelStr = `${customKey.charAt(0).toUpperCase() + customKey.slice(1)}: `;
+                        } else if (key.startsWith("class_custom_")) {
+                          const customKey = key.replace("class_custom_", "");
+                          const values = typeof student.class?.customValues === 'string' ? JSON.parse(student.class.customValues || '{}') : (student.class?.customValues || {});
+                          content = values[customKey] || "-";
+                          labelStr = `${customKey.charAt(0).toUpperCase() + customKey.slice(1)}: `;
+                        }
+
+                        const isPrintSingleLine = f.addressFormat === "singleline_space" || f.addressFormat === "singleline_comma" || f.addressFormat === "singleline";
+                        if (isPrintSingleLine && typeof content === "string") {
+                          if (f.addressFormat === "singleline_comma") {
+                            content = content.replace(/[\r\n]+/g, ", ").replace(/,\s*,/g, ",").trim();
+                          } else {
+                            content = content.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
                           }
+                        }
 
-                          const isPrintSingleLine = f.addressFormat === "singleline_space" || f.addressFormat === "singleline_comma" || f.addressFormat === "singleline";
-                          if (isPrintSingleLine && typeof content === "string") {
-                            if (f.addressFormat === "singleline_comma") {
-                              content = content.replace(/[\r\n]+/g, ", ").replace(/,\s*,/g, ",").trim();
-                            } else {
-                              content = content.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
-                            }
-                          }
+                        if (!content) return null;
 
-                          if (!content) return null;
+                        const isImage = key === "school_logo" || key === "student_photo" || key === "school_signature";
 
-                          const isImage = key === "school_logo" || key === "student_photo" || key === "school_signature";
-
-                          return (
-                            <div
-                              key={key}
-                              className="absolute"
-                              style={{
-                                left: `${f.x}px`,
-                                top: `${f.y}px`,
-                                width: isImage ? `${f.width || 100}px` : (f.width ? `${f.width}px` : 'auto'),
-                                height: isImage ? `${f.height || 100}px` : (f.height ? `${f.height}px` : 'auto'),
-                                fontSize: isImage ? undefined : `${f.fontSize || 16}px`,
-                                color: f.color || "#000000",
-                                fontFamily: `'${f.fontFamily || "Inter"}', sans-serif`,
-                                fontWeight: f.fontWeight || "500",
-                                textAlign: (f.align || "left") as React.CSSProperties["textAlign"],
-                                whiteSpace: f.width ? (isPrintSingleLine ? 'normal' : 'pre-line') : 'nowrap',
-                                wordBreak: 'break-word',
-                                overflowWrap: 'break-word',
-                                transform: isImage ? 'none' : `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
-                                transformOrigin: 'top left',
-                                WebkitTextStroke: !isImage && f.strokeWidth ? `${f.strokeWidth}px ${f.strokeColor || "#ffffff"}` : undefined,
-                                paintOrder: !isImage && f.strokeWidth ? "stroke fill" : undefined,
-                              }}
-                            >
-                              {!isImage && f.labelVisible !== false && labelStr ? (
-                                <span className="font-bold opacity-80 mr-1">{labelStr}</span>
-                              ) : null}
-                              {content}
-                            </div>
-                          );
-                        })}
-                      </div>
+                        return (
+                          <div
+                            key={key}
+                            className="absolute"
+                            style={{
+                              left: `${f.x}px`,
+                              top: `${f.y}px`,
+                              width: isImage ? `${f.width || 100}px` : (f.width ? `${f.width}px` : 'auto'),
+                              height: isImage ? `${f.height || 100}px` : (f.height ? `${f.height}px` : 'auto'),
+                              fontSize: isImage ? undefined : `${f.fontSize || 16}px`,
+                              color: f.color || "#000000",
+                              fontFamily: `'${f.fontFamily || "Inter"}', sans-serif`,
+                              fontWeight: f.fontWeight || "500",
+                              textAlign: (f.align || "left") as React.CSSProperties["textAlign"],
+                              whiteSpace: f.width ? (isPrintSingleLine ? 'normal' : 'pre-line') : 'nowrap',
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word',
+                              transform: isImage ? 'none' : `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
+                              transformOrigin: 'top left',
+                              WebkitTextStroke: !isImage && f.strokeWidth ? `${f.strokeWidth}px ${f.strokeColor || "#ffffff"}` : undefined,
+                              paintOrder: !isImage && f.strokeWidth ? "stroke fill" : undefined,
+                            }}
+                          >
+                            {!isImage && f.labelVisible !== false && labelStr ? (
+                              <span className="font-bold opacity-80 mr-1">{labelStr}</span>
+                            ) : null}
+                            {content}
+                          </div>
+                        );
+                      })}
                     </div>
+                  </div>
                 );
               })}
             </div>
