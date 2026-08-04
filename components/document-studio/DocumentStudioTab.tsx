@@ -2485,12 +2485,10 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
       const { toPng } = h2iMod;
       const jsPDF = jsPDFMod.default || (jsPDFMod as any).jsPDF;
 
-      // The sheet DOM element is captured at the correct orientation dimensions
-      // (printGrid.paperWMm × printGrid.paperHMm). We do NOT pass an orientation
-      // parameter to jsPDF because it would cause jsPDF to swap the dimensions
-      // when width > height (landscape), reversing H-gap and V-gap on the PDF.
+      // Determine orientation based on aspect ratio so jsPDF never auto-swaps width & height
+      const pdfOrientation = printGrid.paperWMm > printGrid.paperHMm ? "landscape" : "portrait";
       const pdf = new jsPDF({
-        orientation: printSettings.paperOrientation,
+        orientation: pdfOrientation,
         unit: "mm",
         format: [printGrid.paperWMm, printGrid.paperHMm],
       });
@@ -2504,7 +2502,7 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
           backgroundColor: "#ffffff",
         });
 
-        if (i > 0) pdf.addPage([printGrid.paperWMm, printGrid.paperHMm], printSettings.paperOrientation);
+        if (i > 0) pdf.addPage([printGrid.paperWMm, printGrid.paperHMm], pdfOrientation);
         pdf.addImage(dataUrl, "PNG", 0, 0, printGrid.paperWMm, printGrid.paperHMm, undefined, "FAST", 0);
       }
 

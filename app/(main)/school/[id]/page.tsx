@@ -19,6 +19,8 @@ import { Rnd } from "react-rnd";
 import uploadImageToCloudinary from "@/utils/cloudService";
 import { toast } from "sonner";
 import ImageEnhancerModal from "@/components/ImageEnhancerModal";
+import { PrintSettingsPanel } from "@/components/PrintSettingsPanel";
+import { PrintSettings } from "@/utils/printLayoutEngine";
 
 import AdBanner from "@/components/AdBanner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -3531,6 +3533,28 @@ export default function SchoolPage() {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  {/* Print Paper Settings Card */}
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-xs select-none">
+                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Default Print Paper Size Settings</h4>
+                    <PrintSettingsPanel
+                      settings={idCardLayoutConfig?.printSettings || {
+                        paperSize: "A4",
+                        paperOrientation: "landscape",
+                        documentHorizontal: false,
+                        gapX: 2,
+                        gapY: 2,
+                      }}
+                      onChange={(newSettings: PrintSettings) => {
+                        setIdCardLayoutConfig((prev: any) => ({
+                          ...prev,
+                          printSettings: newSettings,
+                        }));
+                      }}
+                      showPaperOrientation={true}
+                      className="flex flex-col gap-3"
+                    />
                   </div>
 
                   {/* Separate Dedicated Layout Background Card */}

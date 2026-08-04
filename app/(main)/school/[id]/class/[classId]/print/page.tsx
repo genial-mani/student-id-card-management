@@ -218,6 +218,20 @@ export default function PrintPage() {
       }
       setLayout(finalLayout);
       setTheme(finalTheme);
+
+      if (classData.school?.idCardLayoutConfig) {
+        try {
+          let cfg = classData.school.idCardLayoutConfig;
+          if (typeof cfg === "string") {
+            cfg = JSON.parse(cfg);
+          }
+          if (cfg && cfg.printSettings) {
+            setPrintSettings(cfg.printSettings);
+          }
+        } catch (e) {
+          console.error("Failed to parse printSettings from idCardLayoutConfig", e);
+        }
+      }
     }
   }, [classData]);
 
@@ -322,19 +336,17 @@ export default function PrintPage() {
 
       // 5. Build PDF
       setDlProgress("Building PDF…");
-      // The canvas is already rendered at the correct orientation dimensions
-      // (printGrid.paperW × printGrid.paperH). We do NOT pass an orientation
-      // parameter to jsPDF because it would cause jsPDF to swap the dimensions
-      // when width > height (landscape), reversing H-gap and V-gap on the PDF.
+      // Determine orientation based on aspect ratio so jsPDF never auto-swaps width & height
+      const pdfOrientation = printGrid.paperW > printGrid.paperH ? "landscape" : "portrait";
       const pdf = new jsPDF({
-        orientation: printSettings.paperOrientation,
+        orientation: pdfOrientation,
         unit: "px",
         format: [printGrid.paperW, printGrid.paperH],
       });
 
       let pageCount = 0;
       for (const imgData of sheetImages) {
-        if (pageCount > 0) pdf.addPage([printGrid.paperW, printGrid.paperH], printSettings.paperOrientation);
+        if (pageCount > 0) pdf.addPage([printGrid.paperW, printGrid.paperH], pdfOrientation);
         pdf.addImage(imgData, "JPEG", 0, 0, printGrid.paperW, printGrid.paperH, undefined, "FAST", 0);
         pageCount++;
       }
