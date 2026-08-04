@@ -336,18 +336,19 @@ export default function PrintPage() {
 
       // 5. Build PDF
       setDlProgress("Building PDF…");
-      // Determine orientation based on aspect ratio so jsPDF never auto-swaps width & height
-      const pdfOrientation = printGrid.paperW > printGrid.paperH ? "landscape" : "portrait";
+      // Use mm so the PDF page matches the real-world paper size.
+      // The high-res canvas image (rendered at 300 DPI) provides print quality.
+      const pdfOrientation = printGrid.paperWMm > printGrid.paperHMm ? "landscape" : "portrait";
       const pdf = new jsPDF({
         orientation: pdfOrientation,
-        unit: "px",
-        format: [printGrid.paperW, printGrid.paperH],
+        unit: "mm",
+        format: [printGrid.paperWMm, printGrid.paperHMm],
       });
 
       let pageCount = 0;
       for (const imgData of sheetImages) {
-        if (pageCount > 0) pdf.addPage([printGrid.paperW, printGrid.paperH], pdfOrientation);
-        pdf.addImage(imgData, "JPEG", 0, 0, printGrid.paperW, printGrid.paperH, undefined, "FAST", 0);
+        if (pageCount > 0) pdf.addPage([printGrid.paperWMm, printGrid.paperHMm], pdfOrientation);
+        pdf.addImage(imgData, "JPEG", 0, 0, printGrid.paperWMm, printGrid.paperHMm, undefined, "FAST", 0);
         pageCount++;
       }
 
