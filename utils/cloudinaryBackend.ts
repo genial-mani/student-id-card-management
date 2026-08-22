@@ -121,6 +121,64 @@ export async function bulkDeleteImagesFromCloudinary(urls: string[]): Promise<vo
   } catch (error: any) {
     const errorData = error?.response?.data;
     console.error(`Failed to bulk delete Cloudinary assets`, errorData || error.message);
-    // Suppress error so that failure to delete photos doesn't crash the student deletion process
   }
+}
+
+// ─── Unified Dual-Mode Delete (Cloudinary + R2) ─────────────────────────────
+
+import { isR2Url, deleteFromR2, bulkDeleteFromR2 } from './r2Backend';
+
+/**
+ * Deletes a single image from the correct storage provider.
+ * Detects whether the URL belongs to Cloudinary or R2 and routes accordingly.
+ */
+export async function deleteImage(url: string): Promise<void> {
+  if (!url) return;
+
+  if (url.includes('res.cloudinary.com')) {
+    await deleteImageFromCloudinary(url);
+  } else if (isR2Url(url)) {
+    await deleteFromR2(url);
+  } else {
+    console.warn(`Unknown image provider for URL: ${url}. Skipping deletion.`);
+  }
+}
+
+/**
+ * Deletes multiple images, splitting them by provider.
+ * Cloudinary URLs go to Cloudinary bulk delete, R2 URLs go to R2 bulk delete.
+ */
+export async function bulkDeleteImages(urls: string[]): Promise<void> {
+  if (!urls || urls.length === 0) return;
+
+  const cloudinaryUrls: string[] = [];
+  const r2Urls: string[] = [];
+  const unknownUrls: string[] = [];
+
+  for (const url of urls) {
+    if (!url) continue;
+    if (url.includes('res.cloudinary.com')) {
+      cloudinaryUrls.push(url);
+    } else if (isR2Url(url)) {
+      r2Urls.push(url);
+    } else {
+      unknownUrls.push(url);
+    }
+  }
+
+  if (unknownUrls.length > 0) {
+    console.warn(`Skipping ${unknownUrls.length} images from unknown providers.`);
+  }
+
+  const promises: Promise<void>[] = [];
+
+  if (cloudinaryUrls.length > 0) {
+    promises.push(bulkDeleteImagesFromCloudinary(cloudinaryUrls));
+  }
+
+  if (r2Urls.length > 0) {
+    promises.push(bulkDeleteFromR2(r2Urls));
+  }
+
+  await Promise.all(promises);
 }

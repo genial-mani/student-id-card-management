@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import IdCard, { CardTheme } from "@/components/IdCard";
 import { Button } from "@/components/ui/button";
@@ -81,6 +81,9 @@ function loadDesign(id: string): { layout: number; theme: CardTheme } {
 export default function PrintPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedParam = searchParams.get("selected") || searchParams.get("ids") || "";
+
   const schoolId = params.id as string;
   const classId = params.classId as string;
 
@@ -92,7 +95,14 @@ export default function PrintPage() {
   const [settled, setSettled] = useState(false);
   const [downloading, setDownloading] = useState<"all" | number | null>(null);
   const [dlProgress, setDlProgress] = useState("");
+  const [onlySelected, setOnlySelected] = useState<boolean>(Boolean(selectedParam));
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (selectedParam) {
+      setOnlySelected(true);
+    }
+  }, [selectedParam]);
 
   const [printSettings, setPrintSettings] = useState<PrintSettings>({
     paperSize: "A4",
@@ -251,8 +261,21 @@ export default function PrintPage() {
   }, [user])
 
   // ── Sheet slices ────────────────────────────────────────────────────────────
+  const selectedIdSet = useMemo(() => {
+    if (!selectedParam) return new Set<string>();
+    return new Set(selectedParam.split(",").map((id) => id.trim()).filter(Boolean));
+  }, [selectedParam]);
 
-  const students = classData?.students ?? [];
+  const allClassStudents = classData?.students ?? [];
+
+  const students = useMemo(() => {
+    if (onlySelected && selectedIdSet.size > 0) {
+      const filtered = allClassStudents.filter((s) => selectedIdSet.has(s.id));
+      return filtered.length > 0 ? filtered : allClassStudents;
+    }
+    return allClassStudents;
+  }, [allClassStudents, onlySelected, selectedIdSet]);
+
   const CPP = printGrid.itemsPerPage > 0 ? printGrid.itemsPerPage : 1;
   const totalSheets = Math.max(1, Math.ceil(students.length / CPP));
   const sheets: Student[][] = Array.from({ length: totalSheets }, (_, i) =>
@@ -562,15 +585,35 @@ export default function PrintPage() {
                 </svg>
               </Link>
               <div className="min-w-0">
-                <h1 className="font-bold text-gray-900 text-sm sm:text-base truncate">
-                  {classData.school.name} — Class {classData.name}
+                <h1 className="font-bold text-gray-900 text-sm sm:text-base truncate flex items-center gap-2">
+                  <span>{classData.school.name} — Class {classData.name}</span>
                 </h1>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {students.length} cards · {totalSheets} sheet
-                  {totalSheets !== 1 ? "s" : ""}
-                  {!settled && " · Loading images…"}
-                  {!printGrid.fits && <span className="text-rose-500 font-bold ml-2">Error: Paper size too small.</span>}
-                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                  <p className="text-xs text-gray-400">
+                    {students.length} cards · {totalSheets} sheet
+                    {totalSheets !== 1 ? "s" : ""}
+                    {!settled && " · Loading images…"}
+                    {!printGrid.fits && <span className="text-rose-500 font-bold ml-2">Error: Paper size too small.</span>}
+                  </p>
+                  {selectedIdSet.size > 0 && (
+                    <div className="inline-flex items-center gap-1.5 ml-1">
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                        onlySelected 
+                          ? "bg-violet-100 text-violet-800 border-violet-200" 
+                          : "bg-gray-100 text-gray-700 border-gray-200"
+                      }`}>
+                        {onlySelected ? `🎯 ${students.length} Selected Students` : `All ${allClassStudents.length} Students`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setOnlySelected(!onlySelected)}
+                        className="text-[11px] font-bold text-violet-600 hover:text-violet-800 underline cursor-pointer"
+                      >
+                        {onlySelected ? `Switch to All (${allClassStudents.length})` : `Filter to Selected (${selectedIdSet.size})`}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

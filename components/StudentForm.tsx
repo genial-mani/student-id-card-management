@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import uploadImageToCloudinary from "@/utils/cloudService";
+import uploadImage from "@/utils/cloudService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -161,7 +161,7 @@ export default function StudentForm({
       const folderName = schoolName.trim().split(/\s+/)[0];
 
       if (profilePictureFile) {
-        profilePictureUrl = await uploadImageToCloudinary(
+        profilePictureUrl = await uploadImage(
           profilePictureFile, 
           folderName, 
           generatedCamId

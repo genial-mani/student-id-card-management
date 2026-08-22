@@ -7,7 +7,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { Rnd } from "react-rnd";
 import { Button } from "@/components/ui/button";
-import uploadImageToCloudinary from "@/utils/cloudService";
+import uploadImage from "@/utils/cloudService";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -976,7 +976,7 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
     setIsUploading(true);
     try {
       const folderName = schoolName.trim().split(/\s+/)[0] || "custom";
-      const url = await uploadImageToCloudinary(file, folderName);
+      const url = await uploadImage(file, folderName);
       setBackgroundUrl(url);
       toast.success("Background image uploaded");
     } catch (err) {

@@ -309,7 +309,6 @@ export default function IdCard({
               key={fieldKey}
               src={school.logoUrl}
               alt="Logo"
-              crossOrigin="anonymous"
               style={imageStyle}
               className="object-cover"
             />
@@ -331,7 +330,6 @@ export default function IdCard({
               key={fieldKey}
               src={photoUrl}
               alt="Student"
-              crossOrigin="anonymous"
               style={imageStyle}
               className="object-cover"
             />
@@ -344,7 +342,6 @@ export default function IdCard({
               key={fieldKey}
               src={school.signatureUrl}
               alt="Sign"
-              crossOrigin="anonymous"
               style={imageStyle}
               className="object-cover"
             />

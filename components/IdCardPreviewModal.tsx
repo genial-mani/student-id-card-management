@@ -135,6 +135,12 @@ export default function IdCardPreviewModal({
               school={school}
               student={student}
               classNameStr={student.className || ""}
+              classCustomValues={
+                student.classCustomValues ||
+                (school?.classes && student.classId
+                  ? school.classes.find((c: any) => c.id === student.classId)?.customValues
+                  : undefined)
+              }
             />
           </div>
         </div>

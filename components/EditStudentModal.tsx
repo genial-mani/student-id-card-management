@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, PencilEdit01Icon, ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
-import uploadImageToCloudinary from "@/utils/cloudService";
+import uploadImage from "@/utils/cloudService";
 import Cropper from "react-easy-crop";
 import { toast } from "sonner";
 import ImageEnhancerModal from "@/components/ImageEnhancerModal";
@@ -272,7 +272,7 @@ export default function EditStudentModal({
         const cleanCamId = finalCamSno.replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 12);
         const folderName = schoolName.trim().split(/\s+/)[0];
 
-        const rawUrl = await uploadImageToCloudinary(
+        const rawUrl = await uploadImage(
           profilePictureFile,
           folderName,
           cleanCamId

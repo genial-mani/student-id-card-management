@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/utils/prismaClient';
-import { bulkDeleteImagesFromCloudinary } from '@/utils/cloudinaryBackend';
+import { bulkDeleteImages } from '@/utils/cloudinaryBackend';
 
 function getAuth(request: NextRequest) {
   return {
@@ -114,7 +114,7 @@ export async function DELETE(
     const allImagesToDelete = [...photoUrls, ...docImageUrls, ...schoolImages];
 
     if (allImagesToDelete.length > 0) {
-      await bulkDeleteImagesFromCloudinary(allImagesToDelete);
+      await bulkDeleteImages(allImagesToDelete);
     }
 
     // Delete associated documents, students, classes, and users first to prevent orphans

@@ -31,7 +31,7 @@ export default function StudentListTable({
   onSelectAll,
   onSelectOne,
 }: StudentListTableProps) {
-  const fields = useMemo(() => {
+  const { fields, activeCustomFields } = useMemo(() => {
     const defaults = [
       { key: "name", label: "Student Name", type: "text", required: true, default: true, enabled: true },
       { key: "camSno", label: "CAM Serial No", type: "text", required: false, default: true, enabled: true },
@@ -39,13 +39,32 @@ export default function StudentListTable({
       { key: "fatherPhone", label: "Father Phone", type: "text", required: false, default: true, enabled: true },
       { key: "address", label: "Address", type: "text", required: false, default: true, enabled: true }
     ];
-    if (!customFieldsConfig) return defaults;
+    if (!customFieldsConfig) {
+      return { fields: defaults, activeCustomFields: [] };
+    }
     try {
       const parsed = typeof customFieldsConfig === "string" ? JSON.parse(customFieldsConfig) : customFieldsConfig;
-      const studentFields = parsed?.student || defaults;
-      return studentFields.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone");
+      const studentFields = (parsed?.student || defaults).filter(
+        (f: any) => f.key !== "motherName" && f.key !== "motherPhone"
+      );
+      const classFields = (parsed?.class || []).filter(
+        (f: any) => f.key !== "name"
+      );
+
+      const customClass = classFields
+        .filter((f: any) => !f.default && f.enabled !== false)
+        .map((f: any) => ({ ...f, source: "class" as const }));
+
+      const customStudent = studentFields
+        .filter((f: any) => !f.default && f.enabled !== false)
+        .map((f: any) => ({ ...f, source: "student" as const }));
+
+      return {
+        fields: studentFields,
+        activeCustomFields: [...customClass, ...customStudent],
+      };
     } catch {
-      return defaults;
+      return { fields: defaults, activeCustomFields: [] };
     }
   }, [customFieldsConfig]);
 
@@ -53,8 +72,6 @@ export default function StudentListTable({
     const field = fields.find((f: any) => f.key === key);
     return field ? field.enabled !== false : true;
   };
-
-  const activeCustomFields = fields.filter((f: any) => !f.default && f.enabled);
 
   const renderSortableHeader = (field: string, label: string) => {
     const isCurrent = sortBy.startsWith(field);
@@ -121,7 +138,7 @@ export default function StudentListTable({
               )}
               {/* Custom Fields Headers */}
               {activeCustomFields.map((cf: any) => (
-                <th key={cf.key} className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider select-none">
+                <th key={`${cf.source || "student"}_${cf.key}`} className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider select-none">
                   {cf.label}
                 </th>
               ))}
@@ -228,9 +245,23 @@ export default function StudentListTable({
 
                   {/* Custom Fields Values */}
                   {activeCustomFields.map((cf: any) => {
-                    const val = customVals?.[cf.key] || "—";
+                    let val = "—";
+                    if (cf.source === "class") {
+                      let classVals = (student as any).classCustomValues;
+                      if (typeof classVals === "string") {
+                        try {
+                          classVals = JSON.parse(classVals);
+                        } catch {
+                          classVals = null;
+                        }
+                      }
+                      val = classVals?.[cf.key] || "—";
+                    } else {
+                      val = customVals?.[cf.key] || "—";
+                    }
+
                     return (
-                      <td key={cf.key} className="px-4 py-3 whitespace-nowrap text-gray-700 font-medium">
+                      <td key={`${cf.source || "student"}_${cf.key}`} className="px-4 py-3 whitespace-nowrap text-gray-700 font-medium">
                         {val}
                       </td>
                     );

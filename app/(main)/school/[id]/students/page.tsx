@@ -239,6 +239,7 @@ export default function AllStudentsPage() {
         ...student,
         className: cls.name,
         classId: cls.id,
+        classCustomValues: (cls as any).customValues,
       }))
     );
   }, [school]);
@@ -634,12 +635,28 @@ export default function AllStudentsPage() {
                   selectedClassId ? (
                     filteredStudents.length > 0 ? (
                       <Link
-                        href={`/school/${schoolId}/class/${selectedClassId}/print`}
-                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-750 border border-violet-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm"
-                        title="Print ID Cards for the selected class"
+                        href={
+                          selectedStudentIds.length > 0
+                            ? `/school/${schoolId}/class/${selectedClassId}/print?selected=${selectedStudentIds.join(",")}`
+                            : `/school/${schoolId}/class/${selectedClassId}/print`
+                        }
+                        className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm ${
+                          selectedStudentIds.length > 0
+                            ? "bg-violet-600 hover:bg-violet-700 text-white border border-violet-700 shadow-md"
+                            : "bg-violet-50 hover:bg-violet-100 text-violet-750 border border-violet-200"
+                        }`}
+                        title={
+                          selectedStudentIds.length > 0
+                            ? `Print ID Cards for ${selectedStudentIds.length} selected students`
+                            : "Print ID Cards for the selected class"
+                        }
                       >
                         <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
-                        <span>Print / Export PDF</span>
+                        <span>
+                          {selectedStudentIds.length > 0
+                            ? `Print Selected (${selectedStudentIds.length})`
+                            : "Print / Export PDF"}
+                        </span>
                       </Link>
                     ) : (
                       <button
@@ -654,12 +671,28 @@ export default function AllStudentsPage() {
                   ) : (
                     allStudents.length > 0 ? (
                       <Link
-                        href={`/school/${schoolId}/class/all/print`}
-                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-750 border border-violet-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm"
-                        title="Print ID Cards for all students in the school"
+                        href={
+                          selectedStudentIds.length > 0
+                            ? `/school/${schoolId}/class/all/print?selected=${selectedStudentIds.join(",")}`
+                            : `/school/${schoolId}/class/all/print`
+                        }
+                        className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm ${
+                          selectedStudentIds.length > 0
+                            ? "bg-violet-600 hover:bg-violet-700 text-white border border-violet-700 shadow-md"
+                            : "bg-violet-50 hover:bg-violet-100 text-violet-750 border border-violet-200"
+                        }`}
+                        title={
+                          selectedStudentIds.length > 0
+                            ? `Print ID Cards for ${selectedStudentIds.length} selected students`
+                            : "Print ID Cards for all students in the school"
+                        }
                       >
                         <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
-                        <span>Print All Students</span>
+                        <span>
+                          {selectedStudentIds.length > 0
+                            ? `Print Selected (${selectedStudentIds.length})`
+                            : "Print All Students"}
+                        </span>
                       </Link>
                     ) : (
                       <button

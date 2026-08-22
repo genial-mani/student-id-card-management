@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { processAndUploadStudentPhoto } from "@/utils/imageEnhancer";
+import { processAndUploadStudentPhoto, loadImage } from "@/utils/imageEnhancer";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -42,6 +42,7 @@ export default function ImageEnhancerModal({
 
   // Reset controls when student changes or modal opens
   useEffect(() => {
+    let isMounted = true;
     if (isOpen && student?.profilePictureUrl) {
       setBrightness(100);
       setContrast(100);
@@ -49,27 +50,23 @@ export default function ImageEnhancerModal({
       setIsHoldingOriginal(false);
       setImageLoaded(false);
 
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        imgRef.current = img;
-        setImageLoaded(true);
-      };
-      img.onerror = () => {
-        // Fallback without crossOrigin if CORS headers are missing
-        const fallbackImg = new Image();
-        fallbackImg.onload = () => {
-          imgRef.current = fallbackImg;
-          setImageLoaded(true);
-        };
-        fallbackImg.src = student.profilePictureUrl;
-      };
-      // Append cache buster to avoid CORS cached response issue
-      const safeSrc = student.profilePictureUrl.includes("cloudinary.com")
-        ? student.profilePictureUrl
-        : `${student.profilePictureUrl}${student.profilePictureUrl.includes("?") ? "&" : "?"}_t=${Date.now()}`;
-      img.src = safeSrc;
+      loadImage(student.profilePictureUrl)
+        .then((img) => {
+          if (isMounted) {
+            imgRef.current = img;
+            setImageLoaded(true);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load photo for enhancer:", err);
+          if (isMounted) {
+            toast.error("Failed to load photo. Please check your network connection.");
+          }
+        });
     }
+    return () => {
+      isMounted = false;
+    };
   }, [isOpen, student]);
 
   // Update canvas live previews

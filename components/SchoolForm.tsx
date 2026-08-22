@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import uploadImageToCloudinary from "@/utils/cloudService";
+import uploadImage from "@/utils/cloudService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,9 +73,9 @@ export default function SchoolForm({ onClose, onSuccess, school }: SchoolFormPro
     try {
       let logoUrl = school?.logoUrl || "";
       let signatureUrl = school?.signatureUrl || "";
-      if (logoFile) logoUrl = await uploadImageToCloudinary(logoFile);
+      if (logoFile) logoUrl = await uploadImage(logoFile);
       if (signatureFile)
-        signatureUrl = await uploadImageToCloudinary(signatureFile);
+        signatureUrl = await uploadImage(signatureFile);
 
       const url = school ? `/api/schools/${school.id}` : "/api/schools";
       const method = school ? "PUT" : "POST";

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/utils/prismaClient';
-import { bulkDeleteImagesFromCloudinary } from '@/utils/cloudinaryBackend';
+import { bulkDeleteImages } from '@/utils/cloudinaryBackend';
 
 function getAuth(request: NextRequest) {
   return {
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Extract photo URLs and bulk delete from Cloudinary
     const photoUrls = students.map(s => s.profilePictureUrl).filter(Boolean);
     if (photoUrls.length > 0) {
-      await bulkDeleteImagesFromCloudinary(photoUrls);
+      await bulkDeleteImages(photoUrls);
     }
 
     // Delete the students from database

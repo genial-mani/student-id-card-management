@@ -10,5 +10,6 @@ export interface Student {
   className?: string; // Attached dynamically on client
   classId?: string; // Attached dynamically on client
   customValues?: any;
+  classCustomValues?: any;
 }
 

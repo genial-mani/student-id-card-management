@@ -1,31 +1,76 @@
-import uploadImageToCloudinary from "./cloudService";
+import uploadImage from "./cloudService";
 
 /**
- * Loads an image from a URL into an HTMLImageElement with crossOrigin CORS enabled.
+ * Loads an image from a URL as a local Blob Object URL, completely eliminating
+ * canvas taint and CORS security errors.
  */
-export function loadImage(url: string): Promise<HTMLImageElement> {
+export async function loadImage(url: string): Promise<HTMLImageElement> {
+  if (!url || typeof url !== "string") {
+    throw new Error("Invalid image URL provided.");
+  }
+
+  const trimmedUrl = url.trim();
+
+  // If already a local blob or data URL, load directly
+  if (trimmedUrl.startsWith("blob:") || trimmedUrl.startsWith("data:")) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Failed to load local image."));
+      img.src = trimmedUrl;
+    });
+  }
+
+  let objectUrl = "";
+
+  // 1. Try direct fetch as CORS blob
+  try {
+    const res = await fetch(trimmedUrl, { mode: "cors" });
+    if (res.ok) {
+      const blob = await res.blob();
+      objectUrl = URL.createObjectURL(blob);
+    }
+  } catch {
+    // Direct CORS fetch failed, try via server proxy
+  }
+
+  // 2. Fallback to server proxy if direct fetch failed
+  if (!objectUrl) {
+    try {
+      const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(trimmedUrl)}`;
+      const proxyRes = await fetch(proxyUrl);
+      if (proxyRes.ok) {
+        const blob = await proxyRes.blob();
+        objectUrl = URL.createObjectURL(blob);
+      }
+    } catch {
+      // Proxy failed
+    }
+  }
+
+  // 3. Fallback to direct URL if both blob fetches failed
+  const finalSrc = objectUrl || trimmedUrl;
+
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
+    if (!objectUrl) {
+      img.crossOrigin = "anonymous";
+    }
     img.onload = () => resolve(img);
-    img.onerror = (err) => reject(new Error("Failed to load image for enhancement."));
-    // Add cache busting query parameter if needed to bypass CORS cache issues
-    const safeUrl = url.includes("cloudinary.com")
-      ? url
-      : `${url}${url.includes("?") ? "&" : "?"}_t=${Date.now()}`;
-    img.src = safeUrl;
+    img.onerror = () => reject(new Error("Failed to load image for enhancement."));
+    img.src = finalSrc;
   });
 }
 
 /**
  * Renders an image onto an offscreen canvas with brightness and contrast filters applied,
- * converts the canvas to a JPEG Blob, and uploads it to Cloudinary.
+ * converts the canvas to a JPEG Blob, and uploads it to storage (R2).
  *
  * @param imageUrl The original student profile picture URL
  * @param brightness Percentage value (100 is default, e.g. 125 for +25% brightness)
  * @param contrast Percentage value (100 is default, e.g. 110 for +10% contrast)
- * @param folder Optional Cloudinary folder name (e.g. "student_photos")
- * @returns The new Cloudinary CDN image URL
+ * @param folder Optional folder name (e.g. "student_photos")
+ * @returns The new CDN image URL
  */
 export async function processAndUploadStudentPhoto(
   imageUrl: string,
@@ -70,7 +115,7 @@ export async function processAndUploadStudentPhoto(
   const fileName = `student_photo_${Date.now()}.jpg`;
   const file = new File([blob], fileName, { type: "image/jpeg" });
 
-  // Upload processed file to Cloudinary
-  const newUrl = await uploadImageToCloudinary(file, folder);
+  // Upload processed file to R2
+  const newUrl = await uploadImage(file, folder);
   return newUrl;
 }

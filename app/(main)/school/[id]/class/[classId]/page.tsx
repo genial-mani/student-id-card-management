@@ -27,6 +27,7 @@ import BulkImportModal from "@/components/BulkImportModal";
 interface ClassData {
   id: string;
   name: string;
+  customValues?: any;
   school: {
     id: string;
     name: string;
@@ -275,6 +276,7 @@ export default function ClassPage() {
       ...student,
       className: classData.name,
       classId: classData.id,
+      classCustomValues: classData.customValues,
     }));
   }, [classData]);
 
@@ -723,6 +725,45 @@ export default function ClassPage() {
 
               {/* Action buttons on the right */}
               <div className="flex flex-wrap gap-1.5 sm:gap-2 shrink-0">
+                {/* Print ID Cards */}
+                {canEditOrDelete && (
+                  allStudents.length > 0 ? (
+                    <Link
+                      href={
+                        selectedStudentIds.length > 0
+                          ? `/school/${schoolId}/class/${classId}/print?selected=${selectedStudentIds.join(",")}`
+                          : `/school/${schoolId}/class/${classId}/print`
+                      }
+                      className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm ${
+                        selectedStudentIds.length > 0
+                          ? "bg-violet-600 hover:bg-violet-700 text-white border border-violet-700 shadow-md"
+                          : "bg-violet-50 hover:bg-violet-100 text-violet-750 border border-violet-200"
+                      }`}
+                      title={
+                        selectedStudentIds.length > 0
+                          ? `Print ID Cards for ${selectedStudentIds.length} selected students`
+                          : "Print ID Cards for all students in this class"
+                      }
+                    >
+                      <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
+                      <span>
+                        {selectedStudentIds.length > 0
+                          ? `Print Selected (${selectedStudentIds.length})`
+                          : "Print / Export PDF"}
+                      </span>
+                    </Link>
+                  ) : (
+                    <button
+                      disabled
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-50 text-gray-400 border border-gray-200 rounded-xl text-xs sm:text-sm font-bold h-10 opacity-60 cursor-not-allowed border-0"
+                      title="No students in this class to print"
+                    >
+                      <HugeiconsIcon icon={PrinterIcon} size={16} strokeWidth={2.5} />
+                      <span>Print / Export PDF</span>
+                    </button>
+                  )
+                )}
+
                 {/* Export Excel (Admin only) */}
                 {canEditOrDelete && (
                   <button

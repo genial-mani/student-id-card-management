@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import IdCard, { CardTheme } from "@/components/IdCard";
 import DocumentStudioTab from "@/components/document-studio/DocumentStudioTab";
 import { Rnd } from "react-rnd";
-import uploadImageToCloudinary from "@/utils/cloudService";
+import uploadImage from "@/utils/cloudService";
 import { toast } from "sonner";
 import ImageEnhancerModal from "@/components/ImageEnhancerModal";
 import { PrintSettingsPanel } from "@/components/PrintSettingsPanel";
@@ -877,15 +877,18 @@ export default function SchoolPage() {
   const activePreviewStudent = useMemo(() => {
     if (previewStudentIndex >= 0 && previewStudentIndex < filteredPreviewStudents.length) {
       const st = filteredPreviewStudents[previewStudentIndex];
-      const clsName = school?.classes?.find((c: any) => c.id === st.classId)?.name || (st as any).className || "";
+      const cls = school?.classes?.find((c: any) => c.id === st.classId);
+      const clsName = cls?.name || (st as any).className || "";
       return {
         ...st,
         classNameStr: clsName,
+        classCustomValues: (cls as any)?.customValues,
       };
     }
     return {
       ...DUMMY_STUDENT,
       classNameStr: "Demo Class",
+      classCustomValues: null,
     };
   }, [previewStudentIndex, filteredPreviewStudents, school]);
 
@@ -1151,7 +1154,7 @@ export default function SchoolPage() {
     setBgUploading(true);
     try {
       const folderName = school?.name.trim().split(/\s+/)[0] || "custom";
-      const url = await uploadImageToCloudinary(file, folderName);
+      const url = await uploadImage(file, folderName);
       setIdCardLayoutConfig((prev: any) => ({
         ...prev,
         backgroundUrl: url
@@ -2574,6 +2577,7 @@ export default function SchoolPage() {
                               school={{ ...school, idCardLayoutConfig: idCardLayoutConfig }}
                               student={activePreviewStudent}
                               classNameStr={activePreviewStudent.classNameStr || "Demo Class"}
+                              classCustomValues={activePreviewStudent.classCustomValues}
                               hideFields={true}
                             />
                           </div>
@@ -2736,11 +2740,19 @@ export default function SchoolPage() {
                                 label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
                               } else if (fieldKey.startsWith("school_custom_")) {
                                 const key = fieldKey.replace("school_custom_", "");
-                                val = `[${key}]`;
+                                let schoolCustomVals = school.customValues;
+                                if (typeof schoolCustomVals === "string") {
+                                  try { schoolCustomVals = JSON.parse(schoolCustomVals); } catch { schoolCustomVals = null; }
+                                }
+                                val = schoolCustomVals?.[key] || `[${key}]`;
                                 label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
                               } else if (fieldKey.startsWith("class_custom_")) {
                                 const key = fieldKey.replace("class_custom_", "");
-                                val = `[${key}]`;
+                                let classCustomVals = activePreviewStudent.classCustomValues;
+                                if (typeof classCustomVals === "string") {
+                                  try { classCustomVals = JSON.parse(classCustomVals); } catch { classCustomVals = null; }
+                                }
+                                val = classCustomVals?.[key] || `[${key}]`;
                                 label = `${key.charAt(0).toUpperCase() + key.slice(1)}: `;
                               }
 
