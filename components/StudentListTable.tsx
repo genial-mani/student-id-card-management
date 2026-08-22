@@ -115,7 +115,7 @@ export default function StudentListTable({
                     onChange={(e) => onSelectAll(e.target.checked)}
                     aria-label="Select all students"
                   />
-                </th>
+                </th> 
               )}
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-16 select-none">
                 Photo
