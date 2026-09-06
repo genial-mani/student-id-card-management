@@ -9,12 +9,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Missing image URL" }, { status: 400 });
     }
 
+    let finalUrl = imageUrl.trim();
+    if (finalUrl.startsWith("//")) {
+      finalUrl = `https:${finalUrl}`;
+    }
+
     // Validate protocol
-    if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
+    if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
       return NextResponse.json({ error: "Invalid URL protocol" }, { status: 400 });
     }
 
-    const response = await fetch(imageUrl, {
+    const response = await fetch(finalUrl, {
       headers: {
         "User-Agent": "Student-ID-Card-Manager/1.0",
       },
@@ -36,7 +41,8 @@ export async function GET(request: NextRequest) {
       headers: {
         "Content-Type": contentType,
         "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
       },
     });
   } catch (error: any) {
@@ -46,4 +52,15 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Headers": "*",
+    },
+  });
 }

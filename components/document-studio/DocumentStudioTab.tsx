@@ -2432,6 +2432,31 @@ function StudioDraggableField({
 // PRINT VIEW COMPONENT
 // ----------------------------------------------------------------------
 
+// Helper to ensure remote images can be fetched and rendered in canvas/PDF without CORS errors
+function getSafeImageUrl(url?: string | null): string {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("/")
+  ) {
+    return trimmed;
+  }
+  let finalUrl = trimmed;
+  if (finalUrl.startsWith("//")) {
+    finalUrl = `https:${finalUrl}`;
+  }
+  if (typeof window !== "undefined") {
+    const origin = window.location.origin;
+    if (finalUrl.startsWith(origin)) return finalUrl;
+  }
+  if (finalUrl.startsWith("http://") || finalUrl.startsWith("https://")) {
+    return `/api/proxy-image?url=${encodeURIComponent(finalUrl)}`;
+  }
+  return finalUrl;
+}
+
 function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields, onBack }: any) {
   const [printSettings, setPrintSettings] = useState<PrintSettings>({
     paperSize: "A4",
@@ -2440,6 +2465,35 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
     gapX: 2,
     gapY: 2,
   });
+
+  const [bgDataUrl, setBgDataUrl] = useState<string>("");
+
+  useEffect(() => {
+    if (!backgroundUrl) {
+      setBgDataUrl("");
+      return;
+    }
+    let isMounted = true;
+    (async () => {
+      try {
+        const safeUrl = getSafeImageUrl(backgroundUrl);
+        const res = await fetch(safeUrl);
+        if (res.ok) {
+          const blob = await res.blob();
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            if (isMounted && typeof reader.result === "string") {
+              setBgDataUrl(reader.result);
+            }
+          };
+          reader.readAsDataURL(blob);
+        }
+      } catch (err) {
+        console.warn("Failed to pre-convert background to data URL, will use safe URL:", err);
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [backgroundUrl]);
 
   const printGrid = useMemo(() => {
     return calculatePrintGridMm(printSettings, widthMm, heightMm, 2);
@@ -2475,14 +2529,16 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
   };
 
   const [isGeneratingCmyk, setIsGeneratingCmyk] = useState(false);
+  const [cmykProgress, setCmykProgress] = useState<string>("");
 
   const handleDownloadCmyk = async () => {
     setIsGeneratingCmyk(true);
+    setCmykProgress("Initializing export...");
     try {
       const h2iMod = await import("html-to-image");
       const jsPDFMod = await import("jspdf");
 
-      const { toPng } = h2iMod;
+      const { toJpeg } = h2iMod;
       const jsPDF = jsPDFMod.default || (jsPDFMod as any).jsPDF;
 
       // Determine orientation based on aspect ratio so jsPDF never auto-swaps width & height
@@ -2493,19 +2549,40 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
         format: [printGrid.paperWMm, printGrid.paperHMm],
       });
 
+      const transparentPixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
       const sheets = document.querySelectorAll('.sheet');
 
+      if (sheets.length === 0) {
+        toast.error("No sheets found to export.");
+        return;
+      }
+
       for (let i = 0; i < sheets.length; i++) {
+        const progressMsg = `Rendering sheet ${i + 1} of ${sheets.length}...`;
+        setCmykProgress(progressMsg);
+        toast.loading(progressMsg, { id: "cmyk-export" });
+
         const el = sheets[i] as HTMLElement;
-        const dataUrl = await toPng(el, {
+        const dataUrl = await toJpeg(el, {
+          quality: 0.95,
           pixelRatio: 2,
           backgroundColor: "#ffffff",
+          imagePlaceholder: transparentPixel,
+          onImageErrorHandler: (err: any) => {
+            console.warn(`[Sheet ${i + 1}] Image load warning during export:`, err);
+          },
+          skipFonts: false,
         });
 
         if (i > 0) pdf.addPage([printGrid.paperWMm, printGrid.paperHMm], pdfOrientation);
-        pdf.addImage(dataUrl, "PNG", 0, 0, printGrid.paperWMm, printGrid.paperHMm, undefined, "FAST", 0);
+        pdf.addImage(dataUrl, "JPEG", 0, 0, printGrid.paperWMm, printGrid.paperHMm, undefined, "FAST", 0);
+
+        if (sheets.length > 1 && i < sheets.length - 1) {
+          await new Promise((r) => setTimeout(r, 40));
+        }
       }
 
+      toast.loading("Applying CMYK Fogra39 profile...", { id: "cmyk-export" });
       const { PDFDocument, PDFName } = await import("pdf-lib");
       const pdfBytes = pdf.output("arraybuffer");
       const pdfDoc = await PDFDocument.load(pdfBytes);
@@ -2538,15 +2615,13 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
       const finalPdfBytes = await pdfDoc.save();
 
       if (typeof window !== 'undefined' && (window as any).electronAPI) {
-        toast.loading("Sending to local printer...");
+        toast.loading("Sending to local printer...", { id: "cmyk-export" });
         try {
           await (window as any).electronAPI.printPdf(Array.from(finalPdfBytes));
-          toast.dismiss();
-          toast.success("Sent to local printer successfully!");
+          toast.success("Sent to local printer successfully!", { id: "cmyk-export" });
         } catch (e: any) {
           console.error("Print failed:", e);
-          toast.dismiss();
-          toast.error("Local print failed: " + e.message);
+          toast.error("Local print failed: " + e.message, { id: "cmyk-export" });
         }
       } else {
         const blob = new Blob([finalPdfBytes as any], { type: "application/pdf" });
@@ -2558,12 +2633,14 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
+        toast.success("CMYK PDF downloaded successfully!", { id: "cmyk-export" });
       }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to generate CMYK PDF.");
+    } catch (err: any) {
+      console.error("CMYK export error:", err);
+      toast.error(`Failed to generate CMYK PDF: ${err?.message || "Error rendering images"}`, { id: "cmyk-export" });
     } finally {
       setIsGeneratingCmyk(false);
+      setCmykProgress("");
     }
   };
 
@@ -2583,8 +2660,8 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button onClick={handleDownloadCmyk} disabled={isGeneratingCmyk} className="bg-black hover:bg-gray-800 text-white">
-            <span className="ml-2">{isGeneratingCmyk ? "Generating CMYK..." : "Download CMYK PDF"}</span>
+          <Button onClick={handleDownloadCmyk} disabled={isGeneratingCmyk} className="bg-black hover:bg-gray-800 text-white min-w-[190px]">
+            <span className="ml-2">{isGeneratingCmyk ? (cmykProgress || "Generating CMYK...") : "Download CMYK PDF"}</span>
           </Button>
           <Button onClick={handlePrint} className="bg-violet-600 hover:bg-violet-700 text-white">
             <HugeiconsIcon icon={PrinterIcon} size={16} color="currentColor" />
@@ -2652,8 +2729,13 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
                         transformOrigin: "center center",
                       }}
                     >
-                      {backgroundUrl && (
-                        <Image src={backgroundUrl} alt="Background" fill className="object-fill" unoptimized priority />
+                      {(bgDataUrl || backgroundUrl) && (
+                        <img
+                          src={bgDataUrl || getSafeImageUrl(backgroundUrl)}
+                          alt="Background"
+                          className="object-fill absolute inset-0 w-full h-full pointer-events-none"
+                          crossOrigin="anonymous"
+                        />
                       )}
 
                       {Object.entries(fields).map(([key, f]: [string, any]) => {
@@ -2676,11 +2758,32 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
                         else if (key === "school_address") content = student.school?.address || "-";
                         else if (key === "school_phone") content = student.school?.phone || "-";
                         else if (key === "school_logo" && student.school?.logoUrl) {
-                          content = <Image src={student.school.logoUrl} alt="Logo" fill className="object-contain" unoptimized />;
+                          content = (
+                            <img
+                              src={getSafeImageUrl(student.school.logoUrl)}
+                              alt="Logo"
+                              className="object-contain w-full h-full block pointer-events-none"
+                              crossOrigin="anonymous"
+                            />
+                          );
                         } else if (key === "school_signature" && student.school?.signatureUrl) {
-                          content = <Image src={student.school.signatureUrl} alt="Signature" fill className="object-contain" unoptimized />;
+                          content = (
+                            <img
+                              src={getSafeImageUrl(student.school.signatureUrl)}
+                              alt="Signature"
+                              className="object-contain w-full h-full block pointer-events-none"
+                              crossOrigin="anonymous"
+                            />
+                          );
                         } else if (key === "student_photo" && student.profilePictureUrl) {
-                          content = <Image src={student.profilePictureUrl} alt="Photo" fill className="object-cover" unoptimized />;
+                          content = (
+                            <img
+                              src={getSafeImageUrl(student.profilePictureUrl)}
+                              alt="Photo"
+                              className="object-cover w-full h-full block pointer-events-none"
+                              crossOrigin="anonymous"
+                            />
+                          );
                         } else if (key.startsWith("student_custom_")) {
                           const customKey = key.replace("student_custom_", "");
                           const values = typeof student.customValues === 'string' ? JSON.parse(student.customValues || '{}') : (student.customValues || {});
