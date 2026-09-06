@@ -1780,26 +1780,25 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                   </div>
 
                   <div className="pt-2 border-t border-gray-200">
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center justify-between mb-1.5">
                       <label className="text-[10px] font-bold text-gray-500 uppercase">Box Dimensions ({editorUnit})</label>
-                      {(selectedField.width !== undefined || selectedField.height !== undefined) && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            updateFieldProperty("width", undefined);
-                            updateFieldProperty("height", undefined);
-                            updateFieldProperty("scaleX", undefined);
-                            updateFieldProperty("scaleY", undefined);
-                          }}
-                          className="text-[10px] font-bold text-violet-600 hover:underline cursor-pointer"
-                        >
-                          Auto Reset
-                        </button>
-                      )}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <span className="text-[9px] text-gray-400 font-bold block mb-0.5">Width</span>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[9px] text-gray-400 font-bold">Width</span>
+                          {selectedField.width !== undefined && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateFieldProperty("width", undefined);
+                              }}
+                              className="text-[9px] font-bold text-violet-600 hover:underline cursor-pointer"
+                            >
+                              Auto Reset
+                            </button>
+                          )}
+                        </div>
                         {editorUnit === "mm" ? (
                           <input
                             type="number"
@@ -1820,7 +1819,20 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                         )}
                       </div>
                       <div>
-                        <span className="text-[9px] text-gray-400 font-bold block mb-0.5">Height</span>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[9px] text-gray-400 font-bold">Height</span>
+                          {selectedField.height !== undefined && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateFieldProperty("height", undefined);
+                              }}
+                              className="text-[9px] font-bold text-violet-600 hover:underline cursor-pointer"
+                            >
+                              Auto Reset
+                            </button>
+                          )}
+                        </div>
                         {editorUnit === "mm" ? (
                           <input
                             type="number"
