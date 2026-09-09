@@ -2,7 +2,7 @@
 
 import { PDFDocument, StandardFonts, cmyk } from "pdf-lib";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { Rnd } from "react-rnd";
@@ -1116,6 +1116,9 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
     return (
       <DocumentPrintView
         students={students}
+        schoolClasses={schoolClasses}
+        initialClassFilter={selectedClassFilter}
+        school={school}
         widthMm={widthMm}
         heightMm={heightMm}
         backgroundUrl={backgroundUrl}
@@ -1311,8 +1314,8 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                   key={f.key}
                   onClick={() => fields[f.key] ? handleRemoveField(f.key) : handleAddField(f.key)}
                   className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${fields[f.key]
-                      ? 'bg-violet-600 text-white border-violet-600 shadow-xs'
-                      : 'bg-white text-gray-700 border-gray-200 hover:border-violet-300 hover:bg-violet-50'
+                    ? 'bg-violet-600 text-white border-violet-600 shadow-xs'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-violet-300 hover:bg-violet-50'
                     }`}
                 >
                   {f.label}
@@ -1356,21 +1359,32 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                     <div>
                       <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase mb-1">
                         <span>Width ({editorUnit})</span>
+                        {selectedField.width !== undefined && (
+                          <button
+                            type="button"
+                            onClick={() => updateFieldProperty("width", undefined)}
+                            className="text-[9px] font-bold text-violet-600 hover:underline cursor-pointer normal-case"
+                          >
+                            Auto Reset
+                          </button>
+                        )}
                       </div>
                       {editorUnit === "mm" ? (
                         <input
                           type="number"
                           step="0.1"
                           min="1"
-                          value={((selectedField.width || 100) / MM_TO_PX).toFixed(1)}
-                          onChange={e => updateFieldProperty("width", Math.round((parseFloat(e.target.value) || 1) * MM_TO_PX))}
+                          value={selectedField.width ? ((selectedField.width) / MM_TO_PX).toFixed(1) : ""}
+                          placeholder="Auto (26.5)"
+                          onChange={e => updateFieldProperty("width", e.target.value ? Math.round(parseFloat(e.target.value) * MM_TO_PX) : undefined)}
                           className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold"
                         />
                       ) : (
                         <input
                           type="number"
-                          value={selectedField.width || 100}
-                          onChange={e => updateFieldProperty("width", parseInt(e.target.value) || 100)}
+                          value={selectedField.width || ""}
+                          placeholder="Auto (100)"
+                          onChange={e => updateFieldProperty("width", e.target.value ? parseInt(e.target.value) : undefined)}
                           className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold"
                         />
                       )}
@@ -1379,21 +1393,32 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                     <div>
                       <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase mb-1">
                         <span>Height ({editorUnit})</span>
+                        {selectedField.height !== undefined && (
+                          <button
+                            type="button"
+                            onClick={() => updateFieldProperty("height", undefined)}
+                            className="text-[9px] font-bold text-violet-600 hover:underline cursor-pointer normal-case"
+                          >
+                            Auto Reset
+                          </button>
+                        )}
                       </div>
                       {editorUnit === "mm" ? (
                         <input
                           type="number"
                           step="0.1"
                           min="1"
-                          value={((selectedField.height || 100) / MM_TO_PX).toFixed(1)}
-                          onChange={e => updateFieldProperty("height", Math.round((parseFloat(e.target.value) || 1) * MM_TO_PX))}
+                          value={selectedField.height ? ((selectedField.height) / MM_TO_PX).toFixed(1) : ""}
+                          placeholder="Auto (26.5)"
+                          onChange={e => updateFieldProperty("height", e.target.value ? Math.round(parseFloat(e.target.value) * MM_TO_PX) : undefined)}
                           className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold"
                         />
                       ) : (
                         <input
                           type="number"
-                          value={selectedField.height || 100}
-                          onChange={e => updateFieldProperty("height", parseInt(e.target.value) || 100)}
+                          value={selectedField.height || ""}
+                          placeholder="Auto (100)"
+                          onChange={e => updateFieldProperty("height", e.target.value ? parseInt(e.target.value) : undefined)}
                           className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold"
                         />
                       )}
@@ -1881,8 +1906,8 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
               type="button"
               onClick={() => setShowRulerScale(!showRulerScale)}
               className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${showRulerScale
-                  ? "bg-violet-600 text-white border-violet-600 shadow-2xs"
-                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                ? "bg-violet-600 text-white border-violet-600 shadow-2xs"
+                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                 }`}
               title="Toggle Alignment Scale Ruler in mm/px"
             >
@@ -1893,8 +1918,8 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
               type="button"
               onClick={() => setShowGridOverlay(!showGridOverlay)}
               className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${showGridOverlay
-                  ? "bg-violet-600 text-white border-violet-600 shadow-2xs"
-                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                ? "bg-violet-600 text-white border-violet-600 shadow-2xs"
+                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                 }`}
               title="Toggle Grid Overlay"
             >
@@ -2111,8 +2136,8 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
                   {activeGuideDrag && (
                     <div
                       className={`absolute border-rose-500 z-50 pointer-events-none ${activeGuideDrag.type === "x"
-                          ? "top-0 bottom-0 border-l-2 border-dashed w-0 h-full"
-                          : "left-0 right-0 border-t-2 border-dashed h-0 w-full"
+                        ? "top-0 bottom-0 border-l-2 border-dashed w-0 h-full"
+                        : "left-0 right-0 border-t-2 border-dashed h-0 w-full"
                         }`}
                       style={{
                         left: activeGuideDrag.type === "x" ? `${activeGuideDrag.currentPx}px` : 0,
@@ -2391,7 +2416,7 @@ function StudioDraggableField({
     <Rnd
       bounds="parent"
       position={{ x: f.x || 0, y: f.y || 0 }}
-      size={{ width: f.width || 'auto', height: f.height || 'auto' }}
+      size={{ width: f.width || (fieldInfo.isImage ? 100 : 'auto'), height: f.height || (fieldInfo.isImage ? 100 : 'auto') }}
       scale={scale}
       onDragStart={(e, data) => onDragStart && onDragStart(fieldKey, data.x, data.y, innerRef.current?.offsetWidth || 0, innerRef.current?.offsetHeight || 0)}
       onDrag={(e, data) => onDragMove && onDragMove(fieldKey, data.x, data.y, innerRef.current?.offsetWidth || 0, innerRef.current?.offsetHeight || 0)}
@@ -2444,7 +2469,7 @@ function StudioDraggableField({
 // PRINT VIEW COMPONENT
 // ----------------------------------------------------------------------
 
-// Helper to ensure remote images can be fetched and rendered in canvas/PDF without CORS errors
+// Helper to ensure image URLs have valid protocol for direct browser loading
 function getSafeImageUrl(url?: string | null): string {
   if (!url) return "";
   const trimmed = url.trim();
@@ -2459,17 +2484,83 @@ function getSafeImageUrl(url?: string | null): string {
   if (finalUrl.startsWith("//")) {
     finalUrl = `https:${finalUrl}`;
   }
-  if (typeof window !== "undefined") {
-    const origin = window.location.origin;
-    if (finalUrl.startsWith(origin)) return finalUrl;
-  }
-  if (finalUrl.startsWith("http://") || finalUrl.startsWith("https://")) {
-    return `/api/proxy-image?url=${encodeURIComponent(finalUrl)}`;
-  }
   return finalUrl;
 }
 
-function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields, onBack }: any) {
+const dataUrlMemoryCache = new Map<string, string>();
+
+async function fetchAsDataUrl(rawUrl?: string | null): Promise<string> {
+  if (!rawUrl) return "";
+  const trimmed = rawUrl.trim();
+  if (trimmed.startsWith("data:")) return trimmed;
+  if (dataUrlMemoryCache.has(trimmed)) return dataUrlMemoryCache.get(trimmed)!;
+
+  let directUrl = trimmed;
+  if (directUrl.startsWith("//")) directUrl = `https:${directUrl}`;
+
+  // 1. Try direct browser Image load with crossOrigin="anonymous" (matching ID card generator)
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const ImgCtor = typeof window !== "undefined" ? window.Image : (globalThis as any).Image;
+      const el = new ImgCtor();
+      el.crossOrigin = "anonymous";
+      el.onload = () => resolve(el);
+      el.onerror = (e: any) => reject(e);
+      el.src = directUrl;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.drawImage(img, 0, 0);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+      if (dataUrl && dataUrl.startsWith("data:image/")) {
+        dataUrlMemoryCache.set(trimmed, dataUrl);
+        return dataUrl;
+      }
+    }
+  } catch (err) {
+    // Direct anonymous load or canvas read failed, will attempt proxy fallback below
+  }
+
+  // 2. Fallback: only if direct anonymous load failed, use proxy route
+  try {
+    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(directUrl)}`;
+    const res = await fetch(proxyUrl);
+    if (res.ok) {
+      const blob = await res.blob();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === "string") resolve(reader.result);
+          else reject(new Error("Failed reading as data URL"));
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      dataUrlMemoryCache.set(trimmed, dataUrl);
+      return dataUrl;
+    }
+  } catch (err) {
+    console.warn("Image load failed for:", rawUrl, err);
+  }
+
+  return directUrl;
+}
+
+function DocumentPrintView({
+  students = [],
+  schoolClasses = [],
+  initialClassFilter = "all",
+  school,
+  widthMm,
+  heightMm,
+  backgroundUrl,
+  fields,
+  onBack,
+}: any) {
   const [printSettings, setPrintSettings] = useState<PrintSettings>({
     paperSize: "A4",
     paperOrientation: "portrait",
@@ -2478,8 +2569,51 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
     gapY: 2,
   });
 
+  const [selectedClassId, setSelectedClassId] = useState<string>(initialClassFilter || "all");
+  const [exportRangeMode, setExportRangeMode] = useState<"all" | "range">("all");
+  const [rangeFrom, setRangeFrom] = useState<number>(1);
+  const [rangeTo, setRangeTo] = useState<number>(1);
+  const [imageAssetCache, setImageAssetCache] = useState<Record<string, string>>({});
   const [bgDataUrl, setBgDataUrl] = useState<string>("");
 
+  // Process & filter students
+  const displayStudents = useMemo(() => {
+    let list = students || [];
+    if (selectedClassId !== "all") {
+      list = list.filter((st: any) => (st.classId || st.class?.id) === selectedClassId);
+    }
+    const classOrderMap = new Map((schoolClasses || []).map((c: any, index: number) => [c.id, index]));
+    return [...list].sort((a: any, b: any) => {
+      const classIdA = a.classId || a.class?.id;
+      const classIdB = b.classId || b.class?.id;
+      const orderA = Number(classOrderMap.get(classIdA) ?? 9999);
+      const orderB = Number(classOrderMap.get(classIdB) ?? 9999);
+      if (orderA !== orderB) return orderA - orderB;
+
+      const idA = (a.idNo || a.camSno || a.name || "").toString();
+      const idB = (b.idNo || b.camSno || b.name || "").toString();
+      return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: "base" });
+    }).map((st: any) => {
+      const clsName = schoolClasses.find((c: any) => c.id === (st.classId || st.class?.id))?.name || st.className || st.class?.name || "";
+      return {
+        ...st,
+        classNameStr: clsName,
+        school: st.school || school,
+      };
+    });
+  }, [students, selectedClassId, schoolClasses, school]);
+
+  const printGrid = useMemo(() => {
+    return calculatePrintGridMm(printSettings, widthMm, heightMm, 2);
+  }, [printSettings, widthMm, heightMm]);
+
+  const totalSheets = Math.max(1, Math.ceil(displayStudents.length / Math.max(1, printGrid.itemsPerPage)));
+
+  useEffect(() => {
+    setRangeTo((prev) => Math.min(Math.max(prev, 1), totalSheets));
+  }, [totalSheets]);
+
+  // Pre-convert background
   useEffect(() => {
     if (!backgroundUrl) {
       setBgDataUrl("");
@@ -2488,28 +2622,103 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
     let isMounted = true;
     (async () => {
       try {
-        const safeUrl = getSafeImageUrl(backgroundUrl);
-        const res = await fetch(safeUrl);
-        if (res.ok) {
-          const blob = await res.blob();
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            if (isMounted && typeof reader.result === "string") {
-              setBgDataUrl(reader.result);
-            }
-          };
-          reader.readAsDataURL(blob);
+        const dUrl = await fetchAsDataUrl(backgroundUrl);
+        if (isMounted && dUrl) {
+          setBgDataUrl(dUrl);
         }
       } catch (err) {
-        console.warn("Failed to pre-convert background to data URL, will use safe URL:", err);
+        console.warn("Failed pre-converting background:", err);
       }
     })();
     return () => { isMounted = false; };
   }, [backgroundUrl]);
 
-  const printGrid = useMemo(() => {
-    return calculatePrintGridMm(printSettings, widthMm, heightMm, 2);
-  }, [printSettings, widthMm, heightMm]);
+  // Background asset prefetching for snappy display
+  useEffect(() => {
+    let isCancelled = false;
+    const urls = new Set<string>();
+    if (backgroundUrl) urls.add(backgroundUrl);
+    if (school?.logoUrl) urls.add(school.logoUrl);
+    if (school?.signatureUrl) urls.add(school.signatureUrl);
+
+    displayStudents.forEach((st: any) => {
+      const photo = st.profilePictureUrl || st.photoUrl || st.profilePic;
+      if (photo) urls.add(photo);
+      if (st.school?.logoUrl) urls.add(st.school.logoUrl);
+      if (st.school?.signatureUrl) urls.add(st.school.signatureUrl);
+    });
+
+    const missing = Array.from(urls).filter((u) => u && !imageAssetCache[u]);
+    if (missing.length === 0) return;
+
+    const CONCURRENCY = 12;
+    let idx = 0;
+    const newEntries: Record<string, string> = {};
+
+    const worker = async () => {
+      while (idx < missing.length && !isCancelled) {
+        const u = missing[idx++];
+        try {
+          const d = await fetchAsDataUrl(u);
+          if (d) newEntries[u] = d;
+        } catch (e) {
+          // ignore
+        }
+      }
+    };
+
+    Promise.all(Array.from({ length: Math.min(CONCURRENCY, missing.length) }, () => worker())).then(() => {
+      if (!isCancelled && Object.keys(newEntries).length > 0) {
+        setImageAssetCache((prev) => ({ ...prev, ...newEntries }));
+      }
+    });
+
+    return () => { isCancelled = true; };
+  }, [displayStudents, backgroundUrl, school]);
+
+  // Ensure all assets on targeted sheets are converted to Data URLs before PDF export
+  const ensureAssetsCached = useCallback(async (targetStudents: any[]) => {
+    const urls = new Set<string>();
+    if (backgroundUrl) urls.add(backgroundUrl);
+    if (school?.logoUrl) urls.add(school.logoUrl);
+    if (school?.signatureUrl) urls.add(school.signatureUrl);
+
+    targetStudents.forEach((st: any) => {
+      const photo = st.profilePictureUrl || st.photoUrl || st.profilePic;
+      if (photo) urls.add(photo);
+      if (st.school?.logoUrl) urls.add(st.school.logoUrl);
+      if (st.school?.signatureUrl) urls.add(st.school.signatureUrl);
+    });
+
+    const missing = Array.from(urls).filter((u) => u && !imageAssetCache[u]);
+    if (missing.length === 0) return;
+
+    const CONCURRENCY = 15;
+    let idx = 0;
+    const newEntries: Record<string, string> = {};
+
+    const worker = async () => {
+      while (idx < missing.length) {
+        const u = missing[idx++];
+        try {
+          const d = await fetchAsDataUrl(u);
+          if (d) newEntries[u] = d;
+        } catch (e) {
+          console.warn("Failed caching asset:", u, e);
+        }
+      }
+    };
+
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, missing.length) }, () => worker())
+    );
+
+    if (Object.keys(newEntries).length > 0) {
+      setImageAssetCache((prev) => ({ ...prev, ...newEntries }));
+      // Give React DOM cycle time to render the base64 data URLs into <img src>
+      await new Promise((r) => setTimeout(r, 60));
+    }
+  }, [backgroundUrl, school, imageAssetCache]);
 
   useEffect(() => {
     const style = document.createElement('style');
@@ -2553,6 +2762,51 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
       const { toJpeg } = h2iMod;
       const jsPDF = jsPDFMod.default || (jsPDFMod as any).jsPDF;
 
+      const sheets = document.querySelectorAll('.sheet');
+      if (sheets.length === 0) {
+        toast.error("No sheets found to export.");
+        return;
+      }
+
+      // Determine which sheet indices to export based on range settings
+      let targetIndices: number[] = [];
+      if (exportRangeMode === "range") {
+        const from = Math.max(1, Math.min(rangeFrom, sheets.length));
+        const to = Math.max(from, Math.min(rangeTo, sheets.length));
+        for (let i = from - 1; i < to; i++) {
+          targetIndices.push(i);
+        }
+      } else {
+        targetIndices = Array.from({ length: sheets.length }, (_, i) => i);
+      }
+
+      if (targetIndices.length === 0) {
+        toast.error("Invalid sheet range selected.");
+        return;
+      }
+
+      // Pre-cache all images for the target students as base64 Data URLs so html-to-image is fast and reliable
+      const targetStudents: any[] = [];
+      targetIndices.forEach((idx) => {
+        const slice = displayStudents.slice(idx * printGrid.itemsPerPage, (idx + 1) * printGrid.itemsPerPage);
+        targetStudents.push(...slice);
+      });
+
+      setCmykProgress(`Caching images (${targetStudents.length} docs)...`);
+      await ensureAssetsCached(targetStudents);
+
+      // Pre-extract fontEmbedCSS once so html-to-image doesn't re-scan all stylesheets for every sheet
+      let fontEmbedCSS: string | undefined = undefined;
+      try {
+        if (sheets.length > 0) {
+          fontEmbedCSS = await h2iMod.getFontEmbedCSS(sheets[0] as HTMLElement, {
+            includeQueryParams: true,
+          });
+        }
+      } catch (fontErr) {
+        console.warn("Could not pre-extract fontEmbedCSS, continuing without it:", fontErr);
+      }
+
       // Determine orientation based on aspect ratio so jsPDF never auto-swaps width & height
       const pdfOrientation = printGrid.paperWMm > printGrid.paperHMm ? "landscape" : "portrait";
       const pdf = new jsPDF({
@@ -2562,35 +2816,47 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
       });
 
       const transparentPixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
-      const sheets = document.querySelectorAll('.sheet');
+      const jpegOptions = {
+        quality: 0.90,
+        pixelRatio: 1.5,
+        backgroundColor: "#ffffff",
+        includeQueryParams: true,
+        fontEmbedCSS: fontEmbedCSS || "",
+        imagePlaceholder: transparentPixel,
+        onImageErrorHandler: (err: any) => {
+          console.warn("Image load warning during export:", err);
+        },
+      };
 
-      if (sheets.length === 0) {
-        toast.error("No sheets found to export.");
-        return;
-      }
+      // Process sheets in parallel batches of 2 for maximum speed without memory exhaustion
+      const BATCH_SIZE = 2;
+      const totalToRender = targetIndices.length;
 
-      for (let i = 0; i < sheets.length; i++) {
-        const progressMsg = `Rendering sheet ${i + 1} of ${sheets.length}...`;
+      for (let b = 0; b < targetIndices.length; b += BATCH_SIZE) {
+        const batch = targetIndices.slice(b, b + BATCH_SIZE);
+        const progressMsg = `Rendering sheet ${b + 1}${batch.length > 1 ? `-${Math.min(b + batch.length, totalToRender)}` : ""} of ${totalToRender}...`;
         setCmykProgress(progressMsg);
         toast.loading(progressMsg, { id: "cmyk-export" });
 
-        const el = sheets[i] as HTMLElement;
-        const dataUrl = await toJpeg(el, {
-          quality: 0.95,
-          pixelRatio: 2,
-          backgroundColor: "#ffffff",
-          imagePlaceholder: transparentPixel,
-          onImageErrorHandler: (err: any) => {
-            console.warn(`[Sheet ${i + 1}] Image load warning during export:`, err);
-          },
-          skipFonts: false,
-        });
+        const batchResults = await Promise.all(
+          batch.map(async (sheetIdx) => {
+            const el = sheets[sheetIdx] as HTMLElement;
+            const dataUrl = await toJpeg(el, jpegOptions);
+            return { sheetIdx, dataUrl };
+          })
+        );
 
-        if (i > 0) pdf.addPage([printGrid.paperWMm, printGrid.paperHMm], pdfOrientation);
-        pdf.addImage(dataUrl, "JPEG", 0, 0, printGrid.paperWMm, printGrid.paperHMm, undefined, "FAST", 0);
+        for (let r = 0; r < batchResults.length; r++) {
+          const { dataUrl } = batchResults[r];
+          const globalIdx = b + r;
+          if (globalIdx > 0) {
+            pdf.addPage([printGrid.paperWMm, printGrid.paperHMm], pdfOrientation);
+          }
+          pdf.addImage(dataUrl, "JPEG", 0, 0, printGrid.paperWMm, printGrid.paperHMm, undefined, "FAST", 0);
+        }
 
-        if (sheets.length > 1 && i < sheets.length - 1) {
-          await new Promise((r) => setTimeout(r, 40));
+        if (b + BATCH_SIZE < targetIndices.length) {
+          await new Promise((r) => setTimeout(r, 15));
         }
       }
 
@@ -2626,6 +2892,10 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
 
       const finalPdfBytes = await pdfDoc.save();
 
+      const fileName = targetIndices.length === sheets.length
+        ? "Document_CMYK_All.pdf"
+        : `Document_CMYK_Sheets_${targetIndices[0] + 1}_to_${targetIndices[targetIndices.length - 1] + 1}.pdf`;
+
       if (typeof window !== 'undefined' && (window as any).electronAPI) {
         toast.loading("Sending to local printer...", { id: "cmyk-export" });
         try {
@@ -2640,7 +2910,7 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = "Document_CMYK.pdf";
+        link.download = fileName;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -2656,26 +2926,101 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
     }
   };
 
+  const sheetsToExportCount = exportRangeMode === "range"
+    ? Math.max(1, Math.min(rangeTo, totalSheets) - Math.max(1, Math.min(rangeFrom, totalSheets)) + 1)
+    : totalSheets;
+
   return (
     <div className="bg-gray-100 min-h-full pb-20">
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50 no-print">
+      <div className="bg-white border-b border-gray-200 px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 no-print">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-2 -ml-2 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Print Preview</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-bold text-gray-900">Print Preview</h2>
+              {schoolClasses && schoolClasses.length > 0 && (
+                <select
+                  value={selectedClassId}
+                  onChange={(e) => {
+                    setSelectedClassId(e.target.value);
+                    setRangeFrom(1);
+                    setRangeTo(10);
+                  }}
+                  className="text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-violet-500 focus:outline-none"
+                >
+                  <option value="all">All Classes ({students.length})</option>
+                  {schoolClasses.map((cls: any) => {
+                    const count = (students || []).filter((s: any) => (s.classId || s.class?.id) === cls.id).length;
+                    return (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.name} ({count})
+                      </option>
+                    );
+                  })}
+                </select>
+              )}
+            </div>
             <p className="text-sm text-gray-500">
-              {students.length} documents to print
+              {displayStudents.length} documents to print ({totalSheets} {totalSheets === 1 ? "sheet" : "sheets"})
               {!printGrid.fits && <span className="text-rose-500 font-bold ml-2">Error: Paper size too small.</span>}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={handleDownloadCmyk} disabled={isGeneratingCmyk} className="bg-black hover:bg-gray-800 text-white min-w-[190px]">
-            <span className="ml-2">{isGeneratingCmyk ? (cmykProgress || "Generating CMYK...") : "Download CMYK PDF"}</span>
+
+        <div className="flex items-center flex-wrap gap-3">
+          {/* Export Range Selector */}
+          <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg p-1 text-xs">
+            <button
+              type="button"
+              onClick={() => setExportRangeMode("all")}
+              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                exportRangeMode === "all" ? "bg-white text-gray-900 shadow-xs font-semibold" : "text-gray-500 hover:text-gray-900"
+              }`}
+            >
+              All ({totalSheets})
+            </button>
+            <button
+              type="button"
+              onClick={() => setExportRangeMode("range")}
+              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                exportRangeMode === "range" ? "bg-white text-gray-900 shadow-xs font-semibold" : "text-gray-500 hover:text-gray-900"
+              }`}
+            >
+              Range
+            </button>
+            {exportRangeMode === "range" && (
+              <div className="flex items-center gap-1 pl-1">
+                <input
+                  type="number"
+                  min={1}
+                  max={totalSheets}
+                  value={rangeFrom}
+                  onChange={(e) => setRangeFrom(Math.max(1, Math.min(totalSheets, parseInt(e.target.value) || 1)))}
+                  className="w-12 px-1.5 py-0.5 text-center bg-white border border-gray-200 rounded text-xs font-semibold"
+                />
+                <span className="text-gray-400">to</span>
+                <input
+                  type="number"
+                  min={rangeFrom}
+                  max={totalSheets}
+                  value={rangeTo}
+                  onChange={(e) => setRangeTo(Math.max(rangeFrom, Math.min(totalSheets, parseInt(e.target.value) || 1)))}
+                  className="w-12 px-1.5 py-0.5 text-center bg-white border border-gray-200 rounded text-xs font-semibold"
+                />
+              </div>
+            )}
+          </div>
+
+          <Button onClick={handleDownloadCmyk} disabled={isGeneratingCmyk || !printGrid.fits} className="bg-black hover:bg-gray-800 text-white min-w-[200px]">
+            <span className="ml-2">
+              {isGeneratingCmyk
+                ? (cmykProgress || "Generating CMYK...")
+                : `Download CMYK (${sheetsToExportCount} ${sheetsToExportCount === 1 ? "sheet" : "sheets"})`}
+            </span>
           </Button>
-          <Button onClick={handlePrint} className="bg-violet-600 hover:bg-violet-700 text-white">
+          <Button onClick={handlePrint} disabled={!printGrid.fits} className="bg-violet-600 hover:bg-violet-700 text-white">
             <HugeiconsIcon icon={PrinterIcon} size={16} color="currentColor" />
             <span className="ml-2">Print Documents</span>
           </Button>
@@ -2696,8 +3041,8 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
           </div>
         )}
 
-        {printGrid.fits && Array.from({ length: Math.ceil(students.length / Math.max(1, printGrid.itemsPerPage)) }).map((_, sheetIdx) => {
-          const sheetStudents = students.slice(sheetIdx * printGrid.itemsPerPage, (sheetIdx + 1) * printGrid.itemsPerPage);
+        {printGrid.fits && Array.from({ length: totalSheets }).map((_, sheetIdx) => {
+          const sheetStudents = displayStudents.slice(sheetIdx * printGrid.itemsPerPage, (sheetIdx + 1) * printGrid.itemsPerPage);
           return (
             <div
               key={`sheet-${sheetIdx}`}
@@ -2722,7 +3067,7 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
 
                 return (
                   <div
-                    key={student.id || i}
+                    key={student.id || `${sheetIdx}-${i}`}
                     style={{
                       position: "absolute",
                       left: `${xMm}mm`,
@@ -2743,7 +3088,7 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
                     >
                       {(bgDataUrl || backgroundUrl) && (
                         <img
-                          src={bgDataUrl || getSafeImageUrl(backgroundUrl)}
+                          src={bgDataUrl || imageAssetCache[backgroundUrl] || getSafeImageUrl(backgroundUrl)}
                           alt="Background"
                           className="object-fill absolute inset-0 w-full h-full pointer-events-none"
                           crossOrigin="anonymous"
@@ -2769,33 +3114,45 @@ function DocumentPrintView({ students, widthMm, heightMm, backgroundUrl, fields,
                         else if (key === "school_caption") content = student.school?.caption || "-";
                         else if (key === "school_address") content = student.school?.address || "-";
                         else if (key === "school_phone") content = student.school?.phone || "-";
-                        else if (key === "school_logo" && student.school?.logoUrl) {
-                          content = (
-                            <img
-                              src={getSafeImageUrl(student.school.logoUrl)}
-                              alt="Logo"
-                              className="object-contain w-full h-full block pointer-events-none"
-                              crossOrigin="anonymous"
-                            />
-                          );
-                        } else if (key === "school_signature" && student.school?.signatureUrl) {
-                          content = (
-                            <img
-                              src={getSafeImageUrl(student.school.signatureUrl)}
-                              alt="Signature"
-                              className="object-contain w-full h-full block pointer-events-none"
-                              crossOrigin="anonymous"
-                            />
-                          );
-                        } else if (key === "student_photo" && student.profilePictureUrl) {
-                          content = (
-                            <img
-                              src={getSafeImageUrl(student.profilePictureUrl)}
-                              alt="Photo"
-                              className="object-cover w-full h-full block pointer-events-none"
-                              crossOrigin="anonymous"
-                            />
-                          );
+                        else if (key === "school_logo") {
+                          const logoUrl = student.school?.logoUrl || school?.logoUrl;
+                          if (logoUrl) {
+                            const logoSrc = imageAssetCache[logoUrl] || getSafeImageUrl(logoUrl);
+                            content = (
+                              <img
+                                src={logoSrc}
+                                alt="Logo"
+                                className="object-contain w-full h-full block pointer-events-none"
+                                crossOrigin="anonymous"
+                              />
+                            );
+                          }
+                        } else if (key === "school_signature") {
+                          const sigUrl = student.school?.signatureUrl || school?.signatureUrl;
+                          if (sigUrl) {
+                            const sigSrc = imageAssetCache[sigUrl] || getSafeImageUrl(sigUrl);
+                            content = (
+                              <img
+                                src={sigSrc}
+                                alt="Signature"
+                                className="object-contain w-full h-full block pointer-events-none"
+                                crossOrigin="anonymous"
+                              />
+                            );
+                          }
+                        } else if (key === "student_photo") {
+                          const photoUrl = student.profilePictureUrl || student.photoUrl || student.profilePic;
+                          if (photoUrl) {
+                            const photoSrc = imageAssetCache[photoUrl] || getSafeImageUrl(photoUrl);
+                            content = (
+                              <img
+                                src={photoSrc}
+                                alt="Photo"
+                                className="object-cover w-full h-full block pointer-events-none"
+                                crossOrigin="anonymous"
+                              />
+                            );
+                          }
                         } else if (key.startsWith("student_custom_")) {
                           const customKey = key.replace("student_custom_", "");
                           const values = typeof student.customValues === 'string' ? JSON.parse(student.customValues || '{}') : (student.customValues || {});
