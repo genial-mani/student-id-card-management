@@ -19,6 +19,9 @@ import {
 import { PrintSettingsPanel } from "@/components/PrintSettingsPanel";
 import { PrintSettings, calculatePrintGridMm, getPaperInfo } from "@/utils/printLayoutEngine";
 import ImageEnhancerModal from "@/components/ImageEnhancerModal";
+import ClassPrintSelector from "@/components/ClassPrintSelector";
+import PrintCountLimiter from "@/components/PrintCountLimiter";
+import CollapsibleSheetsDiv from "@/components/CollapsibleSheetsDiv";
 
 // Conversion factor for display: 1 mm ≈ 3.7795 px
 const MM_TO_PX = 3.7795275591;
@@ -2325,7 +2328,6 @@ function StudioDraggableField({
 
   const imgStyle: React.CSSProperties = {
     borderRadius: imgRadius,
-    border: imgBorderW > 0 ? `${imgBorderW}px solid ${imgBorderC}` : undefined,
     boxSizing: "border-box",
   };
 
@@ -2569,18 +2571,22 @@ function DocumentPrintView({
     gapY: 2,
   });
 
-  const [selectedClassId, setSelectedClassId] = useState<string>(initialClassFilter || "all");
+  const [selectedClassIds, setSelectedClassIds] = useState<string[]>(
+    initialClassFilter && initialClassFilter !== "all" ? [initialClassFilter] : []
+  );
+  const [customDocCount, setCustomDocCount] = useState<number | null>(null);
   const [exportRangeMode, setExportRangeMode] = useState<"all" | "range">("all");
   const [rangeFrom, setRangeFrom] = useState<number>(1);
   const [rangeTo, setRangeTo] = useState<number>(1);
   const [imageAssetCache, setImageAssetCache] = useState<Record<string, string>>({});
   const [bgDataUrl, setBgDataUrl] = useState<string>("");
 
-  // Process & filter students
-  const displayStudents = useMemo(() => {
+  // Process & filter students by selected class(es)
+  const filteredStudents = useMemo(() => {
     let list = students || [];
-    if (selectedClassId !== "all") {
-      list = list.filter((st: any) => (st.classId || st.class?.id) === selectedClassId);
+    if (selectedClassIds.length > 0) {
+      const set = new Set(selectedClassIds);
+      list = list.filter((st: any) => set.has(st.classId || st.class?.id));
     }
     const classOrderMap = new Map((schoolClasses || []).map((c: any, index: number) => [c.id, index]));
     return [...list].sort((a: any, b: any) => {
@@ -2601,7 +2607,15 @@ function DocumentPrintView({
         school: st.school || school,
       };
     });
-  }, [students, selectedClassId, schoolClasses, school]);
+  }, [students, selectedClassIds, schoolClasses, school]);
+
+  // Apply document count limit (if user specified a limit)
+  const displayStudents = useMemo(() => {
+    if (customDocCount !== null && customDocCount > 0) {
+      return filteredStudents.slice(0, customDocCount);
+    }
+    return filteredStudents;
+  }, [filteredStudents, customDocCount]);
 
   const printGrid = useMemo(() => {
     return calculatePrintGridMm(printSettings, widthMm, heightMm, 2);
@@ -2938,32 +2952,36 @@ function DocumentPrintView({
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
           <div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-lg font-bold text-gray-900">Print Preview</h2>
               {schoolClasses && schoolClasses.length > 0 && (
-                <select
-                  value={selectedClassId}
-                  onChange={(e) => {
-                    setSelectedClassId(e.target.value);
+                <ClassPrintSelector
+                  classes={schoolClasses}
+                  students={students}
+                  selectedClassIds={selectedClassIds}
+                  onChange={(newIds) => {
+                    setSelectedClassIds(newIds);
                     setRangeFrom(1);
                     setRangeTo(10);
                   }}
-                  className="text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-violet-500 focus:outline-none"
-                >
-                  <option value="all">All Classes ({students.length})</option>
-                  {schoolClasses.map((cls: any) => {
-                    const count = (students || []).filter((s: any) => (s.classId || s.class?.id) === cls.id).length;
-                    return (
-                      <option key={cls.id} value={cls.id}>
-                        {cls.name} ({count})
-                      </option>
-                    );
-                  })}
-                </select>
+                />
               )}
+              <PrintCountLimiter
+                label="Documents to print"
+                totalAvailable={filteredStudents.length}
+                countLimit={customDocCount}
+                onChange={setCustomDocCount}
+              />
             </div>
-            <p className="text-sm text-gray-500">
-              {displayStudents.length} documents to print ({totalSheets} {totalSheets === 1 ? "sheet" : "sheets"})
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+              {displayStudents.length} {displayStudents.length === 1 ? "document" : "documents"} to print
+              {customDocCount !== null && customDocCount < filteredStudents.length && (
+                <span className="text-violet-600 font-semibold ml-1">
+                  (limited from {filteredStudents.length})
+                </span>
+              )}
+              {" · "}
+              {totalSheets} {totalSheets === 1 ? "sheet" : "sheets"}
               {!printGrid.fits && <span className="text-rose-500 font-bold ml-2">Error: Paper size too small.</span>}
             </p>
           </div>
@@ -3024,6 +3042,22 @@ function DocumentPrintView({
             <HugeiconsIcon icon={PrinterIcon} size={16} color="currentColor" />
             <span className="ml-2">Print Documents</span>
           </Button>
+
+          {totalSheets > 1 && (
+            <CollapsibleSheetsDiv
+              totalSheets={totalSheets}
+              downloading={null}
+              onSelectSheet={(sheetIdx) => {
+                setExportRangeMode("range");
+                setRangeFrom(sheetIdx + 1);
+                setRangeTo(sheetIdx + 1);
+                const el = document.querySelectorAll('.sheet')[sheetIdx];
+                el?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+              label="Single Sheets"
+              className="w-auto"
+            />
+          )}
         </div>
       </div>
 
@@ -3114,16 +3148,29 @@ function DocumentPrintView({
                         else if (key === "school_caption") content = student.school?.caption || "-";
                         else if (key === "school_address") content = student.school?.address || "-";
                         else if (key === "school_phone") content = student.school?.phone || "-";
-                        else if (key === "school_logo") {
+                        const isImage = key === "school_logo" || key === "student_photo" || key === "school_signature";
+                        const imgBorderW = isImage ? (typeof f.borderWidth === "number" ? f.borderWidth : (parseInt(f.borderWidth || "0", 10) || 0)) : 0;
+                        const imgBorderC = f.borderColor || "#000000";
+                        const imgRadius = isImage && f.borderRadius ? (typeof f.borderRadius === "number" ? `${f.borderRadius}px` : (f.borderRadius.toString().endsWith("px") || f.borderRadius.toString().endsWith("%") ? f.borderRadius : `${f.borderRadius}px`)) : undefined;
+
+                        let imageContent: React.ReactNode = null;
+                        if (key === "school_logo") {
                           const logoUrl = student.school?.logoUrl || school?.logoUrl;
                           if (logoUrl) {
                             const logoSrc = imageAssetCache[logoUrl] || getSafeImageUrl(logoUrl);
-                            content = (
+                            imageContent = (
                               <img
                                 src={logoSrc}
                                 alt="Logo"
-                                className="object-contain w-full h-full block pointer-events-none"
+                                className="w-full h-full object-contain block pointer-events-none"
                                 crossOrigin="anonymous"
+                                style={{
+                                  borderRadius: imgRadius,
+                                  boxSizing: "border-box",
+                                  display: "block",
+                                  padding: 0,
+                                  margin: 0,
+                                }}
                               />
                             );
                           }
@@ -3131,12 +3178,19 @@ function DocumentPrintView({
                           const sigUrl = student.school?.signatureUrl || school?.signatureUrl;
                           if (sigUrl) {
                             const sigSrc = imageAssetCache[sigUrl] || getSafeImageUrl(sigUrl);
-                            content = (
+                            imageContent = (
                               <img
                                 src={sigSrc}
                                 alt="Signature"
-                                className="object-contain w-full h-full block pointer-events-none"
+                                className="w-full h-full object-contain block pointer-events-none"
                                 crossOrigin="anonymous"
+                                style={{
+                                  borderRadius: imgRadius,
+                                  boxSizing: "border-box",
+                                  display: "block",
+                                  padding: 0,
+                                  margin: 0,
+                                }}
                               />
                             );
                           }
@@ -3144,16 +3198,38 @@ function DocumentPrintView({
                           const photoUrl = student.profilePictureUrl || student.photoUrl || student.profilePic;
                           if (photoUrl) {
                             const photoSrc = imageAssetCache[photoUrl] || getSafeImageUrl(photoUrl);
-                            content = (
+                            imageContent = (
                               <img
                                 src={photoSrc}
                                 alt="Photo"
-                                className="object-cover w-full h-full block pointer-events-none"
+                                className="w-full h-full object-cover block pointer-events-none"
                                 crossOrigin="anonymous"
+                                style={{
+                                  borderRadius: imgRadius,
+                                  boxSizing: "border-box",
+                                  display: "block",
+                                  padding: 0,
+                                  margin: 0,
+                                }}
                               />
                             );
                           }
-                        } else if (key.startsWith("student_custom_")) {
+                        }
+
+                        if (key === "student_name") content = student.name;
+                        else if (key === "student_class") { content = student.classNameStr || student.className || student.class?.name || "-"; labelStr = "Class: "; }
+                        else if (key === "student_camSno") { content = student.camSno || "-"; labelStr = "CAM S.No: "; }
+                        else if (key === "student_idNo") { content = student.idNo || "-"; labelStr = "ID No: "; }
+                        else if (key === "student_fatherName") { content = student.fatherName || "-"; labelStr = "Father: "; }
+                        else if (key === "student_motherName") { content = student.motherName || "-"; labelStr = "Mother: "; }
+                        else if (key === "student_fatherPhone") { content = student.fatherPhone || "-"; labelStr = "Cell: "; }
+                        else if (key === "student_motherPhone") { content = student.motherPhone || "-"; labelStr = "Cell: "; }
+                        else if (key === "student_address") { content = student.address || "-"; labelStr = "Address: "; }
+                        else if (key === "school_name") content = student.school?.name || "-";
+                        else if (key === "school_caption") content = student.school?.caption || "-";
+                        else if (key === "school_address") content = student.school?.address || "-";
+                        else if (key === "school_phone") content = student.school?.phone || "-";
+                        else if (key.startsWith("student_custom_")) {
                           const customKey = key.replace("student_custom_", "");
                           const values = typeof student.customValues === 'string' ? JSON.parse(student.customValues || '{}') : (student.customValues || {});
                           content = values[customKey] || "-";
@@ -3170,6 +3246,9 @@ function DocumentPrintView({
                           labelStr = `${customKey.charAt(0).toUpperCase() + customKey.slice(1)}: `;
                         }
 
+                        if (isImage && !imageContent) return null;
+                        if (!isImage && !content) return null;
+
                         const isPrintSingleLine = f.addressFormat === "singleline_space" || f.addressFormat === "singleline_comma" || f.addressFormat === "singleline";
                         if (isPrintSingleLine && typeof content === "string") {
                           if (f.addressFormat === "singleline_comma") {
@@ -3179,37 +3258,56 @@ function DocumentPrintView({
                           }
                         }
 
-                        if (!content) return null;
-
-                        const isImage = key === "school_logo" || key === "student_photo" || key === "school_signature";
+                        const isAddr = (key === "school_address" || key === "student_address") && !isPrintSingleLine;
+                        const isMulti = isAddr || key === "school_name" || key === "school_caption";
 
                         return (
                           <div
                             key={key}
-                            className="absolute"
+                            className="absolute flex flex-col select-none"
                             style={{
-                              left: `${f.x}px`,
-                              top: `${f.y}px`,
-                              width: isImage ? `${f.width || 100}px` : (f.width ? `${f.width}px` : 'auto'),
-                              height: isImage ? `${f.height || 100}px` : (f.height ? `${f.height}px` : 'auto'),
+                              position: "absolute",
+                              left: `${f.x || 0}px`,
+                              top: `${f.y || 0}px`,
+                              width: isImage ? `${f.width || 100}px` : (f.width ? `${f.width}px` : 'max-content'),
+                              height: isImage ? `${f.height || 100}px` : (f.height ? `${f.height}px` : 'max-content'),
+                              justifyContent: f.verticalAlign === "top" ? "flex-start" : f.verticalAlign === "bottom" ? "flex-end" : "center",
+                              alignItems: f.align === "center" ? "center" : f.align === "right" ? "flex-end" : f.align === "justify" ? "stretch" : "flex-start",
                               fontSize: isImage ? undefined : `${f.fontSize || 16}px`,
                               color: f.color || "#000000",
                               fontFamily: `'${f.fontFamily || "Inter"}', sans-serif`,
                               fontWeight: f.fontWeight || "500",
                               textAlign: (f.align || "left") as React.CSSProperties["textAlign"],
-                              whiteSpace: f.width ? (isPrintSingleLine ? 'normal' : 'pre-line') : 'nowrap',
-                              wordBreak: 'break-word',
-                              overflowWrap: 'break-word',
+                              lineHeight: 1.25,
+                              padding: 0,
+                              margin: 0,
+                              background: "transparent",
+                              border: isImage && imgBorderW > 0 ? `${imgBorderW}px solid ${imgBorderC}` : 'none',
+                              borderRadius: isImage ? imgRadius : undefined,
+                              boxSizing: "border-box",
+                              overflow: "hidden",
                               transform: isImage ? 'none' : `scale(${f.scaleX || 1}, ${f.scaleY || 1})`,
                               transformOrigin: 'top left',
                               WebkitTextStroke: !isImage && f.strokeWidth ? `${f.strokeWidth}px ${f.strokeColor || "#ffffff"}` : undefined,
                               paintOrder: !isImage && f.strokeWidth ? "stroke fill" : undefined,
                             }}
                           >
-                            {!isImage && f.labelVisible !== false && labelStr ? (
-                              <span className="font-bold opacity-80 mr-1">{labelStr}</span>
-                            ) : null}
-                            {content}
+                            {isImage ? imageContent : (
+                              <div
+                                className={`leading-tight select-none overflow-hidden w-full ${f.width ? (isPrintSingleLine ? "whitespace-normal break-words" : "whitespace-pre-line break-words") : isAddr ? "whitespace-pre-line break-words" : isMulti ? "whitespace-normal break-words" : "whitespace-nowrap"}`}
+                                style={{
+                                  textAlign: (f.align || "left") as React.CSSProperties["textAlign"],
+                                  lineHeight: 1.25,
+                                  padding: 0,
+                                  margin: 0,
+                                }}
+                              >
+                                {f.labelVisible !== false && labelStr ? (
+                                  <span className="font-bold opacity-80 mr-1">{labelStr}</span>
+                                ) : null}
+                                <span className={isAddr || (f.width && !isPrintSingleLine) ? "whitespace-pre-line break-words" : ""}>{content}</span>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

@@ -20,6 +20,10 @@ import { PrintSettingsPanel } from "@/components/PrintSettingsPanel";
 import { PrintSettings, calculatePrintGrid, PAPER_SIZES, getPaperInfo, getCardDimensionsMm } from "@/utils/printLayoutEngine";
 import { prefetchImages, drawCardOnCanvas } from "@/utils/canvasCardRenderer";
 import { jsPDF } from "jspdf";
+import ClassPrintSelector from "@/components/ClassPrintSelector";
+import PrintCountLimiter from "@/components/PrintCountLimiter";
+import CollapsibleSheetsDiv from "@/components/CollapsibleSheetsDiv";
+import { getPrintSelectedIds } from "@/utils/printSelectionStorage";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -83,11 +87,19 @@ export default function PrintPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedParam = searchParams.get("selected") || searchParams.get("ids") || "";
+  const [storedSelectedIds, setStoredSelectedIds] = useState<string[]>([]);
 
   const schoolId = params.id as string;
   const classId = params.classId as string;
 
   const [classData, setClassData] = useState<ClassData | null>(null);
+  const [schoolClasses, setSchoolClasses] = useState<any[]>([]);
+  const [allSchoolStudents, setAllSchoolStudents] = useState<Student[]>([]);
+  const [selectedClassIds, setSelectedClassIds] = useState<string[]>(
+    classId && classId !== "all" ? [classId] : []
+  );
+  const [cardLimit, setCardLimit] = useState<number | null>(null);
+
   const [layout, setLayout] = useState(1);
   const [theme, setTheme] = useState<CardTheme>(DEFAULT_THEME);
   const [loading, setLoading] = useState(true);
@@ -99,7 +111,13 @@ export default function PrintPage() {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (selectedParam) {
+    if (selectedParam === "stored" || selectedParam === "session" || selectedParam === "true") {
+      const ids = getPrintSelectedIds();
+      if (ids.length > 0) {
+        setStoredSelectedIds(ids);
+        setOnlySelected(true);
+      }
+    } else if (selectedParam) {
       setOnlySelected(true);
     }
   }, [selectedParam]);
@@ -135,56 +153,69 @@ export default function PrintPage() {
     };
   }
 
-
-
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
   const fetchData = useCallback(async () => {
     try {
-      if (classId === "all") {
-        const res = await fetch(`/api/schools/${schoolId}`);
-        if (res.status === 403) {
-          setForbidden(true);
-          return;
+      // Always attempt fetching the full school to have all classes available for selection
+      const res = await fetch(`/api/schools/${schoolId}`);
+      if (res.status === 403) {
+        setForbidden(true);
+        return;
+      }
+      if (res.ok) {
+        const schoolObj = await res.json();
+        const scClasses = schoolObj.classes || [];
+        const classMap = new Map<string, string>();
+        const classCustomMap = new Map<string, any>();
+        const classOrderMap = new Map<string, number>();
+        scClasses.forEach((c: any, index: number) => {
+          classMap.set(String(c.id), String(c.name || ""));
+          classCustomMap.set(String(c.id), c.customValues);
+          classOrderMap.set(String(c.id), index);
+        });
+
+        let rawStudents = schoolObj.students || [];
+        if (!rawStudents.length && scClasses.length) {
+          rawStudents = scClasses.flatMap((c: any) =>
+            (c.students || []).map((s: any) => ({ ...s, classId: s.classId || c.id }))
+          );
         }
-        if (res.ok) {
-          const schoolObj = await res.json();
-          const schoolClasses = schoolObj.classes || [];
-          const classMap = new Map(schoolClasses.map((c: any) => [c.id, c.name]));
-          const classOrderMap = new Map(schoolClasses.map((c: any, index: number) => [c.id, index]));
 
-          const studentsWithClass = (schoolObj.students || [])
-            .map((s: any) => ({
-              ...s,
-              className: classMap.get(s.classId) || "N/A",
-            }))
-            .sort((a: any, b: any) => {
-              // Primary sort: Class order in school (e.g. Nursery, LKG, Class 1, Class 2...)
-              const orderA = Number(classOrderMap.get(a.classId) ?? 9999);
-              const orderB = Number(classOrderMap.get(b.classId) ?? 9999);
-              if (orderA !== orderB) return orderA - orderB;
+        const studentsWithClass = rawStudents
+          .map((s: any) => ({
+            ...s,
+            className: classMap.get(s.classId) || "N/A",
+            customValues: s.customValues || classCustomMap.get(s.classId) || null,
+          }))
+          .sort((a: any, b: any) => {
+            const orderA = Number(classOrderMap.get(a.classId) ?? 9999);
+            const orderB = Number(classOrderMap.get(b.classId) ?? 9999);
+            if (orderA !== orderB) return orderA - orderB;
 
-              // Secondary sort: Student Name / ID / Roll Number
-              const idA = (a.idNo || a.camSno || a.name || "").toString();
-              const idB = (b.idNo || b.camSno || b.name || "").toString();
-              return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: "base" });
-            });
-
-          setClassData({
-            id: "all",
-            name: "All Students",
-            school: schoolObj,
-            students: studentsWithClass,
+            const idA = (a.idNo || a.camSno || a.name || "").toString();
+            const idB = (b.idNo || b.camSno || b.name || "").toString();
+            return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: "base" });
           });
-        }
+
+        setSchoolClasses(scClasses);
+        setAllSchoolStudents(studentsWithClass);
+        setClassData({
+          id: classId,
+          name: classId === "all" ? "All Students" : (classMap.get(classId) || "Class"),
+          school: schoolObj,
+          students: studentsWithClass,
+          customValues: scClasses.find((c: any) => c.id === classId)?.customValues || schoolObj.customValues,
+        });
       } else {
-        const res = await fetch(`/api/classes/${classId}`);
-        if (res.status === 403) {
+        // Fallback: fetch specific class if school fetch failed
+        const classRes = await fetch(`/api/classes/${classId}`);
+        if (classRes.status === 403) {
           setForbidden(true);
           return;
         }
-        if (res.ok) {
-          const cData = await res.json();
+        if (classRes.ok) {
+          const cData = await classRes.json();
           if (cData && Array.isArray(cData.students)) {
             cData.students.sort((a: any, b: any) => {
               const idA = (a.idNo || a.camSno || a.name || "").toString();
@@ -192,6 +223,8 @@ export default function PrintPage() {
               return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: "base" });
             });
           }
+          setSchoolClasses(cData.school?.classes || [{ id: cData.id, name: cData.name }]);
+          setAllSchoolStudents(cData.students || []);
           setClassData(cData);
         }
       }
@@ -262,19 +295,38 @@ export default function PrintPage() {
 
   // ── Sheet slices ────────────────────────────────────────────────────────────
   const selectedIdSet = useMemo(() => {
-    if (!selectedParam) return new Set<string>();
-    return new Set(selectedParam.split(",").map((id) => id.trim()).filter(Boolean));
-  }, [selectedParam]);
-
-  const allClassStudents = classData?.students ?? [];
-
-  const students = useMemo(() => {
-    if (onlySelected && selectedIdSet.size > 0) {
-      const filtered = allClassStudents.filter((s) => selectedIdSet.has(s.id));
-      return filtered.length > 0 ? filtered : allClassStudents;
+    if (selectedParam === "stored" || selectedParam === "session" || selectedParam === "true") {
+      return new Set<string>(storedSelectedIds);
     }
-    return allClassStudents;
-  }, [allClassStudents, onlySelected, selectedIdSet]);
+    if (!selectedParam) return new Set<string>();
+    return new Set<string>(selectedParam.split(",").map((id) => id.trim()).filter(Boolean));
+  }, [selectedParam, storedSelectedIds]);
+
+  // 1. Filter by selected class(es)
+  const classFilteredStudents = useMemo(() => {
+    if (selectedClassIds.length === 0) {
+      return allSchoolStudents;
+    }
+    const set = new Set(selectedClassIds);
+    return allSchoolStudents.filter((s: any) => set.has(s.classId));
+  }, [allSchoolStudents, selectedClassIds]);
+
+  // 2. Filter by query param ?selected= if onlySelected is enabled
+  const selectionFilteredStudents = useMemo(() => {
+    if (onlySelected && selectedIdSet.size > 0) {
+      const filtered = classFilteredStudents.filter((s) => selectedIdSet.has(s.id));
+      return filtered.length > 0 ? filtered : classFilteredStudents;
+    }
+    return classFilteredStudents;
+  }, [classFilteredStudents, onlySelected, selectedIdSet]);
+
+  // 3. Slice by card limit (if user specified a limit)
+  const students = useMemo(() => {
+    if (cardLimit !== null && cardLimit > 0) {
+      return selectionFilteredStudents.slice(0, cardLimit);
+    }
+    return selectionFilteredStudents;
+  }, [selectionFilteredStudents, cardLimit]);
 
   const CPP = printGrid.itemsPerPage > 0 ? printGrid.itemsPerPage : 1;
   const totalSheets = Math.max(1, Math.ceil(students.length / CPP));
@@ -565,55 +617,88 @@ export default function PrintPage() {
       <div className="min-h-screen bg-slate-200 pb-12 print-page-wrapper">
         <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm no-print">
           <div className="px-4 sm:px-6 py-3">
-            <div className="flex items-center gap-3 mb-2">
-              <Link
-                href={`/school/${schoolId}/students`}
-                className="text-gray-400 hover:text-gray-700 transition-colors shrink-0"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/school/${schoolId}/students`}
+                  className="text-gray-400 hover:text-gray-700 transition-colors shrink-0"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </Link>
-              <div className="min-w-0">
-                <h1 className="font-bold text-gray-900 text-sm sm:text-base truncate flex items-center gap-2">
-                  <span>{classData.school.name} — Class {classData.name}</span>
-                </h1>
-                <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                  <p className="text-xs text-gray-400">
-                    {students.length} cards · {totalSheets} sheet
-                    {totalSheets !== 1 ? "s" : ""}
-                    {!settled && " · Loading images…"}
-                    {!printGrid.fits && <span className="text-rose-500 font-bold ml-2">Error: Paper size too small.</span>}
-                  </p>
-                  {selectedIdSet.size > 0 && (
-                    <div className="inline-flex items-center gap-1.5 ml-1">
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
-                        onlySelected 
-                          ? "bg-violet-100 text-violet-800 border-violet-200" 
-                          : "bg-gray-100 text-gray-700 border-gray-200"
-                      }`}>
-                        {onlySelected ? `🎯 ${students.length} Selected Students` : `All ${allClassStudents.length} Students`}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setOnlySelected(!onlySelected)}
-                        className="text-[11px] font-bold text-violet-600 hover:text-violet-800 underline cursor-pointer"
-                      >
-                        {onlySelected ? `Switch to All (${allClassStudents.length})` : `Filter to Selected (${selectedIdSet.size})`}
-                      </button>
-                    </div>
-                  )}
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                </Link>
+                <div className="min-w-0">
+                  <h1 className="font-bold text-gray-900 text-sm sm:text-base truncate flex items-center gap-2">
+                    <span>
+                      {classData.school.name} —{" "}
+                      {selectedClassIds.length === 0
+                        ? "All Classes"
+                        : selectedClassIds.length === 1
+                        ? `Class ${schoolClasses.find((c) => c.id === selectedClassIds[0])?.name || classData.name}`
+                        : `${selectedClassIds.length} Classes Selected`}
+                    </span>
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                    <p className="text-xs text-gray-400">
+                      {students.length} cards
+                      {cardLimit !== null && cardLimit < selectionFilteredStudents.length && (
+                        <span className="text-violet-600 font-semibold ml-1">
+                          (limited from {selectionFilteredStudents.length})
+                        </span>
+                      )}
+                      {" · "}
+                      {totalSheets} sheet{totalSheets !== 1 ? "s" : ""}
+                      {!settled && " · Loading images…"}
+                      {!printGrid.fits && <span className="text-rose-500 font-bold ml-2">Error: Paper size too small.</span>}
+                    </p>
+                    {selectedIdSet.size > 0 && (
+                      <div className="inline-flex items-center gap-1.5 ml-1">
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                          onlySelected 
+                            ? "bg-violet-100 text-violet-800 border-violet-200" 
+                            : "bg-gray-100 text-gray-700 border-gray-200"
+                        }`}>
+                          {onlySelected ? `🎯 ${selectionFilteredStudents.length} Selected Students` : `All ${classFilteredStudents.length} Students`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setOnlySelected(!onlySelected)}
+                          className="text-[11px] font-bold text-violet-600 hover:text-violet-800 underline cursor-pointer"
+                        >
+                          {onlySelected ? `Switch to All (${classFilteredStudents.length})` : `Filter to Selected (${selectedIdSet.size})`}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
+              </div>
+
+              {/* Class Selector & Card Count Limiter Controls */}
+              <div className="flex flex-wrap items-center gap-2">
+                {schoolClasses.length > 0 && (
+                  <ClassPrintSelector
+                    classes={schoolClasses}
+                    students={allSchoolStudents}
+                    selectedClassIds={selectedClassIds}
+                    onChange={setSelectedClassIds}
+                  />
+                )}
+                <PrintCountLimiter
+                  label="Cards to print"
+                  totalAvailable={selectionFilteredStudents.length}
+                  countLimit={cardLimit}
+                  onChange={setCardLimit}
+                />
               </div>
             </div>
 
@@ -631,8 +716,31 @@ export default function PrintPage() {
                 ⚡ Print Now (Instant)
               </Button>
 
-              {/* Separator */}
-              <span className="text-gray-300 text-xs font-medium">or</span>
+              <Button
+                type="button"
+                onClick={() => downloadSheets(sheets.map((_, i) => i))}
+                disabled={isBusy}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-fuchsia-600 hover:bg-fuchsia-700 text-white shadow-sm transition-colors disabled:opacity-40"
+              >
+                {!settled
+                  ? "Loading images…"
+                  : downloading === "all"
+                    ? "Generating PDF…"
+                    : totalSheets === 1
+                      ? "Download PDF"
+                      : `Download All (${totalSheets} sheets)`}
+              </Button>
+
+              {totalSheets > 1 && (
+                <CollapsibleSheetsDiv
+                  totalSheets={totalSheets}
+                  downloading={downloading}
+                  onSelectSheet={(i) => downloadSheets([i])}
+                  disabled={isBusy}
+                  label="Single Sheets"
+                  className="w-auto"
+                />
+              )}
 
               {dlProgress && (
                 <span className="text-xs text-fuchsia-700 font-medium flex items-center gap-1.5 mr-1">
@@ -658,36 +766,6 @@ export default function PrintPage() {
                   <span className="truncate max-w-xs">{dlProgress}</span>
                 </span>
               )}
-
-              {sheets.map((_, i) => (
-                <Button
-                  key={i}
-                  type="button"
-                  onClick={() => downloadSheets([i])}
-                  disabled={isBusy}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border shadow-sm transition-colors disabled:opacity-40 ${downloading === i
-                    ? "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-700"
-                    : "border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
-                    }`}
-                >
-                  {downloading === i ? "…" : `Sheet ${i + 1}`}
-                </Button>
-              ))}
-
-              <Button
-                type="button"
-                onClick={() => downloadSheets(sheets.map((_, i) => i))}
-                disabled={isBusy}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-fuchsia-600 hover:bg-fuchsia-700 text-white shadow-sm transition-colors disabled:opacity-40"
-              >
-                {!settled
-                  ? "Loading images…"
-                  : downloading === "all"
-                    ? "Generating PDF…"
-                    : totalSheets === 1
-                      ? "Download PDF"
-                      : `Download All (${totalSheets} sheets)`}
-              </Button>
             </div>
           </div>
         </div>

@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import BulkDeleteModal from "@/components/BulkDeleteModal";
 import BulkImportModal from "@/components/BulkImportModal";
+import { savePrintSelectedIds } from "@/utils/printSelectionStorage";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -731,9 +732,14 @@ export default function ClassPage() {
                     <Link
                       href={
                         selectedStudentIds.length > 0
-                          ? `/school/${schoolId}/class/${classId}/print?selected=${selectedStudentIds.join(",")}`
+                          ? `/school/${schoolId}/class/${classId}/print?selected=stored`
                           : `/school/${schoolId}/class/${classId}/print`
                       }
+                      onClick={() => {
+                        if (selectedStudentIds.length > 0) {
+                          savePrintSelectedIds(selectedStudentIds);
+                        }
+                      }}
                       className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer h-10 shadow-sm ${
                         selectedStudentIds.length > 0
                           ? "bg-violet-600 hover:bg-violet-700 text-white border border-violet-700 shadow-md"

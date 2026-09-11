@@ -72,24 +72,57 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
     targetUrl = `https:${targetUrl}`;
   }
 
-  // 1. Try fetching as Blob first (bypasses Chrome CORS disk cache poisoning)
+  // 0. If local data URL or Blob URL, load directly
+  if (targetUrl.startsWith("data:") || targetUrl.startsWith("blob:")) {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = targetUrl;
+    });
+  }
+
+  // Helper: load an Image element from a Blob via object URL (completely CORS-safe, never taints canvas)
+  const loadFromBlob = (blob: Blob): Promise<HTMLImageElement> => {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = (e) => {
+        URL.revokeObjectURL(objectUrl);
+        reject(e);
+      };
+      img.src = objectUrl;
+    });
+  };
+
+  // 1. Try fetching directly as Blob with CORS (fastest path for CDNs with CORS headers)
   try {
     const res = await fetch(targetUrl, { mode: "cors" });
     if (res.ok) {
       const blob = await res.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      return await new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = (e) => reject(e);
-        img.src = objectUrl;
-      });
+      return await loadFromBlob(blob);
     }
-  } catch (err) {
-    console.warn("Fetch blob failed for image, trying cache-buster Image load:", targetUrl, err);
+  } catch {
+    // Direct CORS fetch failed, try proxy fallback
   }
 
-  // 2. Try direct Image load with crossOrigin = "anonymous" and cache buster
+  // 2. Try server proxy route (/api/proxy-image)
+  // Bypasses browser CORS restrictions, missing CDN headers, and Chrome disk cache poisoning.
+  if (targetUrl.startsWith("http://") || targetUrl.startsWith("https://")) {
+    try {
+      const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(targetUrl)}`;
+      const proxyRes = await fetch(proxyUrl);
+      if (proxyRes.ok) {
+        const blob = await proxyRes.blob();
+        return await loadFromBlob(blob);
+      }
+    } catch {
+      // Server proxy fetch failed
+    }
+  }
+
+  // 3. Try direct Image load with crossOrigin = "anonymous" and cache buster
   try {
     return await new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
@@ -101,11 +134,11 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
         : `${targetUrl}?_cb=${Date.now()}`;
       img.src = cacheBustUrl;
     });
-  } catch (err) {
-    console.warn("Cache-buster Image load failed, trying direct anonymous Image load:", targetUrl, err);
+  } catch {
+    // Cache-buster Image load failed
   }
 
-  // 3. Try direct Image load with crossOrigin = "anonymous"
+  // 4. Try direct Image load with crossOrigin = "anonymous"
   try {
     return await new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
@@ -114,20 +147,15 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
       img.onerror = (e) => reject(e);
       img.src = targetUrl;
     });
-  } catch (err) {
-    console.warn("Anonymous Image load failed, trying non-CORS fallback:", targetUrl, err);
+  } catch {
+    // Anonymous Image load failed
   }
 
-  // 4. Fallback: direct Image load without crossOrigin
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = (e) => {
-      console.error("All image load attempts failed for:", targetUrl, e);
-      reject(e);
-    };
-    img.src = targetUrl;
-  });
+  // CRITICAL: We NEVER fall back to loading without crossOrigin.
+  // Drawing a non-CORS image onto a canvas flags it as tainted, causing canvas.toDataURL()
+  // to throw a SecurityError and crash the entire PDF download process.
+  console.warn("Could not load image safely with CORS (image may be 404 or blocked):", targetUrl);
+  throw new Error(`Could not load image safely with CORS: ${targetUrl}`);
 }
 
 /**
