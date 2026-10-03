@@ -657,7 +657,7 @@ function DocumentDesigner({ doc, onBack, schoolName, students, customFieldsConfi
       classFields.filter((f: any) => !f.default && f.enabled).forEach((f: any) => {
         baseFields.push({ key: `class_custom_${f.key}`, label: `(Class) ${f.label}`, defaultLabel: `[${f.label}]`, isImage: false });
       });
-      student.filter((f: any) => !f.default && f.enabled && f.key !== "designation").forEach((f: any) => {
+      student.filter((f: any) => !f.default && f.enabled).forEach((f: any) => {
         baseFields.push({ key: `student_custom_${f.key}`, label: `(Student) ${f.label}`, defaultLabel: `[${f.label}]`, isImage: false });
       });
     }
