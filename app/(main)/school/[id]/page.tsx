@@ -944,7 +944,7 @@ export default function SchoolPage() {
             ? JSON.parse(school.customFieldsConfig)
             : school.customFieldsConfig;
           if (parsed && parsed.student) {
-            parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone" && f.key !== "camSno" && f.key !== "designation");
+            parsed.student = parsed.student.filter((f: any) => f.key !== "motherName" && f.key !== "motherPhone" && f.key !== "camSno");
           }
           setCustomFieldsConfig(parsed);
         } catch (e) {
