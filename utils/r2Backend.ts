@@ -21,6 +21,8 @@ function getR2Client(): S3Client {
       accessKeyId,
       secretAccessKey,
     },
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
   });
 }
 
@@ -107,7 +109,17 @@ export async function createPresignedUploadUrl(
     ContentType: contentType,
   });
 
-  const uploadUrl = await getSignedUrl(client, command, { expiresIn });
+  const uploadUrl = await getSignedUrl(client, command, {
+    expiresIn,
+    signableHeaders: new Set(['content-type']),
+    unhoistableHeaders: new Set([
+      'x-amz-checksum-crc32',
+      'x-amz-checksum-crc32c',
+      'x-amz-checksum-sha1',
+      'x-amz-checksum-sha256',
+      'x-amz-sdk-checksum-algorithm',
+    ]),
+  });
 
   return {
     uploadUrl,

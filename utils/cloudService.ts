@@ -41,6 +41,8 @@ async function compressImageFile(file: File, maxDimension: number = 2000): Promi
 
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
 
         canvas.toBlob(
