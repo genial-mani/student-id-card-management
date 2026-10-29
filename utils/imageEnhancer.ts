@@ -64,7 +64,93 @@ export async function loadImage(url: string): Promise<HTMLImageElement> {
 
 /**
  * Renders an image onto an offscreen canvas with brightness and contrast filters applied,
- * converts the canvas to a JPEG Blob, and uploads it to storage (R2).
+ * resizes to an optimal resolution for ID cards (max 1200px), and compresses to a lightweight JPEG.
+ * This prevents HTTP 413 (Payload Too Large) errors when uploading to server/cloud storage.
+ *
+ * @param img The loaded HTMLImageElement
+ * @param brightness Percentage value (100 default)
+ * @param contrast Percentage value (100 default)
+ * @param maxDimension Maximum width/height (defaults to 1920px, crisp full HD resolution)
+ */
+export async function createOptimizedEnhancedImageBlob(
+  img: HTMLImageElement,
+  brightness: number = 100,
+  contrast: number = 100,
+  maxDimension: number = 1920
+): Promise<{ blob: Blob; dataUrl: string }> {
+  const origW = img.naturalWidth || img.width || 600;
+  const origH = img.naturalHeight || img.height || 800;
+
+  // Compute scaled dimensions preserving aspect ratio
+  let w = origW;
+  let h = origH;
+  if (w > maxDimension || h > maxDimension) {
+    if (w > h) {
+      h = Math.round((h * maxDimension) / w);
+      w = maxDimension;
+    } else {
+      w = Math.round((w * maxDimension) / h);
+      h = maxDimension;
+    }
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Unable to create 2D canvas context.");
+  }
+
+  // Smooth scaling
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  // Solid background
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, w, h);
+
+  // Apply brightness & contrast filters
+  ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
+  ctx.drawImage(img, 0, 0, w, h);
+
+  // Convert to high-quality compressed JPEG (0.90 gives pristine quality while staying well below 5MB)
+  let quality = 0.90;
+  let blob: Blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => {
+        if (b) resolve(b);
+        else reject(new Error("Canvas to Blob conversion failed."));
+      },
+      "image/jpeg",
+      quality
+    );
+  });
+
+  // Safety threshold: ensure photo strictly respects the 5MB limit
+  const MAX_FILE_SIZE_THRESHOLD = 5 * 1024 * 1024; // 5MB
+  if (blob.size > MAX_FILE_SIZE_THRESHOLD) {
+    quality = 0.80;
+    blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (b) => {
+          if (b) resolve(b);
+          else reject(new Error("Canvas compression retry failed."));
+        },
+        "image/jpeg",
+        quality
+      );
+    });
+  }
+
+  const dataUrl = canvas.toDataURL("image/jpeg", quality);
+  return { blob, dataUrl };
+}
+
+/**
+ * Renders an image onto an offscreen canvas with brightness and contrast filters applied,
+ * converts the canvas to an optimized JPEG Blob, and uploads it to storage (R2).
  *
  * @param imageUrl The original student profile picture URL
  * @param brightness Percentage value (100 is default, e.g. 125 for +25% brightness)
@@ -79,39 +165,9 @@ export async function processAndUploadStudentPhoto(
   folder: string = "student_photos"
 ): Promise<string> {
   const img = await loadImage(imageUrl);
+  const { blob } = await createOptimizedEnhancedImageBlob(img, brightness, contrast);
 
-  const canvas = document.createElement("canvas");
-  canvas.width = img.naturalWidth || img.width || 600;
-  canvas.height = img.naturalHeight || img.height || 800;
-
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    throw new Error("Unable to create 2D canvas context.");
-  }
-
-  // Clear background
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Apply CSS 2D canvas filter
-  ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
-
-  // Draw enhanced image at full resolution
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-  // Convert canvas to Blob (High quality JPEG 0.95)
-  const blob: Blob = await new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (b) => {
-        if (b) resolve(b);
-        else reject(new Error("Canvas to Blob conversion failed."));
-      },
-      "image/jpeg",
-      0.95
-    );
-  });
-
-  // Create a File object from the Blob
+  // Create a File object from the optimized Blob
   const fileName = `student_photo_${Date.now()}.jpg`;
   const file = new File([blob], fileName, { type: "image/jpeg" });
 

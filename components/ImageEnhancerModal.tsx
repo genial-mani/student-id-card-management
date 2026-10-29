@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { processAndUploadStudentPhoto, loadImage } from "@/utils/imageEnhancer";
+import { processAndUploadStudentPhoto, loadImage, createOptimizedEnhancedImageBlob } from "@/utils/imageEnhancer";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -119,11 +119,24 @@ export default function ImageEnhancerModal({
 
     try {
       if (onPhotoProcessed || !student.id) {
-        const canvas = canvasRef.current;
-        if (canvas) {
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+        if (imgRef.current) {
+          const { blob, dataUrl } = await createOptimizedEnhancedImageBlob(
+            imgRef.current,
+            brightness,
+            contrast
+          );
+          const file = new File([blob], `photo_${Date.now()}.jpg`, { type: "image/jpeg" });
+          if (onPhotoProcessed) {
+            onPhotoProcessed(dataUrl, file);
+          }
+          toast.success("Photo brightness adjusted successfully!");
+          onClose();
+          return;
+        } else if (canvasRef.current) {
+          const canvas = canvasRef.current;
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
           const blob: Blob = await new Promise((resolve, reject) => {
-            canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Canvas export failed"))), "image/jpeg", 0.95);
+            canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Canvas export failed"))), "image/jpeg", 0.88);
           });
           const file = new File([blob], `photo_${Date.now()}.jpg`, { type: "image/jpeg" });
           if (onPhotoProcessed) {

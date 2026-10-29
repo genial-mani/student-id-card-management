@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, DeleteObjectsCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // ─── R2 Configuration ────────────────────────────────────────────────────────
 
@@ -80,6 +81,39 @@ export async function uploadToR2(
   );
 
   return `${publicUrl}/${key}`;
+}
+
+/**
+ * Generates a presigned PUT URL allowing the client to upload directly to Cloudflare R2.
+ * The file bytes bypass the Next.js/Vercel server entirely, preventing any payload size limits (413).
+ *
+ * @param key - The object key (path), e.g. "Delhi/a3f8b2c1d4e5.jpg"
+ * @param contentType - The MIME type, e.g. "image/jpeg"
+ * @param expiresIn - Expiration time in seconds (default: 300 = 5 minutes)
+ * @returns { uploadUrl: string, publicUrl: string, key: string }
+ */
+export async function createPresignedUploadUrl(
+  key: string,
+  contentType: string,
+  expiresIn: number = 300
+): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
+  const client = getR2Client();
+  const bucket = getBucketName();
+  const publicUrl = getPublicUrl();
+
+  const command = new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    ContentType: contentType,
+  });
+
+  const uploadUrl = await getSignedUrl(client, command, { expiresIn });
+
+  return {
+    uploadUrl,
+    publicUrl: `${publicUrl}/${key}`,
+    key,
+  };
 }
 
 // ─── URL Helpers ─────────────────────────────────────────────────────────────

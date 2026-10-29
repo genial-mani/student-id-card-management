@@ -56,6 +56,11 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
+  // For file uploads: pass request directly without rewriting headers to preserve multipart body streaming
+  if (pathname.startsWith('/api/upload')) {
+    return NextResponse.next();
+  }
+
   // For API routes: attach user info via headers so route handlers can read it
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-user-id', payload.userId);
