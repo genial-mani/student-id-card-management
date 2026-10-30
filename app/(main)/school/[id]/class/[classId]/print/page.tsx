@@ -107,6 +107,7 @@ export default function PrintPage() {
   const [settled, setSettled] = useState(false);
   const [downloading, setDownloading] = useState<"all" | number | null>(null);
   const [dlProgress, setDlProgress] = useState("");
+  const [dlPercent, setDlPercent] = useState<number | null>(null);
   const [onlySelected, setOnlySelected] = useState<boolean>(Boolean(selectedParam));
   const { user } = useAuth();
 
@@ -356,21 +357,32 @@ export default function PrintPage() {
       const QUALITY_MULTIPLIER = 1.5; // Balances quality with memory limits (v8 string max length)
 
       // 1. Wait for web fonts (used by Canvas fillText)
+      setDlProgress("Loading fonts…");
+      setDlPercent(5);
       await document.fonts.ready;
 
       // 3. Pre-fetch every image the cards will need
-      setDlProgress("Pre-fetching images…");
       const allStudents = indices.flatMap((i) => sheets[i]);
+      setDlProgress("Pre-fetching images (0%)…");
+      setDlPercent(10);
+
       const imageCache = await prefetchImages(
         classData!.school,
         allStudents,
         layout,
         classData!.school.idCardLayoutConfig,
+        (loaded, total) => {
+          const pct = total > 0 ? Math.round((loaded / total) * 100) : 100;
+          setDlProgress(`Pre-fetching images (${loaded}/${total} - ${pct}%)…`);
+          // Images stage accounts for 10% to 50% of the overall progress
+          setDlPercent(Math.min(50, 10 + Math.round((loaded / (total || 1)) * 40)));
+        },
       );
 
       // 4. Render target sheets sequentially to keep browser memory footprint minimal
       // Reuses a single canvas instead of allocating 36 separate large canvases simultaneously in RAM
       setDlProgress("Preparing PDF…");
+      setDlPercent(52);
       const pdfOrientation = printGrid.paperWMm > printGrid.paperHMm ? "landscape" : "portrait";
       const pdf = new jsPDF({
         orientation: pdfOrientation,
@@ -385,7 +397,11 @@ export default function PrintPage() {
 
       for (let sIdx = 0; sIdx < indices.length; sIdx++) {
         const sheetIdx = indices[sIdx];
-        setDlProgress(`Rendering sheet ${sIdx + 1} of ${indices.length}…`);
+        const sheetPercent = Math.round(52 + ((sIdx + 1) / indices.length) * 43);
+        setDlProgress(`Rendering sheet ${sIdx + 1} of ${indices.length} (${Math.round(((sIdx + 1) / indices.length) * 100)}%)…`);
+        setDlPercent(sheetPercent);
+        // Yield to the browser main thread so the progress UI update paints
+        await new Promise((resolve) => setTimeout(resolve, 0));
 
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(QUALITY_MULTIPLIER, QUALITY_MULTIPLIER);
@@ -416,6 +432,9 @@ export default function PrintPage() {
       }
 
       // 6. Save / download
+      setDlProgress("Finalizing PDF file…");
+      setDlPercent(98);
+      await new Promise((resolve) => setTimeout(resolve, 10));
       const safe = (s: string) => (s ?? "").replace(/[^a-z0-9]/gi, "_");
       const fileName =
         [
@@ -455,6 +474,7 @@ export default function PrintPage() {
     } finally {
       setDownloading(null);
       setDlProgress("");
+      setDlPercent(null);
     }
   };
 
@@ -731,9 +751,9 @@ export default function PrintPage() {
               )}
 
               {dlProgress && (
-                <span className="text-xs text-fuchsia-700 font-medium flex items-center gap-1.5 mr-1">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-fuchsia-50 border border-fuchsia-200 rounded-xl shadow-2xs">
                   <svg
-                    className="animate-spin w-3.5 h-3.5 shrink-0"
+                    className="animate-spin w-4 h-4 text-fuchsia-600 shrink-0"
                     fill="none"
                     viewBox="0 0 24 24"
                   >
@@ -751,8 +771,27 @@ export default function PrintPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                     />
                   </svg>
-                  <span className="truncate max-w-xs">{dlProgress}</span>
-                </span>
+                  <div className="flex flex-col">
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span className="font-semibold text-fuchsia-900 truncate max-w-[220px]">
+                        {dlProgress}
+                      </span>
+                      {dlPercent !== null && (
+                        <span className="font-bold text-fuchsia-700 tabular-nums">
+                          {dlPercent}%
+                        </span>
+                      )}
+                    </div>
+                    {dlPercent !== null && (
+                      <div className="w-40 sm:w-52 h-1.5 bg-fuchsia-200/80 rounded-full overflow-hidden mt-1">
+                        <div
+                          className="h-full bg-gradient-to-r from-fuchsia-500 to-violet-600 transition-all duration-200 ease-out"
+                          style={{ width: `${Math.max(3, Math.min(100, dlPercent))}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>

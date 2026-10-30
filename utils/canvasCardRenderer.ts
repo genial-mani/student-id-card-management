@@ -167,6 +167,7 @@ export async function prefetchImages(
   students: StudentLike[],
   layout: number,
   layoutConfig: any,
+  onProgress?: (loaded: number, total: number) => void,
 ): Promise<ImageCache> {
   const urls = new Set<string>();
 
@@ -199,31 +200,40 @@ export async function prefetchImages(
 
   const cache: ImageCache = new Map();
   const urlList = Array.from(urls);
+  let loadedCount = 0;
+  const totalCount = urlList.length;
 
-  const results = await Promise.allSettled(
-    urlList.map(async (url) => {
-      const img = await loadImage(url);
-      return { url, img };
-    }),
-  );
+  if (onProgress) onProgress(0, totalCount);
 
-  for (let i = 0; i < results.length; i++) {
-    const r = results[i];
-    const originalUrl = urlList[i];
-    if (r.status === "fulfilled") {
-      const img = r.value.img;
-      cache.set(originalUrl, img);
-      if (originalUrl.startsWith("//")) {
-        cache.set(`https:${originalUrl}`, img);
+  // Run with concurrency pool of 6 parallel requests for fast download without browser connection starvation
+  const CONCURRENCY = 6;
+  let currentIndex = 0;
+
+  async function worker() {
+    while (currentIndex < urlList.length) {
+      const idx = currentIndex++;
+      const url = urlList[idx];
+      try {
+        const img = await loadImage(url);
+        cache.set(url, img);
+        if (url.startsWith("//")) {
+          cache.set(`https:${url}`, img);
+        }
+        const cleanUrl = url.split("?")[0];
+        if (!cache.has(cleanUrl)) {
+          cache.set(cleanUrl, img);
+        }
+      } catch (err) {
+        console.warn("Could not prefetch image for PDF rendering:", url, err);
+      } finally {
+        loadedCount++;
+        if (onProgress) onProgress(loadedCount, totalCount);
       }
-      const cleanUrl = originalUrl.split("?")[0];
-      if (!cache.has(cleanUrl)) {
-        cache.set(cleanUrl, img);
-      }
-    } else {
-      console.warn("Could not prefetch image for PDF rendering:", originalUrl, r.reason);
     }
   }
+
+  const workers = Array.from({ length: Math.min(CONCURRENCY, urlList.length) }, () => worker());
+  await Promise.all(workers);
 
   return cache;
 }
