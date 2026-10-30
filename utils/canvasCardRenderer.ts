@@ -96,33 +96,32 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
     });
   };
 
-  // 1. Try fetching directly as Blob with CORS (fastest path for CDNs with CORS headers)
+  // 1. Try fetching directly as Blob from R2 / Cloudinary with CORS (direct from CDN)
   try {
     const res = await fetch(targetUrl, { mode: "cors" });
     if (res.ok) {
       const blob = await res.blob();
       return await loadFromBlob(blob);
     }
-  } catch {
-    // Direct CORS fetch failed, try proxy fallback
+    console.warn(`[Direct R2/CDN Fetch Failed with HTTP ${res.status}]:`, targetUrl);
+  } catch (err) {
+    console.warn("[Direct CORS Fetch Network Error]:", targetUrl, err);
   }
 
-  // 2. Try server proxy route (/api/proxy-image)
-  // Bypasses browser CORS restrictions, missing CDN headers, and Chrome disk cache poisoning.
-  if (targetUrl.startsWith("http://") || targetUrl.startsWith("https://")) {
-    try {
-      const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(targetUrl)}`;
-      const proxyRes = await fetch(proxyUrl);
-      if (proxyRes.ok) {
-        const blob = await proxyRes.blob();
-        return await loadFromBlob(blob);
-      }
-    } catch {
-      // Server proxy fetch failed
-    }
+  // 2. Try direct Image load with crossOrigin = "anonymous" directly from R2 / Cloudinary
+  try {
+    return await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = targetUrl;
+    });
+  } catch (err) {
+    console.warn("[Direct Image CrossOrigin Error]:", targetUrl, err);
   }
 
-  // 3. Try direct Image load with crossOrigin = "anonymous" and cache buster
+  // 3. Try direct Image load with crossOrigin = "anonymous" and cache buster directly from R2 / Cloudinary
   try {
     return await new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
@@ -134,21 +133,22 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
         : `${targetUrl}?_cb=${Date.now()}`;
       img.src = cacheBustUrl;
     });
-  } catch {
-    // Cache-buster Image load failed
+  } catch (err) {
+    console.warn("[Direct Image CacheBust Error]:", targetUrl, err);
   }
 
-  // 4. Try direct Image load with crossOrigin = "anonymous"
-  try {
-    return await new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => resolve(img);
-      img.onerror = (e) => reject(e);
-      img.src = targetUrl;
-    });
-  } catch {
-    // Anonymous Image load failed
+  // 4. Fallback to server proxy route (/api/proxy-image) ONLY if all direct CORS/CDN attempts fail
+  if (targetUrl.startsWith("http://") || targetUrl.startsWith("https://")) {
+    try {
+      const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(targetUrl)}`;
+      const proxyRes = await fetch(proxyUrl);
+      if (proxyRes.ok) {
+        const blob = await proxyRes.blob();
+        return await loadFromBlob(blob);
+      }
+    } catch {
+      // Server proxy fetch failed
+    }
   }
 
   // CRITICAL: We NEVER fall back to loading without crossOrigin.

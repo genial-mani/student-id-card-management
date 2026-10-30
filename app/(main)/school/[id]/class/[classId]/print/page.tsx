@@ -368,51 +368,9 @@ export default function PrintPage() {
         classData!.school.idCardLayoutConfig,
       );
 
-      // 4. Render all target sheets to offscreen canvases in parallel
-      setDlProgress("Rendering sheets…");
-      const sheetImages = await Promise.all(
-        indices.map(async (sheetIdx) => {
-          const sheetStudents = sheets[sheetIdx];
-          const canvas = document.createElement("canvas");
-
-          // Scale canvas physical pixels up for higher quality
-          canvas.width = printGrid.paperW * QUALITY_MULTIPLIER;
-          canvas.height = printGrid.paperH * QUALITY_MULTIPLIER;
-
-          const ctx = canvas.getContext("2d")!;
-
-          // Scale the drawing context so coordinates remain the same
-          ctx.scale(QUALITY_MULTIPLIER, QUALITY_MULTIPLIER);
-
-          // White background
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, printGrid.paperW, printGrid.paperH);
-
-          // Draw each card at its slot position
-          for (let i = 0; i < sheetStudents.length; i++) {
-            const { x, y } = getSlotPos(i);
-            drawCardOnCanvas(
-              ctx, x, y,
-              classData!.school,
-              sheetStudents[i],
-              (sheetStudents[i] as any).className || classData!.name,
-              classData!.customValues,
-              layout,
-              theme,
-              classData!.school.idCardLayoutConfig,
-              imageCache,
-            );
-          }
-
-          // Maximize quality without blowing up file size / hitting string limits
-          return canvas.toDataURL("image/jpeg", 0.92);
-        }),
-      );
-
-      // 5. Build PDF
-      setDlProgress("Building PDF…");
-      // Use mm so the PDF page matches the real-world paper size.
-      // The high-res canvas image (rendered at 300 DPI) provides print quality.
+      // 4. Render target sheets sequentially to keep browser memory footprint minimal
+      // Reuses a single canvas instead of allocating 36 separate large canvases simultaneously in RAM
+      setDlProgress("Preparing PDF…");
       const pdfOrientation = printGrid.paperWMm > printGrid.paperHMm ? "landscape" : "portrait";
       const pdf = new jsPDF({
         orientation: pdfOrientation,
@@ -420,11 +378,41 @@ export default function PrintPage() {
         format: [printGrid.paperWMm, printGrid.paperHMm],
       });
 
-      let pageCount = 0;
-      for (const imgData of sheetImages) {
-        if (pageCount > 0) pdf.addPage([printGrid.paperWMm, printGrid.paperHMm], pdfOrientation);
+      const canvas = document.createElement("canvas");
+      canvas.width = printGrid.paperW * QUALITY_MULTIPLIER;
+      canvas.height = printGrid.paperH * QUALITY_MULTIPLIER;
+      const ctx = canvas.getContext("2d")!;
+
+      for (let sIdx = 0; sIdx < indices.length; sIdx++) {
+        const sheetIdx = indices[sIdx];
+        setDlProgress(`Rendering sheet ${sIdx + 1} of ${indices.length}…`);
+
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(QUALITY_MULTIPLIER, QUALITY_MULTIPLIER);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, printGrid.paperW, printGrid.paperH);
+
+        const sheetStudents = sheets[sheetIdx];
+        for (let i = 0; i < sheetStudents.length; i++) {
+          const { x, y } = getSlotPos(i);
+          drawCardOnCanvas(
+            ctx, x, y,
+            classData!.school,
+            sheetStudents[i],
+            (sheetStudents[i] as any).className || classData!.name,
+            classData!.customValues,
+            layout,
+            theme,
+            classData!.school.idCardLayoutConfig,
+            imageCache,
+          );
+        }
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.90);
+        if (sIdx > 0) {
+          pdf.addPage([printGrid.paperWMm, printGrid.paperHMm], pdfOrientation);
+        }
         pdf.addImage(imgData, "JPEG", 0, 0, printGrid.paperWMm, printGrid.paperHMm, undefined, "FAST", 0);
-        pageCount++;
       }
 
       // 6. Save / download

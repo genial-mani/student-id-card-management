@@ -31,10 +31,25 @@ export async function loadImage(url: string): Promise<HTMLImageElement> {
       objectUrl = URL.createObjectURL(blob);
     }
   } catch {
-    // Direct CORS fetch failed, try via server proxy
+    // Direct CORS fetch failed
   }
 
-  // 2. Fallback to server proxy if direct fetch failed
+  // 2. Direct anonymous image load (direct from Cloudflare R2 / Cloudinary)
+  if (!objectUrl) {
+    try {
+      return await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = trimmedUrl;
+      });
+    } catch {
+      // Direct anonymous image load failed
+    }
+  }
+
+  // 3. Fallback to server proxy only if all direct browser loads failed
   if (!objectUrl) {
     try {
       const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(trimmedUrl)}`;
@@ -48,7 +63,7 @@ export async function loadImage(url: string): Promise<HTMLImageElement> {
     }
   }
 
-  // 3. Fallback to direct URL if both blob fetches failed
+  // 4. Fallback to direct URL if both blob fetches failed
   const finalSrc = objectUrl || trimmedUrl;
 
   return new Promise((resolve, reject) => {
