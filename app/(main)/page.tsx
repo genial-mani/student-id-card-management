@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { fetchSchoolsCached } from "@/lib/schoolsApi";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -86,18 +87,17 @@ export default function Home() {
 
   useEffect(() => {
     const handleSchoolsUpdated = () => {
-      fetchDashboardData();
+      fetchDashboardData(true);
     };
     window.addEventListener("schools-updated", handleSchoolsUpdated);
     return () => window.removeEventListener("schools-updated", handleSchoolsUpdated);
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (forceRefresh = false) => {
     try {
       setDataLoading(true);
-      const response = await fetch("/api/schools");
-      if (response.ok) {
-        const data = await response.json();
+      const data = await fetchSchoolsCached(forceRefresh);
+      if (Array.isArray(data)) {
         setSchools(data);
       }
     } catch (error) {

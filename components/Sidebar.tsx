@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { fetchSchoolsCached } from "@/lib/schoolsApi";
 import balaji from "@/assets/tirupati-balaji-hd-wallpaper-for-android-2745524-removebg-preview.png";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Add01Icon, Logout01Icon, DashboardSquare02Icon  } from "@hugeicons/core-free-icons";
@@ -24,16 +25,17 @@ interface SidebarProps {
 
 export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProps) {
   const [schools, setSchools] = useState<School[]>([]);
-  const { user, logout } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const pathname = usePathname();
 
   useEffect(() => {
+    if (authLoading || !user) return;
     fetchSchools();
-  }, [user]);
+  }, [user, authLoading]);
 
   useEffect(() => {
     const handleCacheReset = () => {
-      fetchSchools();
+      fetchSchools(true);
     };
     window.addEventListener("schools-updated", handleCacheReset);
     return () => {
@@ -41,11 +43,10 @@ export default function Sidebar({ onCreateSchool, isOpen, onClose }: SidebarProp
     };
   }, []);
 
-  const fetchSchools = async () => {
+  const fetchSchools = async (forceRefresh = false) => {
     try {
-      const response = await fetch("/api/schools");
-      if (response.ok) {
-        const data = await response.json();
+      const data = await fetchSchoolsCached(forceRefresh);
+      if (Array.isArray(data)) {
         setSchools(data);
       }
     } catch (error) {
