@@ -47,8 +47,10 @@ interface School {
   signatureUrl: string;
   idCardLayout: number;
   idCardTheme?: string | null;
-  classes: Class[];
-  students: Student[];
+  classes?: { length: number } | Class[];
+  students?: { length: number } | Student[];
+  studentCount?: number;
+  classCount?: number;
 }
 
 export default function Home() {

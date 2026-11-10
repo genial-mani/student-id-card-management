@@ -43,6 +43,9 @@ model Student {
   customValues      Json?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@index([schoolId])
+  @@index([classId])
 }
 
 model Class {
@@ -54,6 +57,8 @@ model Class {
   customValues Json?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  @@index([schoolId])
 }
 
 model User {

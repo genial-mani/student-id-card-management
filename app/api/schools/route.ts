@@ -15,15 +15,47 @@ export async function GET(request: NextRequest) {
     // Users can only see their own school
     const where = role === 'admin' ? {} : { id: schoolId };
 
+    // Fetch schools with database-level counts instead of loading all 6,000+ student documents
     const schools = await prisma.school.findMany({
       where,
-      include: {
-        classes: true,
-        students: true,
+      select: {
+        id: true,
+        name: true,
+        caption: true,
+        address: true,
+        phone: true,
+        logoUrl: true,
+        signatureUrl: true,
+        idCardLayout: true,
+        idCardTheme: true,
+        idCardLayoutConfig: true,
+        customFieldsConfig: true,
+        customValues: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            students: true,
+            classes: true,
+          },
+        },
       },
+      orderBy: { createdAt: 'desc' },
     });
-    return NextResponse.json(schools);
+
+    // Format output providing lightweight counts and backwards-compatible array lengths
+    const formatted = schools.map((s) => ({
+      ...s,
+      studentCount: s._count.students,
+      classCount: s._count.classes,
+      // Array length compatibility for UI consumers (e.g. school.students.length, school.classes.length)
+      students: { length: s._count.students },
+      classes: { length: s._count.classes },
+    }));
+
+    return NextResponse.json(formatted);
   } catch (error) {
+    console.error('Failed to fetch schools:', error);
     return NextResponse.json(
       { error: 'Failed to fetch schools' },
       { status: 500 }
