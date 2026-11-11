@@ -395,6 +395,8 @@ export default function PrintPage() {
       canvas.width = printGrid.paperW * QUALITY_MULTIPLIER;
       canvas.height = printGrid.paperH * QUALITY_MULTIPLIER;
       const ctx = canvas.getContext("2d")!;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
 
       for (let sIdx = 0; sIdx < indices.length; sIdx++) {
         const sheetIdx = indices[sIdx];
@@ -406,6 +408,8 @@ export default function PrintPage() {
 
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(QUALITY_MULTIPLIER, QUALITY_MULTIPLIER);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, printGrid.paperW, printGrid.paperH);
 
@@ -425,11 +429,11 @@ export default function PrintPage() {
           );
         }
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.90);
+        const imgData = canvas.toDataURL("image/jpeg", 0.98);
         if (sIdx > 0) {
           pdf.addPage([printGrid.paperWMm, printGrid.paperHMm], pdfOrientation);
         }
-        pdf.addImage(imgData, "JPEG", 0, 0, printGrid.paperWMm, printGrid.paperHMm, undefined, "FAST", 0);
+        pdf.addImage(imgData, "JPEG", 0, 0, printGrid.paperWMm, printGrid.paperHMm, undefined, "SLOW", 0);
       }
 
       // 6. Save / download

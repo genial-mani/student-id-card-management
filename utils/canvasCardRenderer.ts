@@ -513,6 +513,8 @@ function drawCoverImage(
     sy = (imgH - sh) / 2;
   }
 
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
 
@@ -792,6 +794,8 @@ export function drawCardOnCanvas(
   const { widthMm: cardWMm, heightMm: cardHMm, widthPx: cardWidthPx, heightPx: cardHeightPx } = getCardDimensionsMm(layoutConfig);
 
   ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
 
   // Clip to card boundary (overflow: hidden)
   ctx.beginPath();
