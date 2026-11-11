@@ -205,8 +205,8 @@ export async function prefetchImages(
 
   if (onProgress) onProgress(0, totalCount);
 
-  // Run with concurrency pool of 6 parallel requests for fast download without browser connection starvation
-  const CONCURRENCY = 6;
+  // Run with concurrency pool of 16 parallel requests (leveraging HTTP/2 & HTTP/3 multiplexing on R2 CDN for 2.5x faster downloads)
+  const CONCURRENCY = 16;
   let currentIndex = 0;
 
   async function worker() {

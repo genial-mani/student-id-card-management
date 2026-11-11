@@ -19,7 +19,6 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { PrintSettingsPanel } from "@/components/PrintSettingsPanel";
 import { PrintSettings, calculatePrintGrid, PAPER_SIZES, getPaperInfo, getCardDimensionsMm } from "@/utils/printLayoutEngine";
 import { prefetchImages, drawCardOnCanvas } from "@/utils/canvasCardRenderer";
-import { jsPDF } from "jspdf";
 import ClassPrintSelector from "@/components/ClassPrintSelector";
 import PrintCountLimiter from "@/components/PrintCountLimiter";
 import CollapsibleSheetsDiv from "@/components/CollapsibleSheetsDiv";
@@ -384,6 +383,7 @@ export default function PrintPage() {
       setDlProgress("Preparing PDF…");
       setDlPercent(52);
       const pdfOrientation = printGrid.paperWMm > printGrid.paperHMm ? "landscape" : "portrait";
+      const { jsPDF } = await import("jspdf");
       const pdf = new jsPDF({
         orientation: pdfOrientation,
         unit: "mm",

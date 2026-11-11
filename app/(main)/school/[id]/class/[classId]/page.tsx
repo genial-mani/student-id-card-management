@@ -268,7 +268,7 @@ export default function ClassPage() {
         })
         .catch(console.error);
     }
-  }, [classData]);
+  }, [classData?.school?.id]);
 
   // Flatten students into the expected structure
   const allStudents = useMemo(() => {

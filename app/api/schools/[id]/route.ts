@@ -23,16 +23,38 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Fetch school, classes, and students in a single indexed query instead of querying students twice
     const school = await prisma.school.findUnique({
       where: { id },
-      include: { classes: { include: { students: true } }, students: true },
+      include: {
+        classes: true,
+        students: true,
+      },
     });
 
     if (!school) {
       return NextResponse.json({ error: 'School not found' }, { status: 404 });
     }
 
-    return NextResponse.json(school);
+    // Attach students into classes in memory without querying MongoDB twice
+    const classMap = new Map<string, any>();
+    for (const c of school.classes) {
+      classMap.set(c.id, { ...c, students: [], studentCount: 0 });
+    }
+    for (const s of school.students) {
+      if (s.classId && classMap.has(s.classId)) {
+        const cls = classMap.get(s.classId);
+        cls.students.push(s);
+        cls.studentCount++;
+      }
+    }
+
+    const formatted = {
+      ...school,
+      classes: Array.from(classMap.values()),
+    };
+
+    return NextResponse.json(formatted);
   } catch {
     return NextResponse.json({ error: 'Failed to fetch school' }, { status: 500 });
   }

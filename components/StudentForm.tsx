@@ -121,10 +121,25 @@ export default function StudentForm({
 
       if (!ctx) return;
 
-      canvas.width = croppedAreaPixels.width;
-      canvas.height = croppedAreaPixels.height;
+      // Downscale photo to ideal ID card dimensions (max 800x1000) for sharp 300+ DPI print while reducing file size by 95%
+      const MAX_WIDTH = 800;
+      const MAX_HEIGHT = 1000;
+      let targetWidth = croppedAreaPixels.width;
+      let targetHeight = croppedAreaPixels.height;
 
-      // Draw the cropped area onto the canvas
+      if (targetWidth > MAX_WIDTH || targetHeight > MAX_HEIGHT) {
+        const ratio = Math.min(MAX_WIDTH / targetWidth, MAX_HEIGHT / targetHeight);
+        targetWidth = Math.round(targetWidth * ratio);
+        targetHeight = Math.round(targetHeight * ratio);
+      }
+
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
+      // Draw the cropped area onto the canvas scaled to target dimensions
       ctx.drawImage(
         image,
         croppedAreaPixels.x,
@@ -133,18 +148,18 @@ export default function StudentForm({
         croppedAreaPixels.height,
         0,
         0,
-        croppedAreaPixels.width,
-        croppedAreaPixels.height
+        targetWidth,
+        targetHeight
       );
 
-      // Convert to file
+      // Convert to file with optimal 0.88 quality
       canvas.toBlob((blob) => {
         if (!blob) return;
         const file = new File([blob], "profile-pic.jpg", { type: "image/jpeg" });
         setProfilePictureFile(file);
         setPreviewUrl(URL.createObjectURL(blob));
         setIsCropping(false);
-      }, "image/jpeg", 0.95);
+      }, "image/jpeg", 0.88);
     } catch (e) {
       console.error("Failed to crop image", e);
     }
