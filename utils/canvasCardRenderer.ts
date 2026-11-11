@@ -513,24 +513,6 @@ function drawCoverImage(
     sy = (imgH - sh) / 2;
   }
 
-  // Multi-step downsampling: If downscaling by > 2x, perform step-down to prevent browser canvas blurring
-  if (sw > w * 2 && sh > h * 2) {
-    const stepCanvas = document.createElement("canvas");
-    stepCanvas.width = Math.round(w * 2);
-    stepCanvas.height = Math.round(h * 2);
-    const stepCtx = stepCanvas.getContext("2d");
-    if (stepCtx) {
-      stepCtx.imageSmoothingEnabled = true;
-      stepCtx.imageSmoothingQuality = "high";
-      stepCtx.drawImage(img, sx, sy, sw, sh, 0, 0, stepCanvas.width, stepCanvas.height);
-
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(stepCanvas, 0, 0, stepCanvas.width, stepCanvas.height, x, y, w, h);
-      return;
-    }
-  }
-
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
