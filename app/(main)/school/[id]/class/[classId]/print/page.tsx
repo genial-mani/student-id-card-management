@@ -383,8 +383,9 @@ export default function PrintPage() {
       setDlProgress("Preparing PDF…");
       setDlPercent(52);
       const pdfOrientation = printGrid.paperWMm > printGrid.paperHMm ? "landscape" : "portrait";
-      const { jsPDF } = await import("jspdf");
-      const pdf = new jsPDF({
+      const jsPdfModule = await import("jspdf");
+      const JsPDFConstructor = (jsPdfModule as any).default || (jsPdfModule as any).jsPDF || jsPdfModule;
+      const pdf = new JsPDFConstructor({
         orientation: pdfOrientation,
         unit: "mm",
         format: [printGrid.paperWMm, printGrid.paperHMm],
