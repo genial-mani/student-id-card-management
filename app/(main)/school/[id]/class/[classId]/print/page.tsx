@@ -353,7 +353,7 @@ export default function PrintPage() {
     setDownloading(isAll ? "all" : indices[0]);
 
     try {
-      const QUALITY_MULTIPLIER = 1.5; // Balances quality with memory limits (v8 string max length)
+      const QUALITY_MULTIPLIER = 2.0; // 600 DPI ultra-high sharpness for photo and text rendering
 
       // 1. Wait for web fonts (used by Canvas fillText)
       setDlProgress("Loading fonts…");
